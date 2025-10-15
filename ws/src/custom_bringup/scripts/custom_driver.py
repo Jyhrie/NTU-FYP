@@ -20,9 +20,9 @@ from transbot_bringup.cfg import PIDparamConfig
 class transbot_driver:
     def __init__(self):
         rospy.on_shutdown(self.cancel)
-        #self.bot_arm = Transbot_ARM()
-        #bot_arm_offset = self.bot_arm.get_arm_offset()
-        #self.bot = Transbot(arm_offset=bot_arm_offset)
+        self.bot_arm = Transbot_ARM()
+        bot_arm_offset = self.bot_arm.get_arm_offset()
+        self.bot = Transbot(arm_offset=bot_arm_offset)
         # 弧度转角度
 	    # Radians turn angle
         self.RA2DE = 180 / pi
