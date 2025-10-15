@@ -85,6 +85,15 @@ class transbot_driver:
         # rospy.loginfo("cmd_vel: {}, cmd_ang: {}".format(velocity, angular))
         self.bot.set_car_motion(velocity, angular)
 
+    def dynamic_reconfigure_callback(self, config, level):
+        # self.bot.set_pid_param(config['Kp'], config['Ki'], config['Kd'])
+        print(config['Kp'], config['Ki'], config['Kd'])
+        self.linear_max = config['linear_max']
+        self.linear_min = config['linear_min']
+        self.angular_max = config['angular_max']
+        self.angular_min = config['angular_min']
+        return config
+
 if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
     try:
