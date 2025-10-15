@@ -11,8 +11,8 @@
         <rosparam command="load" file="$(find transbot_bringup)/param/ekf/robot_localization.yaml"/>
     </node>
 
-    <!-- custom_bringup-->
-    <node pkg="transbot_bringup" type="transbot_driver.py" name="transbot_node" required="true" output="screen">
+    <!-- custom_bringup -->
+    <node pkg="custom_bringup" type="custom_bringup.py" name="transbot_node" required="true" output="screen">
         <param name="imu" value="/transbot/imu"/>
         <param name="vel" value="/transbot/get_vel"/>
     </node>
