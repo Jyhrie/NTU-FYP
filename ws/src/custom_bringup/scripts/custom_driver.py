@@ -34,6 +34,7 @@ class transbot_driver:
         self.linear_min = rospy.get_param('~linear_speed_limit', 0.0)
         self.angular_max = rospy.get_param('~angular_speed_limit', 2.0)
         self.angular_min = rospy.get_param('~angular_speed_limit', 0.0)
+        self.sub_cmd_vel = rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=10)
         
         #publishers
         self.velPublisher = rospy.Publisher(vel, Twist, queue_size=10)
@@ -44,31 +45,6 @@ class transbot_driver:
         self.dyn_server = Server(PIDparamConfig, self.dynamic_reconfigure_callback)
         self.bot.create_receive_threading()
         self.bot.set_uart_servo_angle(9, 90)
-
-    def bind_subscribers_to_publishers(self):
-        while not rospy.is_shutdown():
-
-            published_topics = [topic for topic, _ in rospy.get_published_topics()]
-            has_publisher = "/cmd_vel" in published_topics
-
-            # Case 1: Publisher exists AND subscriber is None → create subscriber
-            if has_publisher and not hasattr(self, 'sub_cmd_vel') or self.sub_cmd_vel is None:
-                self.sub_cmd_vel = rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=10)
-                rospy.loginfo("Subscriber to /cmd_vel created as publisher exists.")
-
-            # Case 2: No publisher AND subscriber exists → remove subscriber
-            elif not has_publisher and hasattr(self, 'sub_cmd_vel') and self.sub_cmd_vel is not None:
-                self.sub_cmd_vel.unregister()  # unsubscribe cleanly
-                self.sub_cmd_vel = None
-                rospy.loginfo("No publisher on /cmd_vel, subscriber removed.")
-
-            # Case 3: No publisher AND subscriber is None → break loop
-            elif not has_publisher and (not hasattr(self, 'sub_cmd_vel') or self.sub_cmd_vel is None):
-                rospy.loginfo("No publisher and no subscriber, exiting loop.")
-                break
-
-            # Sleep a bit before next check
-            rospy.sleep(0.5)
 
     def cancel(self):
         # self.srv_CurrentAngle.shutdown()
@@ -164,12 +140,7 @@ if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
     try:
         driver = transbot_driver()
-
-        # Start bind_subscribers_to_publishers in its own thread
-        sub_thread = threading.Thread(target=driver.bind_subscribers_to_publishers)
-        sub_thread.daemon = True  # allows thread to exit when main thread exits
-        sub_thread.start()
-
+        
         # Start pub_data in its own thread
         pub_thread = threading.Thread(target=driver.pub_data)
         pub_thread.daemon = True
