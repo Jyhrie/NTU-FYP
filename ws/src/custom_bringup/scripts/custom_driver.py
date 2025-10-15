@@ -104,7 +104,7 @@ class transbot_driver:
         # 发布小车运动速度、陀螺仪数据、电池电压
 	    ## Publish the speed of the car, gyroscope data, and battery voltage
         while not rospy.is_shutdown():
-            sleep(0.05)
+            sleep(0.5)
             ax, ay, az = self.bot.get_accelerometer_data()
             gx, gy, gz = self.bot.get_gyroscope_data()
             velocity, angular = self.bot.get_motion_data()
@@ -135,6 +135,7 @@ class transbot_driver:
             # print(ax, ay, az, gx, gy, gz)
             # rospy.loginfo("velocity: {}, angular: {}".format(twist.linear.x, twist.angular.z))
             self.velPublisher.publish(twist)
+            print("callback fired")
 
 if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
