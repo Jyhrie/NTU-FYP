@@ -16,7 +16,7 @@ def move_robot():
     Initializes a ROS node and publishes Twist messages to
     move the robot forward for a duration, stop, and then reverse for a duration.
     """
-    rospy.init_node(NODE_NAME, anonymous=True)
+    rospy.init_node(NODE_NAME, anonymous=False)
     rospy.loginfo("--- Python Version Check ---")
     rospy.loginfo("Running with Python: {}".format(sys.version.split('\n')[0]))
     rospy.loginfo("----------------------------")
