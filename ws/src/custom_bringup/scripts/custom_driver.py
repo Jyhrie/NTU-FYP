@@ -137,17 +137,39 @@ class transbot_driver:
             # rospy.loginfo("velocity: {}, angular: {}".format(twist.linear.x, twist.angular.z))
             self.velPublisher.publish(twist)
 
-    def loop(self):
+    def check_cmd_vel_publishers(self):
+        """
+        Check periodically if /cmd_vel_custom has any publishers.
+        Create subscriber if yes, unregister if none.
+        """
+        rate = rospy.Rate(1)  # check 1 Hz
         while not rospy.is_shutdown():
-            sleep(0.5)
-            print("looping")
+            publishers = [t[0] for t in rospy.get_published_topics() if t[0] == self.cmd_vel_topic]
+            if publishers:
+                # Create subscriber if it doesn't exist
+                if self.cmd_vel_subscriber is None:
+                    rospy.loginfo("Publisher detected on %s, creating subscriber", self.cmd_vel_topic)
+                    self.cmd_vel_subscriber = rospy.Subscriber(self.cmd_vel_topic, Twist, self.cmd_vel_callback, queue_size=10)
+            else:
+                # No publisher, unregister subscriber if exists
+                if self.cmd_vel_subscriber is not None:
+                    rospy.loginfo("No publisher detected on %s, unregistering subscriber", self.cmd_vel_topic)
+                    self.cmd_vel_subscriber.unregister()
+                    self.cmd_vel_subscriber = None
+            rate.sleep()
     
 
 if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
     try:
         driver = transbot_driver()
-        driver.pub_data()
+        driver.pub_thread = threading.Thread(target=self.pub_data)
+        driver.pub_thread.daemon = True
+        driver.pub_thread.start()
+
+        driver.sub_checker_thread = threading.Thread(target=self.check_cmd_vel_publishers)
+        driver.sub_checker_thread.daemon = True
+        driver.sub_checker_thread.start()
 
         rospy.spin()
     except Exception as e:
