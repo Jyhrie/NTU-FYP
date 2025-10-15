@@ -1,2 +1,2 @@
-
+custom_bringup
 -DCATKIN_DEVEL_PREFIX=/home/jetson/fyp/ws/devel -DCMAKE_INSTALL_PREFIX=/home/jetson/fyp/ws/install -G Unix Makefiles
