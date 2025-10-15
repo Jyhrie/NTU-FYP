@@ -1,8 +1,19 @@
 <launch>
-    <!-- Launch the base_node from transbot_bringup -->
-    <node pkg="transbot_bringup" type="base_node" name="base_node" output="screen">
-        <!-- You can add parameters here if needed, for example:
-        <param name="param_name" value="param_value"/>
-        -->
+    <!-- base node from -->
+    <node pkg="transbot_bringup" name="base_node" type="base_node">
+        <param name="linear_scale" type="double" value="1.2"/>
+        <param name="is_multi_robot"  type="bool" value="false"/>
+    </node>
+
+    <!-- enable ekf -->
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization">
+        <remap from="odometry/filtered" to="odom"/>
+        <rosparam command="load" file="$(find transbot_bringup)/param/ekf/robot_localization.yaml"/>
+    </node>
+
+    <!-- custom_bringup-->
+    <node pkg="transbot_bringup" type="transbot_driver.py" name="transbot_node" required="true" output="screen">
+        <param name="imu" value="/transbot/imu"/>
+        <param name="vel" value="/transbot/get_vel"/>
     </node>
 </launch>
