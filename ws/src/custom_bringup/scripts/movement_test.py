@@ -20,9 +20,15 @@ def move_robot():
     pub = rospy.Publisher(TOPIC_NAME, Twist, queue_size=1)
     rate = rospy.Rate(10) # 10hz publishing rate (optional, but good practice)
 
-    # Allow time for the publisher to establish a connection
-    rospy.loginfo("Waiting for subscribers to connect to %s" % TOPIC_NAME)
-    time.sleep(1.0) # Wait a second for connections
+    i = 0
+    while not rospy.is_shutdown() and pub.get_num_connections() == 0:
+        if i == 4:
+            print("Waiting for subscriber to connect to {}".format(pub.name))
+        rospy.sleep(0.5)
+        i += 1
+        i = i % 5
+    if rospy.is_shutdown():
+        raise Exception("Got shutdown request before subscribers connected")
 
     # 1. Initialize Twist messages
     forward_twist = Twist()
