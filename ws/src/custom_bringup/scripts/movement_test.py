@@ -21,8 +21,10 @@ def move_robot():
     rospy.loginfo("Running with Python: {}".format(sys.version.split('\n')[0]))
     rospy.loginfo("----------------------------")
     pub = rospy.Publisher(TOPIC_NAME, Twist, queue_size=1)
-    rate = rospy.Rate(10) # 10hz publishing rate (optional, but good practice)
+    rate = rospy.Rate(10) 
 
+    rospy.sleep(0.5)
+    
     i = 0
     while not rospy.is_shutdown() and pub.get_num_connections() == 0:
         if i == 4:
