@@ -24,7 +24,7 @@ def move_robot():
     rate = rospy.Rate(10) 
 
     rospy.sleep(0.5)
-    
+
     i = 0
     while not rospy.is_shutdown() and pub.get_num_connections() == 0:
         if i == 4:
@@ -51,6 +51,7 @@ def move_robot():
     start_time = time.time()
 
     try:
+        rospy.loginfo("starting")
         # --- 2. Move Forward ---
         #rospy.loginfo(f"Moving Forward at {LINEAR_SPEED} m/s for {MOTION_DURATION} seconds...")
         
@@ -70,6 +71,8 @@ def move_robot():
         while time.time() - start_time < MOTION_DURATION and not rospy.is_shutdown():
             pub.publish(reverse_twist)
             rate.sleep()
+
+        rospy.loginfo("end")
 
     except rospy.ROSInterruptException:
         pass
