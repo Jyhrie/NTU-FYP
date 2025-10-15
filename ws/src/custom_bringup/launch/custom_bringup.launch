@@ -11,7 +11,25 @@
         <rosparam command="load" file="$(find transbot_bringup)/param/ekf/robot_localization.yaml"/>
     </node>
 
-    <!-- custom_bringup -->
+    <!-- launch astrapro from their launchfile, too much stuff to copy into here, -->
+    <include file="$(find astra_camera)/launch/astrapro.launch"/>
+    <!-- add physical offset to camera-->
+    <node pkg="tf" type="static_transform_publisher" name="base_link_to_camera"
+        args="0.08 0 0.10403 -0.05 0 0  /base_link /camera_link  30"/>
+
+    <!-- launch rplidar node | this publishes /scan -->
+    <node name="rplidarNode" pkg="rplidar_ros" type="rplidarNode" output="screen" respawn="true">
+        <param name="serial_port" type="string" value="/dev/rplidar"/>
+        <param name="serial_baudrate" type="int" value="115200"/>
+        <param name="frame_id" type="string" value="laser"/>
+        <param name="inverted" type="bool" value="false"/>
+        <param name="angle_compensate" type="bool" value="true"/>
+    </node>
+    <!-- add physical offset to lidar-->
+    <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser"
+          args="-0.03 0 0.13 3.1416 0 0  /base_link /laser  30"/>
+
+    <!-- custom bringup -->
     <node pkg="custom_bringup" type="custom_driver.py" name="transbot_node" required="true" output="screen">
         <param name="imu" value="/transbot/imu"/>
         <param name="vel" value="/transbot/get_vel"/>
