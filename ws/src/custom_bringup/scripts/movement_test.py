@@ -26,22 +26,17 @@ def move_robot():
     rospy.sleep(2)
 
     start_time = time.time()
-    while pub.get_num_connections() == 0 and (time.time() - start_time) < 1.0:
-        rospy.loginfo("Waiting for subscriber to connect...")
-        rospy.sleep(0.05)
-
-    if pub.get_num_connections() == 0:
-        rospy.logwarn("No subscriber connected yet, publishing anyway")
-    # i = 0
-    # while not rospy.is_shutdown() and pub.get_num_connections() == 0:
-    #     if i == 4:
-    #         print(pub.get_num_connections())
-    #         print("Waiting for subscriber to connect to {}".format(pub.name))
-    #     rospy.sleep(0.5)
-    #     i += 1
-    #     i = i % 5
-    # if rospy.is_shutdown():
-    #     raise Exception("Got shutdown request before subscribers connected")
+    
+    i = 0
+    while not rospy.is_shutdown() and pub.get_num_connections() == 0:
+        if i == 4:
+            print(pub.get_num_connections())
+            print("Waiting for subscriber to connect to {}".format(pub.name))
+        rospy.sleep(0.5)
+        i += 1
+        i = i % 5
+    if rospy.is_shutdown():
+        raise Exception("Got shutdown request before subscribers connected")
 
     # 1. Initialize Twist messages
     forward_twist = Twist()

@@ -29,14 +29,12 @@ class transbot_driver:
         imu = rospy.get_param("imu", "/transbot/imu")
         vel = rospy.get_param("vel", "/transbot/get_vel")
 
-        self.cmd_vel_subscriber = None
-        self.cmd_vel_topic = "/cmd_vel_custom"
-
         self.CameraDevice = rospy.get_param("CameraDevice", "astra")
         self.linear_max = rospy.get_param('~linear_speed_limit', 0.4)
         self.linear_min = rospy.get_param('~linear_speed_limit', 0.0)
         self.angular_max = rospy.get_param('~angular_speed_limit', 2.0)
         self.angular_min = rospy.get_param('~angular_speed_limit', 0.0)
+        
         self.sub_cmd_vel = rospy.Subscriber("/cmd_vel_custom", Twist, self.cmd_vel_callback, queue_size=10)
         
         #publishers
@@ -140,40 +138,12 @@ class transbot_driver:
             # rospy.loginfo("velocity: {}, angular: {}".format(twist.linear.x, twist.angular.z))
             self.velPublisher.publish(twist)
 
-    def check_cmd_vel_publishers(self):
-        """
-        Check periodically if /cmd_vel_custom has any publishers.
-        Create subscriber if yes, unregister if none.
-        """
-        rate = rospy.Rate(1)  # check 1 Hz
-        while not rospy.is_shutdown():
-            publishers = [t[0] for t in rospy.get_published_topics() if t[0] == self.cmd_vel_topic]
-            if publishers:
-                # Create subscriber if it doesn't exist
-                if self.cmd_vel_subscriber is None:
-                    rospy.sleep(0.5)
-                    rospy.loginfo("Publisher detected on %s, creating subscriber", self.cmd_vel_topic)
-                    self.cmd_vel_subscriber = rospy.Subscriber(self.cmd_vel_topic, Twist, self.cmd_vel_callback, queue_size=10)
-            else:
-                # No publisher, unregister subscriber if exists
-                if self.cmd_vel_subscriber is not None:
-                    rospy.loginfo("No publisher detected on %s, unregistering subscriber", self.cmd_vel_topic)
-                    self.cmd_vel_subscriber.unregister()
-                    self.cmd_vel_subscriber = None
-            rate.sleep()
-    
 
 if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
     try:
         driver = transbot_driver()
-        driver.pub_thread = threading.Thread(target=driver.pub_data)
-        driver.pub_thread.daemon = True
-        driver.pub_thread.start()
-
-        driver.sub_checker_thread = threading.Thread(target=driver.check_cmd_vel_publishers)
-        driver.sub_checker_thread.daemon = True
-        driver.sub_checker_thread.start()
+        driver.pub_data()
 
         rospy.spin()
     except Exception as e:
