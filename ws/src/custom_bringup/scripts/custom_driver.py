@@ -35,8 +35,13 @@ class transbot_driver:
         self.angular_max = rospy.get_param('~angular_speed_limit', 2.0)
         self.angular_min = rospy.get_param('~angular_speed_limit', 0.0)
         self.sub_cmd_vel = rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=10)
+
+        #publishers
         self.velPublisher = rospy.Publisher(vel, Twist, queue_size=10)
         self.imuPublisher = rospy.Publisher(imu, Imu, queue_size=10)
+        self.ediPublisher = rospy.Publisher('/edition', Edition, queue_size=10)
+        self.volPublisher = rospy.Publisher("/voltage", Battery, queue_size=10)
+
         self.dyn_server = Server(PIDparamConfig, self.dynamic_reconfigure_callback)
         self.bot.create_receive_threading()
         self.bot.set_uart_servo_angle(9, 90)
@@ -93,6 +98,42 @@ class transbot_driver:
         self.angular_max = config['angular_max']
         self.angular_min = config['angular_min']
         return config
+    
+    def pub_data(self):
+        # 发布小车运动速度、陀螺仪数据、电池电压
+	    ## Publish the speed of the car, gyroscope data, and battery voltage
+        while not rospy.is_shutdown():
+            sleep(0.05)
+            ax, ay, az = self.bot.get_accelerometer_data()
+            gx, gy, gz = self.bot.get_gyroscope_data()
+            velocity, angular = self.bot.get_motion_data()
+            voltage = self.bot.get_battery_voltage()
+            battery = Battery()
+            battery.Voltage = voltage
+            self.volPublisher.publish(battery)
+            robot_edition = self.bot.get_version()
+            edition = Edition()
+            edition.edition = robot_edition
+            self.ediPublisher.publish(edition)
+            # rospy.loginfo("battery: {}".format(battery))
+            # 发布陀螺仪的数据
+	        # Publish gyroscope data
+            imu = Imu()
+            imu.linear_acceleration.x = ax
+            imu.linear_acceleration.y = ay
+            imu.linear_acceleration.z = az
+            imu.angular_velocity.x = gx
+            imu.angular_velocity.y = gy
+            imu.angular_velocity.z = gz
+            self.imuPublisher.publish(imu)
+            # 将小车当前的线速度和角速度发布出去
+	        # Publish the current linear velocity and angular velocity of the car
+            twist = Twist()
+            twist.linear.x = velocity
+            twist.angular.z = angular
+            # print(ax, ay, az, gx, gy, gz)
+            # rospy.loginfo("velocity: {}, angular: {}".format(twist.linear.x, twist.angular.z))
+            self.velPublisher.publish(twist)
 
 if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
