@@ -27,7 +27,7 @@ def move_robot():
     while not rospy.is_shutdown() and pub.get_num_connections() == 0:
         if i == 4:
             print("Waiting for subscriber to connect to {}".format(pub.name))
-        rospy.sleep(0.5)
+        time.sleep(0.5)
         i += 1
         i = i % 5
     if rospy.is_shutdown():
