@@ -47,15 +47,27 @@ class transbot_driver:
 
     def bind_subscribers_to_publishers(self):
         while not rospy.is_shutdown():
-            if hasattr(self, 'sub_cmd_vel') and self.sub_cmd_vel.get_num_connections() > 0:
-                rospy.loginfo("/cmd_vel already has a publisher connected. Subscriber bound.")
+
+            published_topics = [topic for topic, _ in rospy.get_published_topics()]
+            has_publisher = "/cmd_vel" in published_topics
+
+            # Case 1: Publisher exists AND subscriber is None → create subscriber
+            if has_publisher and not hasattr(self, 'sub_cmd_vel') or self.sub_cmd_vel is None:
+                self.sub_cmd_vel = rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=10)
+                rospy.loginfo("Subscriber to /cmd_vel created as publisher exists.")
+
+            # Case 2: No publisher AND subscriber exists → remove subscriber
+            elif not has_publisher and hasattr(self, 'sub_cmd_vel') and self.sub_cmd_vel is not None:
+                self.sub_cmd_vel.unregister()  # unsubscribe cleanly
+                self.sub_cmd_vel = None
+                rospy.loginfo("No publisher on /cmd_vel, subscriber removed.")
+
+            # Case 3: No publisher AND subscriber is None → break loop
+            elif not has_publisher and (not hasattr(self, 'sub_cmd_vel') or self.sub_cmd_vel is None):
+                rospy.loginfo("No publisher and no subscriber, exiting loop.")
                 break
 
-            # If subscriber doesn't exist, create it
-            if not hasattr(self, 'sub_cmd_vel'):
-                self.sub_cmd_vel = rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=10)
-                rospy.loginfo("Created subscriber for /cmd_vel, waiting for publisher...")
-
+            # Sleep a bit before next check
             rospy.sleep(0.5)
 
     def cancel(self):
@@ -117,7 +129,6 @@ class transbot_driver:
 	    ## Publish the speed of the car, gyroscope data, and battery voltage
         while not rospy.is_shutdown():
             sleep(0.05)
-            rospy.loginfo("publishing data")
             ax, ay, az = self.bot.get_accelerometer_data()
             gx, gy, gz = self.bot.get_gyroscope_data()
             velocity, angular = self.bot.get_motion_data()
