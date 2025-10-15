@@ -17,6 +17,9 @@ def move_robot():
     move the robot forward for a duration, stop, and then reverse for a duration.
     """
     rospy.init_node(NODE_NAME, anonymous=True)
+    rospy.loginfo("--- Python Version Check ---")
+    rospy.loginfo("Running with Python: {}".format(sys.version.split('\n')[0]))
+    rospy.loginfo("----------------------------")
     pub = rospy.Publisher(TOPIC_NAME, Twist, queue_size=1)
     rate = rospy.Rate(10) # 10hz publishing rate (optional, but good practice)
 
@@ -76,9 +79,6 @@ def move_robot():
 
 if __name__ == '__main__':
     try:
-        rospy.loginfo("--- Python Version Check ---")
-        rospy.loginfo("Running with Python: {}".format(sys.version.split('\n')[0]))
-        rospy.loginfo("----------------------------")
         move_robot()
     except rospy.ROSInterruptException:
         pass
