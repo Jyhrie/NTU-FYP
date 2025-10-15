@@ -163,11 +163,11 @@ if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
     try:
         driver = transbot_driver()
-        driver.pub_thread = threading.Thread(target=self.pub_data)
+        driver.pub_thread = threading.Thread(target=driver.pub_data)
         driver.pub_thread.daemon = True
         driver.pub_thread.start()
 
-        driver.sub_checker_thread = threading.Thread(target=self.check_cmd_vel_publishers)
+        driver.sub_checker_thread = threading.Thread(target=driver.check_cmd_vel_publishers)
         driver.sub_checker_thread.daemon = True
         driver.sub_checker_thread.start()
 
