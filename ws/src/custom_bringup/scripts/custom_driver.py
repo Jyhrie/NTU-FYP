@@ -90,6 +90,7 @@ class transbot_driver:
             angular = self.angular_min
         # rospy.loginfo("cmd_vel: {}, cmd_ang: {}".format(velocity, angular))
         self.bot.set_car_motion(velocity, angular)
+        print("callback fired")
 
     def dynamic_reconfigure_callback(self, config, level):
         # self.bot.set_pid_param(config['Kp'], config['Ki'], config['Kd'])
@@ -135,7 +136,7 @@ class transbot_driver:
             # print(ax, ay, az, gx, gy, gz)
             # rospy.loginfo("velocity: {}, angular: {}".format(twist.linear.x, twist.angular.z))
             self.velPublisher.publish(twist)
-            print("callback fired")
+    
 
 if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
