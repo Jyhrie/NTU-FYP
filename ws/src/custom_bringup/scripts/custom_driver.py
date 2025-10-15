@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 sys.path.append("/home/jetson/Transbot/transbot")
 import rospy
