@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding: utf-8
 
 import sys
 sys.path.append("/home/jetson/Transbot/transbot")
