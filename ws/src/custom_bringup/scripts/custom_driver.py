@@ -136,16 +136,18 @@ class transbot_driver:
             # print(ax, ay, az, gx, gy, gz)
             # rospy.loginfo("velocity: {}, angular: {}".format(twist.linear.x, twist.angular.z))
             self.velPublisher.publish(twist)
+
+    def loop(self):
+        while not rospy.is_shutdown():
+            sleep(0.5)
+            print("looping")
     
 
 if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
     try:
         driver = transbot_driver()
-        # Start pub_data in its own thread
-        pub_thread = threading.Thread(target=driver.pub_data)
-        pub_thread.daemon = True
-        pub_thread.start()
+        driver.pub_data()
 
         rospy.spin()
     except Exception as e:
