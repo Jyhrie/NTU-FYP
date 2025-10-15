@@ -42,16 +42,16 @@ class transbot_driver:
         self.bot.set_uart_servo_angle(9, 90)
 
     def cancel(self):
-        self.srv_CurrentAngle.shutdown()
-        self.srv_RGBLight.shutdown()
-        self.srv_Buzzer.shutdown()
-        self.srv_Headlight.shutdown()
+        # self.srv_CurrentAngle.shutdown()
+        # self.srv_RGBLight.shutdown()
+        # self.srv_Buzzer.shutdown()
+        # self.srv_Headlight.shutdown()
         self.velPublisher.unregister()
         self.imuPublisher.unregister()
-        self.volPublisher.unregister()
+        # self.volPublisher.unregister()
         self.sub_cmd_vel.unregister()
-        self.sub_TargetAngle.unregister()
-        self.sub_PWMServo.unregister()
+        # self.sub_TargetAngle.unregister()
+        # self.sub_PWMServo.unregister()
         # Always stop the robot when shutting down the node
         rospy.loginfo("Close the robot...")
         rospy.sleep(1)
