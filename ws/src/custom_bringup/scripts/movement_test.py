@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+
 import rospy
 from geometry_msgs.msg import Twist
 import time
+import sys
 
 # --- Configuration ---
 LINEAR_SPEED = 0.5  # meters/second
@@ -68,6 +70,9 @@ def move_robot():
 
 if __name__ == '__main__':
     try:
+        rospy.loginfo("--- Python Version Check ---")
+        rospy.loginfo("Running with Python: {}".format(sys.version.split('\n')[0]))
+        rospy.loginfo("----------------------------")
         move_robot()
     except rospy.ROSInterruptException:
         pass
