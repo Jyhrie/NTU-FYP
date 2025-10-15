@@ -23,17 +23,17 @@ def move_robot():
     pub = rospy.Publisher(TOPIC_NAME, Twist, queue_size=1)
     rate = rospy.Rate(10) # 10hz publishing rate (optional, but good practice)
 
-    # *** THE CRITICAL CHANGE: Use wait_for_connection() ***
-    rospy.loginfo("Waiting indefinitely for a subscriber to connect to {}...".format(TOPIC_NAME))
-    try:
-        # This function blocks until a subscriber is connected.
-        # This is the most reliable ROS method for this purpose.
-        pub.wait_for_subscribers()
-        rospy.loginfo("Subscriber connected! Starting motion sequence.")
-    except rospy.ROSInterruptException:
-        # Allows the script to exit gracefully if Ctrl+C is pressed while waiting.
-        rospy.logwarn("Script interrupted while waiting for connection.")
-        return # Exit the function if interrupted
+    # # *** THE CRITICAL CHANGE: Use wait_for_connection() ***
+    # rospy.loginfo("Waiting indefinitely for a subscriber to connect to {}...".format(TOPIC_NAME))
+    # try:
+    #     # This function blocks until a subscriber is connected.
+    #     # This is the most reliable ROS method for this purpose.
+    #     pub.wait_for_subscribers()
+    #     rospy.loginfo("Subscriber connected! Starting motion sequence.")
+    # except rospy.ROSInterruptException:
+    #     # Allows the script to exit gracefully if Ctrl+C is pressed while waiting.
+    #     rospy.logwarn("Script interrupted while waiting for connection.")
+    #     return # Exit the function if interrupted
 
     # 1. Initialize Twist messages
     forward_twist = Twist()
