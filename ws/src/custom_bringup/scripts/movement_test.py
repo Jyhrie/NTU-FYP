@@ -16,17 +16,17 @@ def move_robot():
     Initializes a ROS node and publishes Twist messages to
     move the robot forward for a duration, stop, and then reverse for a duration.
     """
-    rospy.init_node(NODE_NAME, anonymous=True)
+    rospy.init_node(NODE_NAME, anonymous=False)
     rospy.loginfo("--- Python Version Check ---")
     rospy.loginfo("Running with Python: {}".format(sys.version.split('\n')[0]))
     rospy.loginfo("----------------------------")
-    pub = rospy.Publisher(TOPIC_NAME, Twist, queue_size=1)
+    pub = rospy.Publisher(TOPIC_NAME, Twist, queue_size=1, latch=True)
     rate = rospy.Rate(10) 
 
     rospy.sleep(2)
 
     start_time = time.time()
-    
+
     i = 0
     while not rospy.is_shutdown() and pub.get_num_connections() == 0:
         if i == 4:
