@@ -28,7 +28,7 @@ def move_robot():
     try:
         # This function blocks until a subscriber is connected.
         # This is the most reliable ROS method for this purpose.
-        pub.wait_for_connection()
+        pub.wait_for_subscribers()
         rospy.loginfo("Subscriber connected! Starting motion sequence.")
     except rospy.ROSInterruptException:
         # Allows the script to exit gracefully if Ctrl+C is pressed while waiting.
