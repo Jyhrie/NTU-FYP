@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/jetson/fyp/ws/devel/setup.sh
