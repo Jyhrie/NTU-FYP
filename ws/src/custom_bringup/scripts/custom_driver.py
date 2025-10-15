@@ -151,7 +151,7 @@ class transbot_driver:
             if publishers:
                 # Create subscriber if it doesn't exist
                 if self.cmd_vel_subscriber is None:
-                    rospy.sleep(3)
+                    rospy.sleep(0.5)
                     rospy.loginfo("Publisher detected on %s, creating subscriber", self.cmd_vel_topic)
                     self.cmd_vel_subscriber = rospy.Subscriber(self.cmd_vel_topic, Twist, self.cmd_vel_callback, queue_size=10)
             else:
