@@ -9,7 +9,7 @@ import sys
 LINEAR_SPEED = 0.5  # meters/second
 MOTION_DURATION = 0.5 # seconds for each motion (forward and reverse)
 NODE_NAME = 'simple_motion_publisher'
-TOPIC_NAME = 'cmd_vel'
+TOPIC_NAME = '/cmd_vel'
 
 def move_robot():
     """
