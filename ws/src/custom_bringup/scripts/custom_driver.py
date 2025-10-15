@@ -29,6 +29,9 @@ class transbot_driver:
         imu = rospy.get_param("imu", "/transbot/imu")
         vel = rospy.get_param("vel", "/transbot/get_vel")
 
+        self.cmd_vel_subscriber = None
+        self.cmd_vel_topic = "/cmd_vel_custom"
+
         self.CameraDevice = rospy.get_param("CameraDevice", "astra")
         self.linear_max = rospy.get_param('~linear_speed_limit', 0.4)
         self.linear_min = rospy.get_param('~linear_speed_limit', 0.0)
