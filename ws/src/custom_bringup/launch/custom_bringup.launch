@@ -1,0 +1,8 @@
+<launch>
+    <!-- Launch the base_node from transbot_bringup -->
+    <node pkg="transbot_bringup" type="base_node" name="base_node" output="screen">
+        <!-- You can add parameters here if needed, for example:
+        <param name="param_name" value="param_value"/>
+        -->
+    </node>
+</launch>
