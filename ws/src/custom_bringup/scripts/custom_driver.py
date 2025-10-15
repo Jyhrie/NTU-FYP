@@ -34,8 +34,7 @@ class transbot_driver:
         self.linear_min = rospy.get_param('~linear_speed_limit', 0.0)
         self.angular_max = rospy.get_param('~angular_speed_limit', 2.0)
         self.angular_min = rospy.get_param('~angular_speed_limit', 0.0)
-        self.sub_cmd_vel = rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=10)
-
+        
         #publishers
         self.velPublisher = rospy.Publisher(vel, Twist, queue_size=10)
         self.imuPublisher = rospy.Publisher(imu, Imu, queue_size=10)
@@ -45,6 +44,19 @@ class transbot_driver:
         self.dyn_server = Server(PIDparamConfig, self.dynamic_reconfigure_callback)
         self.bot.create_receive_threading()
         self.bot.set_uart_servo_angle(9, 90)
+
+    def bind_subscribers_to_publishers(self):
+        while not rospy.is_shutdown():
+            if hasattr(self, 'sub_cmd_vel') and self.sub_cmd_vel.get_num_connections() > 0:
+                rospy.loginfo("/cmd_vel already has a publisher connected. Subscriber bound.")
+                break
+
+            # If subscriber doesn't exist, create it
+            if not hasattr(self, 'sub_cmd_vel'):
+                self.sub_cmd_vel = rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=10)
+                rospy.loginfo("Created subscriber for /cmd_vel, waiting for publisher...")
+
+            rospy.sleep(0.5)
 
     def cancel(self):
         # self.srv_CurrentAngle.shutdown()
@@ -60,6 +72,7 @@ class transbot_driver:
         # Always stop the robot when shutting down the node
         rospy.loginfo("Close the robot...")
         rospy.sleep(1)
+
 
     def cmd_vel_callback(self, msg):
         # 小车运动控制，订阅者回调函数
@@ -104,6 +117,7 @@ class transbot_driver:
 	    ## Publish the speed of the car, gyroscope data, and battery voltage
         while not rospy.is_shutdown():
             sleep(0.05)
+            rospy.loginfo("publishing data")
             ax, ay, az = self.bot.get_accelerometer_data()
             gx, gy, gz = self.bot.get_gyroscope_data()
             velocity, angular = self.bot.get_motion_data()
@@ -139,8 +153,17 @@ if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
     try:
         driver = transbot_driver()
-        
-        driver.pub_data()
+
+        # Start bind_subscribers_to_publishers in its own thread
+        sub_thread = threading.Thread(target=driver.bind_subscribers_to_publishers)
+        sub_thread.daemon = True  # allows thread to exit when main thread exits
+        sub_thread.start()
+
+        # Start pub_data in its own thread
+        pub_thread = threading.Thread(target=driver.pub_data)
+        pub_thread.daemon = True
+        pub_thread.start()
+
         rospy.spin()
     except Exception as e:
         rospy.loginfo(e)
