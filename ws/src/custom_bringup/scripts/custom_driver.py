@@ -34,7 +34,7 @@ class transbot_driver:
         self.linear_min = rospy.get_param('~linear_speed_limit', 0.0)
         self.angular_max = rospy.get_param('~angular_speed_limit', 2.0)
         self.angular_min = rospy.get_param('~angular_speed_limit', 0.0)
-        
+
         self.sub_cmd_vel = rospy.Subscriber("/cmd_vel_custom", Twist, self.cmd_vel_callback, queue_size=10)
         
         #publishers
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
     try:
         driver = transbot_driver()
-        driver.pub_data()
+        #driver.pub_data()
 
         rospy.spin()
     except Exception as e:
