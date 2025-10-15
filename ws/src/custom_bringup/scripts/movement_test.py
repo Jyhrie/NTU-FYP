@@ -40,7 +40,7 @@ def move_robot():
 
     try:
         # --- 2. Move Forward ---
-        rospy.loginfo(f"Moving Forward at {LINEAR_SPEED} m/s for {MOTION_DURATION} seconds...")
+        #rospy.loginfo(f"Moving Forward at {LINEAR_SPEED} m/s for {MOTION_DURATION} seconds...")
         
         while time.time() - start_time < MOTION_DURATION and not rospy.is_shutdown():
             pub.publish(forward_twist)
@@ -52,7 +52,7 @@ def move_robot():
         time.sleep(0.1) # Brief pause before reverse motion
 
         # --- 4. Move Reverse ---
-        rospy.loginfo(f"Moving Reverse at {-LINEAR_SPEED} m/s for {MOTION_DURATION} seconds...")
+        #rospy.loginfo(f"Moving Reverse at {-LINEAR_SPEED} m/s for {MOTION_DURATION} seconds...")
         start_time = time.time() # Reset timer for reverse motion
 
         while time.time() - start_time < MOTION_DURATION and not rospy.is_shutdown():
