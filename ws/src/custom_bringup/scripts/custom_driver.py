@@ -91,5 +91,6 @@ if __name__ == '__main__':
         driver = transbot_driver()
         driver.pub_data()
         rospy.spin()
-    except:
+    except Exception as e:
+        rospy.loginfo(e)
         rospy.loginfo("Final!!!")
