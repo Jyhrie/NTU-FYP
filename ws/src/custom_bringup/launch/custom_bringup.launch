@@ -12,7 +12,7 @@
     </node>
 
     <!-- custom_bringup -->
-    <node pkg="custom_bringup" type="custom_bringup.py" name="transbot_node" required="true" output="screen">
+    <node pkg="custom_bringup" type="custom_driver.py" name="transbot_node" required="true" output="screen">
         <param name="imu" value="/transbot/imu"/>
         <param name="vel" value="/transbot/get_vel"/>
     </node>
