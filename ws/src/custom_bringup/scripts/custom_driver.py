@@ -13,6 +13,7 @@ from transbot_msgs.srv import *
 from sensor_msgs.msg import Imu
 from Transbot_Lib import Transbot
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 from arm_transbot import Transbot_ARM
 from dynamic_reconfigure.server import Server
 from transbot_bringup.cfg import PIDparamConfig
@@ -36,6 +37,7 @@ class transbot_driver:
         self.angular_min = rospy.get_param('~angular_speed_limit', 0.0)
 
         self.sub_cmd_vel = rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=10)
+        self.odom = rospy.Subscriber("/odom", Twist, self.odom_callback, queue_size=10)
         
         #publishers
         self.velPublisher = rospy.Publisher(vel, Twist, queue_size=10)
@@ -61,6 +63,33 @@ class transbot_driver:
         # Always stop the robot when shutting down the node
         rospy.loginfo("Close the robot...")
         rospy.sleep(1)
+
+    def odom_callback(msg):
+        # Print basic info
+        print("Timestamp:", msg.header.stamp)
+        print("Frame:", msg.header.frame_id)
+        print("Child frame:", msg.child_frame_id)
+        print("Position: x=%.2f, y=%.2f, z=%.2f" % (
+            msg.pose.pose.position.x,
+            msg.pose.pose.position.y,
+            msg.pose.pose.position.z
+        ))
+        print("Orientation: x=%.2f, y=%.2f, z=%.2f, w=%.2f" % (
+            msg.pose.pose.orientation.x,
+            msg.pose.pose.orientation.y,
+            msg.pose.pose.orientation.z,
+            msg.pose.pose.orientation.w
+        ))
+        print("Linear velocity: x=%.2f, y=%.2f, z=%.2f" % (
+            msg.twist.twist.linear.x,
+            msg.twist.twist.linear.y,
+            msg.twist.twist.linear.z
+        ))
+        print("Angular velocity: x=%.2f, y=%.2f, z=%.2f\n" % (
+            msg.twist.twist.angular.x,
+            msg.twist.twist.angular.y,
+            msg.twist.twist.angular.z
+        ))
 
 
     def cmd_vel_callback(self, msg):
