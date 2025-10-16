@@ -37,7 +37,7 @@ class transbot_driver:
         self.angular_min = rospy.get_param('~angular_speed_limit', 0.0)
 
         self.sub_cmd_vel = rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=10)
-        self.odom = rospy.Subscriber("/odom", Twist, self.odom_callback, queue_size=10)
+        self.odom = rospy.Subscriber("/odom", Odometry, self.odom_callback, queue_size=10)
         
         #publishers
         self.velPublisher = rospy.Publisher(vel, Twist, queue_size=10)
