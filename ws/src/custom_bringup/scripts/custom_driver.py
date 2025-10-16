@@ -48,6 +48,7 @@ class transbot_driver:
         self.dyn_server = Server(PIDparamConfig, self.dynamic_reconfigure_callback)
         self.bot.create_receive_threading()
         self.bot.set_uart_servo_angle(9, 90)
+        print("initilzation complete")
 
     def cancel(self):
         # self.srv_CurrentAngle.shutdown()
