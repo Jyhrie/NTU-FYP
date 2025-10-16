@@ -1,22 +1,23 @@
 <launch>
-    <!-- base node -->
+    <!-- base node from -->
     <node pkg="transbot_bringup" name="base_node" type="base_node">
         <param name="linear_scale" type="double" value="1.2"/>
-        <param name="is_multi_robot" type="bool" value="false"/>
+        <param name="is_multi_robot"  type="bool" value="false"/>
     </node>
 
-    <!-- EKF -->
+    <!-- enable ekf -->
     <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization">
         <remap from="odometry/filtered" to="odom"/>
         <rosparam command="load" file="$(find transbot_bringup)/param/ekf/robot_localization.yaml"/>
     </node>
 
-    <!-- Astra camera -->
+    <!-- launch astrapro from their launchfile, too much stuff to copy into here, -->
     <include file="$(find astra_camera)/launch/astrapro.launch"/>
+    <!-- add physical offset to camera-->
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_camera"
-          args="0.08 0 0.10403 -0.05 0 0 base_link camera_link 30"/>
+        args="0.08 0 0.10403 -0.05 0 0  /base_link /camera_link  30"/>
 
-    <!-- RPLIDAR -->
+    <!-- launch rplidar node | this publishes /scan -->
     <node name="rplidarNode" pkg="rplidar_ros" type="rplidarNode" output="screen" respawn="true">
         <param name="serial_port" type="string" value="/dev/rplidar"/>
         <param name="serial_baudrate" type="int" value="115200"/>
@@ -24,32 +25,13 @@
         <param name="inverted" type="bool" value="false"/>
         <param name="angle_compensate" type="bool" value="true"/>
     </node>
+    <!-- add physical offset to lidar-->
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser"
-          args="-0.03 0 0.13 3.1416 0 0 base_link laser 30"/>
+          args="-0.03 0 0.13 3.1416 0 0  /base_link /laser  30"/>
 
-    <!-- Custom driver -->
+    <!-- custom bringup -->
     <node pkg="custom_bringup" type="custom_driver.py" name="transbot_node" required="true" output="screen">
         <param name="imu" value="/transbot/imu"/>
         <param name="vel" value="/transbot/get_vel"/>
     </node>
-
-    <!-- carto stuff
-    <node name="cartographer_node"
-          pkg="cartographer_ros"
-          type="cartographer_node"
-          args="-configuration_directory /opt/ros/melodic/share/cartographer_ros/configuration_files -configuration_basename transbot.lua"
-          output="screen">
-        <remap from="scan" to="/scan"/>
-        <remap from="odom" to="/odom"/>
-    </node>
-
-    <node name="cartographer_occupancy_grid_node"
-          pkg="cartographer_ros"
-          type="cartographer_occupancy_grid_node"
-          args="-resolution 0.05"
-          output="screen"/>
-
-    <node pkg="tf" type="static_transform_publisher" name="base_link_to_base_footprint"
-          args="0 0 0 0 0 0 base_link base_footprint 30"/>
-    -->
 </launch>
