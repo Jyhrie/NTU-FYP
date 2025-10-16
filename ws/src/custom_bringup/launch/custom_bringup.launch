@@ -33,7 +33,7 @@
         <param name="vel" value="/transbot/get_vel"/>
     </node>
 
-    <!-- Cartographer SLAM -->
+    <!-- carto stuff
     <node name="cartographer_node"
           pkg="cartographer_ros"
           type="cartographer_node"
@@ -49,7 +49,7 @@
           args="-resolution 0.05"
           output="screen"/>
 
-    <!-- Base link footprint -->
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_base_footprint"
           args="0 0 0 0 0 0 base_link base_footprint 30"/>
+    -->
 </launch>
