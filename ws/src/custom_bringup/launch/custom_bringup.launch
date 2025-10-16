@@ -1,5 +1,4 @@
 <launch>
-  
     <!-- custom bringup -->
     <node pkg="custom_bringup" type="custom_driver.py" name="transbot_node" required="true" output="screen">
         <param name="imu" value="/transbot/imu"/>

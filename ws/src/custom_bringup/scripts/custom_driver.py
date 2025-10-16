@@ -172,7 +172,8 @@ if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
     try:
         driver = transbot_driver()
-        driver.pub_data()
+        t = threading.Thread(target=driver.pub_data)
+        t.start()
 
         rospy.spin()
     except Exception as e:
