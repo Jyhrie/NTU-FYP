@@ -6,13 +6,13 @@
     </node>
 
     <!-- base node from -->
-    <node pkg="transbot_bringup" name="base_node" type="base_node" launch-prefix="bash -c 'sleep 2; exec'">
+    <node pkg="transbot_bringup" name="base_node" type="base_node">
         <param name="linear_scale" type="double" value="1.2"/>
         <param name="is_multi_robot"  type="bool" value="false"/>
     </node>
 
     <!-- enable ekf -->
-    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization" launch-prefix="bash -c 'sleep 4; exec'">
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization">
         <remap from="odometry/filtered" to="odom"/>
         <rosparam command="load" file="$(find transbot_bringup)/param/ekf/robot_localization.yaml"/>
     </node>
