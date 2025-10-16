@@ -1,10 +1,4 @@
 <launch>
-    <!-- custom bringup -->
-    <node pkg="custom_bringup" type="custom_driver.py" name="transbot_node" required="true" output="screen">
-        <param name="imu" value="/transbot/imu"/>
-        <param name="vel" value="/transbot/get_vel"/>
-    </node>
-
     <!-- base node from -->
     <node pkg="transbot_bringup" name="base_node" type="base_node">
         <param name="linear_scale" type="double" value="1.2"/>
@@ -34,6 +28,13 @@
     <!-- add physical offset to lidar-->
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser"
           args="-0.03 0 0.13 3.1416 0 0  /base_link /laser  30"/>
+
+    <!-- custom bringup -->
+    <node pkg="custom_bringup" type="custom_driver.py" name="transbot_node" required="true" output="screen">
+        <param name="imu" value="/transbot/imu"/>
+        <param name="vel" value="/transbot/get_vel"/>
+    </node>
+
 
 
 </launch>

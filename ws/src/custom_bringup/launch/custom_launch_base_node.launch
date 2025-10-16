@@ -1,0 +1,7 @@
+    <launch>
+    <node pkg="transbot_bringup" name="base_node" type="base_node">
+        <param name="linear_scale" type="double" value="1.2"/>
+        <param name="is_multi_robot"  type="bool" value="false"/>
+    </node>
+    </launch>
+    
