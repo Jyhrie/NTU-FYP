@@ -38,6 +38,9 @@ class transbot_driver:
 
         self.sub_cmd_vel = rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=10)
         self.odom = rospy.Subscriber("/odom", Odometry, self.odom_callback, queue_size=10)
+
+        #robotic arm
+        self.sub_TargetAngle = rospy.Subscriber("/TargetAngle", Arm, self.sub_armcallback, queue_size=10)
         
         #publishers
         self.velPublisher = rospy.Publisher(vel, Twist, queue_size=10)
@@ -66,32 +69,7 @@ class transbot_driver:
         rospy.sleep(1)
 
     def odom_callback(self, msg):
-        # Print basic info
-        print("Timestamp:", msg.header.stamp)
-        print("Frame:", msg.header.frame_id)
-        print("Child frame:", msg.child_frame_id)
-        print("Position: x=%.2f, y=%.2f, z=%.2f" % (
-            msg.pose.pose.position.x,
-            msg.pose.pose.position.y,
-            msg.pose.pose.position.z
-        ))
-        print("Orientation: x=%.2f, y=%.2f, z=%.2f, w=%.2f" % (
-            msg.pose.pose.orientation.x,
-            msg.pose.pose.orientation.y,
-            msg.pose.pose.orientation.z,
-            msg.pose.pose.orientation.w
-        ))
-        print("Linear velocity: x=%.2f, y=%.2f, z=%.2f" % (
-            msg.twist.twist.linear.x,
-            msg.twist.twist.linear.y,
-            msg.twist.twist.linear.z
-        ))
-        print("Angular velocity: x=%.2f, y=%.2f, z=%.2f\n" % (
-            msg.twist.twist.angular.x,
-            msg.twist.twist.angular.y,
-            msg.twist.twist.angular.z
-        ))
-
+        pass
 
     def cmd_vel_callback(self, msg):
         # 小车运动控制，订阅者回调函数
@@ -167,6 +145,15 @@ class transbot_driver:
             # print(ax, ay, az, gx, gy, gz)
             # rospy.loginfo("velocity: {}, angular: {}".format(twist.linear.x, twist.angular.z))
             self.velPublisher.publish(twist)
+
+    def sub_armcallback(self, msg):
+        # 机械臂控制，订阅者回调函数
+	    # Robotic arm control, subscriber callback function
+        if not isinstance(msg, Arm): return
+        for joint in msg.joint:
+            if not isinstance(joint, Joint): continue
+            # print "joint: ", joint
+            if joint.run_time != 0: self.bot.set_uart_servo_angle(joint.id, joint.angle, joint.run_time)
 
 
 if __name__ == '__main__':
