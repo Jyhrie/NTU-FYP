@@ -1,0 +1,3 @@
+roslaunch custom_bringup custom_bringup.launch
+
+rosrun custom_bringup movement_test.py

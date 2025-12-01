@@ -65,7 +65,7 @@ class transbot_driver:
         rospy.loginfo("Close the robot...")
         rospy.sleep(1)
 
-    def odom_callback(msg):
+    def odom_callback(self, msg):
         # Print basic info
         print("Timestamp:", msg.header.stamp)
         print("Frame:", msg.header.frame_id)
