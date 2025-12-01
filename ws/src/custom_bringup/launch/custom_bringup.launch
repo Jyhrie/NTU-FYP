@@ -5,6 +5,18 @@
         <param name="vel" value="/transbot/get_vel"/>
     </node>
 
+    <!-- enable ekf -->
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization">
+        <remap from="odometry/filtered" to="odom"/>
+        <rosparam command="load" file="$(find transbot_bringup)/param/ekf/robot_localization.yaml"/>
+    </node>
+
+    <!-- launch base node-->
+    <!-- <node pkg="transbot_bringup" name="base_node" type="base_node">
+        <param name="linear_scale" type="double" value="1.2"/>
+        <param name="is_multi_robot"  type="bool" value="false"/>
+    </node> -->
+
     <!-- launch astrapro from their launchfile, too much stuff to copy into here, -->
     <include file="$(find astra_camera)/launch/astrapro.launch"/>
     <!-- add physical offset to camera-->
@@ -22,9 +34,4 @@
     <!-- add physical offset to lidar-->
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser"
           args="-0.03 0 0.13 3.1416 0 0  /base_link /laser  30"/>
-
-
-
-
-
 </launch>
