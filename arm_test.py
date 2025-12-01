@@ -44,7 +44,7 @@ def move_arm():
         # Joint 1: Lift the main arm (ID 7)
         j7 = Joint()
         j7.id = 7
-        j7.angle = 40 # Middle position
+        j7.angle = 160 # Middle position
         j7.run_time = 2000 
         
         # Joint 2: Close the claw (ID 9)
