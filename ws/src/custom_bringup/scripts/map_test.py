@@ -17,7 +17,7 @@ CMD_TOPIC = '/cmd_vel'
 SCAN_TOPIC = '/scan'
 MAP_TOPIC = '/map'
 
-# threshold to detect unexplored/unknown space in map (-1 = unknown)
+# Threshold to detect unknown space in map (-1 = unknown)
 UNKNOWN_THRESHOLD = -1
 MAP_EDGE_MARGIN = 0.2  # meters
 
@@ -49,18 +49,17 @@ class HugWallMap:
         if self.map_data is None:
             return False  # treat as safe if map not ready
 
-        # Convert margin in meters to map cells
         resolution = self.map_data.info.resolution
         width = self.map_data.info.width
         height = self.map_data.info.height
 
-        # Robot is assumed at the center of the map grid for simplicity
+        # Assume robot is at center of map grid
         cx = int(width / 2)
         cy = int(height / 2)
 
         margin_cells = int(MAP_EDGE_MARGIN / resolution)
         
-        # Check a column of cells ahead
+        # Check a small rectangle of cells ahead
         for dx in range(0, margin_cells):
             cell_index = (cy * width) + (cx + dx)
             if 0 <= cell_index < len(self.map_data.data):
@@ -74,18 +73,29 @@ class HugWallMap:
                 self.rate.sleep()
                 continue
 
-            # --- LIDAR distances ---
-            scan_len = len(self.scan.ranges)
-            right_index = int(scan_len * 0.25)       # 90 deg to right
-            front_index = int(scan_len * 0.0)        # 0 deg = front
+            # --- Filter LIDAR ranges ---
+            valid_ranges = [r for r in self.scan.ranges if not (math.isinf(r) or math.isnan(r))]
+            scan_len = len(valid_ranges)
+            if scan_len == 0:
+                rospy.logwarn("No valid LIDAR data")
+                self.rate.sleep()
+                continue
 
-            right_dist = min(self.scan.ranges[right_index-2:right_index+2])
-            front_dist = min(self.scan.ranges[front_index-2:front_index+2])
+            # --- Indices for front and right ---
+            right_index = int(scan_len * 0.25)       # ~90 deg right
+            front_index = int(scan_len * 0.0)        # 0 deg front
+
+            # Safe slicing to avoid index errors
+            right_slice = valid_ranges[max(0,right_index-2):min(scan_len,right_index+3)]
+            front_slice = valid_ranges[max(0,front_index-2):min(scan_len,front_index+3)]
+
+            right_dist = min(right_slice) if right_slice else float('inf')
+            front_dist = min(front_slice) if front_slice else float('inf')
 
             # --- Wall-following logic ---
             map_edge_ahead = self.check_map_ahead()
 
-            if front_dist < DESIRED_DISTANCE or map_edge_ahead:  
+            if front_dist < DESIRED_DISTANCE or map_edge_ahead:
                 # Obstacle ahead OR approaching unknown map edge
                 self.twist.linear.x = 0.0
                 self.twist.angular.z = ANGULAR_SPEED  # turn left
@@ -93,7 +103,7 @@ class HugWallMap:
                 # Move forward
                 self.twist.linear.x = LINEAR_SPEED
                 error = DESIRED_DISTANCE - right_dist
-                self.twist.angular.z = error * 1.5
+                self.twist.angular.z = error * 1.5  # P-controller
 
             self.cmd_pub.publish(self.twist)
             self.rate.sleep()
