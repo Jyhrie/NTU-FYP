@@ -1,4 +1,24 @@
 <launch>
+
+    <param name="robot_description"
+           command="$(find xacro)/xacro '$(find transbot_description)/urdf/transbot_$(arg robot_model).urdf'"/>
+    <group if="$(arg use_gui)">
+        <node name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui"/>
+    </group>
+    <!-- GUI adjustable interface -->
+
+    <group unless="$(arg use_gui)">
+        <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
+    </group>
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+
+    <!-- Some errors during calibration of imu installation -->
+    <node pkg="imu_calib" type="apply_calib" name="apply_calib" output="screen" respawn="false">
+        <param name="calib_file" value="$(find transbot_bringup)/param/imu/imu_calib.yaml"/>
+        <param name="calibrate_gyros" value="true"/>
+                <param name="is_multi" value="false"/>
+    </node>
+
     <!-- custom bringup -->
     <node pkg="custom_bringup" type="custom_driver.py" name="transbot_node" required="true" output="screen">
         <param name="imu" value="/transbot/imu"/>
