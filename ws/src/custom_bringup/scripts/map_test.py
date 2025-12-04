@@ -8,7 +8,7 @@ import math
 
 # --- Configuration ---
 LINEAR_SPEED = 0.15      # m/s
-ANGULAR_SPEED = 0.3      # rad/s
+ANGULAR_SPEED = 0.15      # rad/s
 DESIRED_DISTANCE = 0.3   # meters from wall
 RATE_HZ = 10
 
@@ -93,7 +93,8 @@ class HugWallMap:
             front_dist = min(front_slice) if front_slice else float('inf')
 
             # --- Wall-following logic ---
-            map_edge_ahead = self.check_map_ahead()
+            #map_edge_ahead = self.check_map_ahead()
+            map_edge_ahead = False
 
             if front_dist < DESIRED_DISTANCE or map_edge_ahead:
                 # Obstacle ahead OR approaching unknown map edge
