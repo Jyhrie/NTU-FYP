@@ -1,4 +1,7 @@
 <launch>
+    <!-- define vars -->
+    <arg name="use_gui" default="false"/>
+    <arg name="robot_model" default="astra" doc="robot_model type [astra,camera]"/>
 
     <param name="robot_description"
            command="$(find xacro)/xacro '$(find transbot_description)/urdf/transbot_$(arg robot_model).urdf'"/>
