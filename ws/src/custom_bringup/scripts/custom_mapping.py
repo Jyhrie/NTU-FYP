@@ -120,7 +120,7 @@ class Mapper:
             #     continue
             # pass
 
-            print(self.get_right_wall(spread_deg=12))
+            print(self.get_right_wall())
             rate.sleep()
 
         
