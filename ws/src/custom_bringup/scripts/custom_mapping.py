@@ -163,12 +163,12 @@ class Mapper:
             # pass
             right_wall_dist = self.get_right_wall()
             self.parallel_alignment()
-            print(f"Right wall distance: {right_wall_dist}")
-            if right_wall_dist is None or right_wall_dist > 1:
-                self.publish_move_command(0,0)  # turn right
-            else:
-                self.publish_move_command(LINEAR_SPEED, 0)  # move forward
-            rate.sleep()
+            # print(f"Right wall distance: {right_wall_dist}")
+            # if right_wall_dist is None or right_wall_dist > 1:
+            #     self.publish_move_command(0,0)  # turn right
+            # else:
+            #     self.publish_move_command(LINEAR_SPEED, 0)  # move forward
+            # rate.sleep()
 
         
         # correction_distance = self.get_correction_distance()
