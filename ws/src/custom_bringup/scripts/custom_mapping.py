@@ -114,17 +114,17 @@ class Mapper:
         front_ranges = wall_ranges[:half]  # first half → front side of wall
         back_ranges  = wall_ranges[half:]  # second half → back side of wall
 
-        prev_front_dist = None
-        prev_back_dist = None
+        prev_front_dist = front_ranges[0]
+        prev_back_dist = back_ranges[0]
         falloff_count_front = 0
         falloff_count_back = 0
         patience = 3   
         for i in range(0,max_bidirectional_samples):
-            front_dist = [i]  # LiDAR beam at front-side
-            back_dist  = [i]   # LiDAR beam at back-side
+            front_dist = front_ranges[i]  # LiDAR beam at front-side
+            back_dist  = back_ranges[i]   # LiDAR beam at back-side
 
             if prev_front_dist is not None and falloff_count_front < patience:
-                if front_dist > prev_front_dist + max_falloff:
+                if abs(front_dist - prev_front_dist) > max_falloff:
                     falloff_count_front += 1
                 else:
                     prev_front_dist = front_dist
@@ -133,7 +133,7 @@ class Mapper:
                     print("Front edge detected at index", i)
                     # handle edge (stop, turn, etc.)
             if prev_back_dist is not None  and falloff_count_back < patience:
-                if back_dist > prev_back_dist + max_falloff:
+                if abs(back_dist - prev_back_dist) > max_falloff:
                     falloff_count_back += 1
                 else:
                     prev_back_dist = back_dist
