@@ -43,6 +43,11 @@ class Mapper:
         rospy.init_node(NODE_NAME, anonymous=False)
         rospy.loginfo("--- Custom Mapping Algoritm ---")
 
+        self.scan = None
+        self.start_transform = None
+        self.map_data = None
+        self.forward_wall = None
+
         self.cmd_pub = rospy.Publisher(CMD_TOPIC, Twist, queue_size=1)
         rospy.Subscriber(SCAN_TOPIC, LaserScan, self.scan_callback)
         rospy.Subscriber(MAP_TOPIC, OccupancyGrid, self.map_callback)
