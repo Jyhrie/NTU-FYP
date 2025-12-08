@@ -62,7 +62,8 @@ class Mapper:
 
         scan = self.scan 
         
-        right_angle = -math.pi / 2  # -90° in radians
+        #this is left
+        right_angle = math.pi / 2  # -90° in radians
         index = int(round((right_angle - scan.angle_min) / scan.angle_increment))
 
         i_start = index - spread_samples
