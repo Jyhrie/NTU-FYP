@@ -121,13 +121,15 @@ class Mapper:
         pass
 
     def run(self):
+        rate = rospy.Rate(10)  # 10 Hz
         while not rospy.is_shutdown():
-            if self.scan is None or self.map_data is None:
-                rospy.loginfo("Waiting for SCAN and MAP data...")
-                continue
-            pass
+            # if self.scan is None or self.map_data is None:
+            #     rospy.loginfo("Waiting for SCAN and MAP data...")
+            #     continue
+            # pass
 
             print(self.get_right_wall(spread_deg=90))
+            rate.sleep()
 
         
         # correction_distance = self.get_correction_distance()
