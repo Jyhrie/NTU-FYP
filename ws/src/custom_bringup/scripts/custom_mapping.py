@@ -56,7 +56,7 @@ class Mapper:
         self.start_transform = Transform((0,0,0), Quaternion(0,0,0,1))
         pass
 
-    def get_right_wall(self, spread_samples=45):
+    def get_right_wall(self, spread_samples=10):
         if self.scan is None:
             return None
 
@@ -87,9 +87,6 @@ class Mapper:
         median_idx = len(wall_ranges_sorted) // 2
         return wall_ranges_sorted[median_idx]
     
-
-
-
     def publish_move_command(self, linear, angular):
         twist = Twist()
         twist.linear.x = linear
@@ -120,8 +117,11 @@ class Mapper:
             #     rospy.loginfo("Waiting for SCAN and MAP data...")
             #     continue
             # pass
-
-            print(self.get_right_wall())
+            right_wall_dist = self.get_right_wall()
+            if right_wall_dist > 1 or right_wall_dist is None:
+                self.publish_move_command(0,0)  # turn right
+            else:
+                self.publish_move_command(LINEAR_SPEED, 0)  # move forward
             rate.sleep()
 
         
