@@ -145,8 +145,8 @@ class Mapper:
         median_front = np.median(front_valid) if front_valid else float('inf')
         median_back  = np.median(back_valid)  if back_valid else float('inf')
 
-        print()("Median Front Distance:", median_front)
-        print()("Median Back Distance:", median_back)
+        print("Median Front Distance:", median_front)
+        print("Median Back Distance:", median_back)
 
 
 
