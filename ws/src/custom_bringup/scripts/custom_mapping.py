@@ -120,7 +120,7 @@ class Mapper:
         falloff_count_back = 0
         patience = 3   
         for i in range(0,max_bidirectional_samples):
-            front_dist = front_ranges[-(i+1)]  # LiDAR beam at front-side
+            front_dist = front_ranges[i]  # LiDAR beam at front-side
             back_dist  = back_ranges[i]   # LiDAR beam at back-side
 
             if prev_front_dist is not None and falloff_count_front < patience:
