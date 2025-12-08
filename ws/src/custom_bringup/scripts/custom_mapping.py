@@ -182,7 +182,7 @@ class Mapper:
             #     self.publish_move_command(0,0)  # turn right
             # else:
             #     self.publish_move_command(LINEAR_SPEED, 0)  # move forward
-            # rate.sleep()
+            rate.sleep()
 
         
         # correction_distance = self.get_correction_distance()
