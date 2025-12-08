@@ -65,8 +65,8 @@ class Mapper:
         right_angle = -math.pi / 2  # -90° in radians
         index = int(round((right_angle - scan.angle_min) / scan.angle_increment))
 
-        i_start = index + spread_samples
-        i_end   = index - spread_samples
+        i_start = index - spread_samples
+        i_end   = index + spread_samples
 
         # Clamp to valid array range
         i_start = max(0, i_start)
