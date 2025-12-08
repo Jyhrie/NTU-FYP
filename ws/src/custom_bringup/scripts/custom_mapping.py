@@ -120,7 +120,7 @@ class Mapper:
         falloff_count_back = 0
         front_edge_index = len(front_ranges)
         back_edge_index = len(back_ranges)
-        patience = 3   
+        patience = 5
         for i in range(0,max_bidirectional_samples):
             front_dist = front_ranges[i]  # LiDAR beam at front-side
             back_dist  = back_ranges[i]   # LiDAR beam at back-side
@@ -134,7 +134,7 @@ class Mapper:
                 if falloff_count_front >= patience:
                     front_edge_index = i
                     print("Front edge detected at index", i)
-                    print("Front Edges: ", front_ranges[i-3], front_ranges[i-2], front_ranges[i-1], front_ranges[i])
+                    print("Front Edges: ", front_ranges[i-5], front_ranges[i-4],front_ranges[i-3], front_ranges[i-2], front_ranges[i-1], front_ranges[i])
 
 
             if prev_back_dist is not None  and falloff_count_back < patience:
@@ -147,9 +147,35 @@ class Mapper:
                     back_edge_index = i
                     print("Back edge detected at index", i)
 
-
+        sample_index = 0
         normalized_distance_index = front_edge_index if front_edge_index < back_edge_index else back_edge_index
-        print("Normalized Distance Index:", normalized_distance_index)
+        if normalized_distance_index == len(front_ranges):
+            sample_index = len(front_ranges) -patience
+        else:
+            sample_index = normalized_distance_index
+        print("sampling_index", sample_index)
+        print("Front Distance at sample index:", front_ranges[sample_index])
+        print("Back Distance at sample index:", back_ranges[sample_index])
+
+        d_front = front_ranges[sample_index]  # distance to wall at front
+        d_back  = back_ranges[sample_index]   # distance to wall at back
+
+        angle_front = scan.angle_min + (i_start + half + sample_index) * scan.angle_increment
+        angle_back  = scan.angle_min + (i_start + sample_index) * scan.angle_increment
+
+        x_front = d_front * math.cos(angle_front)
+        y_front = d_front * math.sin(angle_front)
+
+        x_back  = d_back  * math.cos(angle_back)
+        y_back  = d_back  * math.sin(angle_back)
+
+        dx = x_front - x_back
+        dy = y_front - y_back
+        wall_angle = math.atan2(dy, dx)  # radians
+
+        wall_angle_deg = math.degrees(wall_angle)
+        print(f"Wall angle: {wall_angle_deg:.2f}°")
+
 
         # front_valid = [r for r in front_ranges if r is not None and np.isfinite(r)]
         # back_valid  = [r for r in back_ranges  if r is not None and np.isfinite(r)]
