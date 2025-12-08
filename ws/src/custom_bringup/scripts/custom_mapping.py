@@ -118,6 +118,8 @@ class Mapper:
         prev_back_dist = back_ranges[0]
         falloff_count_front = 0
         falloff_count_back = 0
+        front_edge_index = len(front_ranges)
+        back_edge_index = len(back_ranges)
         patience = 3   
         for i in range(0,max_bidirectional_samples):
             front_dist = front_ranges[i]  # LiDAR beam at front-side
@@ -130,6 +132,7 @@ class Mapper:
                     prev_front_dist = front_dist
                     falloff_count_front = 0  # reset if distance normalizes
                 if falloff_count_front >= patience:
+                    front_edge_index = i
                     print("Front edge detected at index", i)
                     print("Front Edges: ", front_ranges[i-3], front_ranges[i-2], front_ranges[i-1], front_ranges[i])
 
@@ -141,18 +144,25 @@ class Mapper:
                     prev_back_dist = back_dist
                     falloff_count_back = 0
                 if falloff_count_back >= patience:
+                    back_edge_index = i
                     print("Back edge detected at index", i)
 
-        front_valid = [r for r in front_ranges if r is not None and np.isfinite(r)]
-        back_valid  = [r for r in back_ranges  if r is not None and np.isfinite(r)]
 
-        median_front = np.median(front_valid) if front_valid else float('inf')
-        median_back  = np.median(back_valid)  if back_valid else float('inf')
+        normalized_distance_index = front_edge_index if front_edge_index < back_edge_index else back_edge_index
+        print("Normalized Distance Index:", normalized_distance_index)
 
-        print("Median Front Distance:", median_front)
-        print("Median Back Distance:", median_back)
+        # front_valid = [r for r in front_ranges if r is not None and np.isfinite(r)]
+        # back_valid  = [r for r in back_ranges  if r is not None and np.isfinite(r)]
 
+        
 
+        # median_front = np.median(front_valid) if front_valid else float('inf')
+        # median_back  = np.median(back_valid)  if back_valid else float('inf')
+
+        # print("Median Front Distance:", median_front)
+        # print("Median Back Distance:", median_back)
+
+        
 
         #wall_ranges = [r for r in wall_ranges if scan.range_min < r < scan.range_max]
 
