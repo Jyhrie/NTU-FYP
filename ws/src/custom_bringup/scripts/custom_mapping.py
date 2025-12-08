@@ -118,6 +118,7 @@ class Mapper:
             #     continue
             # pass
             right_wall_dist = self.get_right_wall()
+            print(f"Right wall distance: {right_wall_dist}")
             if right_wall_dist is None or right_wall_dist > 1:
                 self.publish_move_command(0,0)  # turn right
             else:
