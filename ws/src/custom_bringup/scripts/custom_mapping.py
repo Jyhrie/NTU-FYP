@@ -131,6 +131,7 @@ class Mapper:
                     falloff_count_front = 0  # reset if distance normalizes
                 if falloff_count_front >= patience:
                     print("Front edge detected at index", i)
+                    print("Front Edges: ", front_ranges[i-3], front_ranges[i-2], front_ranges[i-1], front_ranges[i])
 
 
             if prev_back_dist is not None  and falloff_count_back < patience:
