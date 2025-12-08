@@ -65,8 +65,7 @@ class Mapper:
         # Convert degrees to radians
         spread_rad = math.radians(spread_deg)
 
-        # EXACT EAST = -90 degrees
-        east_angle = -math.pi / 2
+        east_angle = 0       
 
         # Compute start/end angles
         start_angle = east_angle - spread_rad
@@ -128,7 +127,7 @@ class Mapper:
             #     continue
             # pass
 
-            print(self.get_right_wall(spread_deg=90))
+            print(self.get_right_wall(spread_deg=12))
             rate.sleep()
 
         
