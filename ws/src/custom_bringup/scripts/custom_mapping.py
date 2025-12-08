@@ -157,20 +157,21 @@ class Mapper:
         d_front = front_ranges[sample_index]  # distance to wall at front
         d_back  = back_ranges[sample_index]   # distance to wall at back
 
-        angle_front = scan.angle_min + (i_start + half + sample_index) * scan.angle_increment
-        angle_back  = scan.angle_min + (i_start + sample_index) * scan.angle_increment
+        theta_front = sample_index * scan.angle_increment  # radians
+        theta_back  = sample_index * -scan.angle_increment
 
-        x_front = d_front * math.cos(angle_front)
-        y_front = d_front * math.sin(angle_front)
+        x_front = d_front * math.cos(theta_front)
+        y_front = d_front * math.sin(theta_front)
 
-        x_back  = d_back  * math.cos(angle_back)
-        y_back  = d_back  * math.sin(angle_back)
+        x_back  = d_back  * math.cos(theta_back)
+        y_back  = d_back  * math.sin(theta_back)
 
         dx = x_front - x_back
         dy = y_front - y_back
-        wall_angle = math.atan2(dy, dx)  # radians
 
+        wall_angle = math.atan2(dy, dx)  # radians
         wall_angle_deg = math.degrees(wall_angle)
+
         print(f"Wall angle: {wall_angle_deg:.2f}°")
 
 
