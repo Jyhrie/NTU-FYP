@@ -4,6 +4,7 @@ import rospy
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import OccupancyGrid
+import numpy as np
 import math
 
 LINEAR_SPEED = 0.15      # m/s
@@ -93,21 +94,64 @@ class Mapper:
         twist.angular.z = angular
         self.cmd_pub.publish(twist)
 
-    def get_correction_distance(self):
-        #get 90deg distance away from wall (this acts as the hug distance) if value is inf, make robot turn right until wall is detected, peform smooth turn.
-        #take n points, close to 90deg right of robot, find the median distance away from the wall.
-        pass
+    def parallel_alignment(self, dir=1, max_bidirectional_samples=50, max_falloff=0.2):
+        if self.scan is None:
+            return None
 
-    def get_correction_angle(self):
-        #get gradient of wall from x points (this acts as the correction angle)
-        pass
+        scan = self.scan 
+        right_angle = math.pi / 2  # -90° in radians
+        index = int(round((right_angle - scan.angle_min) / scan.angle_increment))
 
-    def check_forward(self):
-        #get forward
-        pass
+        i_start = index - max_bidirectional_samples
+        i_end   = index + max_bidirectional_samples
 
-    def check_left(self):
-        #get left
+        i_start = max(0, i_start)
+        i_end   = min(len(scan.ranges), i_end)
+
+        wall_ranges = scan.ranges[i_start:i_end]
+        num_beams = len(wall_ranges)
+        half = num_beams // 2
+        front_ranges = wall_ranges[:half]  # first half → front side of wall
+        back_ranges  = wall_ranges[half:]  # second half → back side of wall
+
+        prev_front_dist = None
+        prev_back_dist = None
+        falloff_count_front = 0
+        falloff_count_back = 0
+        patience = 3   
+        for i in range(0,max_bidirectional_samples):
+            front_dist = [i]  # LiDAR beam at front-side
+            back_dist  = [i]   # LiDAR beam at back-side
+
+            if prev_front_dist is not None and falloff_count_front < patience:
+                if front_dist > prev_front_dist + max_falloff:
+                    falloff_count_front += 1
+                else:
+                    falloff_count_front = 0  # reset if distance normalizes
+                if falloff_count_front >= patience:
+                    print("Front edge detected at index", i)
+                    # handle edge (stop, turn, etc.)
+            if prev_back_dist is not None  and falloff_count_back < patience:
+                if back_dist > prev_back_dist + max_falloff:
+                    falloff_count_back += 1
+                else:
+                    falloff_count_back = 0
+                if falloff_count_back >= patience:
+                    print("Back edge detected at index", i)
+
+        front_valid = [r for r in front_ranges if r is not None and np.isfinite(r)]
+        back_valid  = [r for r in back_ranges  if r is not None and np.isfinite(r)]
+
+        median_front = np.median(front_valid) if front_valid else float('inf')
+        median_back  = np.median(back_valid)  if back_valid else float('inf')
+
+        print()("Median Front Distance:", median_front)
+        print()("Median Back Distance:", median_back)
+
+
+
+        #wall_ranges = [r for r in wall_ranges if scan.range_min < r < scan.range_max]
+
         pass
 
     def run(self):
@@ -118,6 +162,7 @@ class Mapper:
             #     continue
             # pass
             right_wall_dist = self.get_right_wall()
+            self.parallel_alignment()
             print(f"Right wall distance: {right_wall_dist}")
             if right_wall_dist is None or right_wall_dist > 1:
                 self.publish_move_command(0,0)  # turn right
