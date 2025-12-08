@@ -181,7 +181,7 @@ class Mapper:
         max_angular_speed = 0.5  # rad/s
         angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
 
-        self.publish_move_command(linear=0.15, angular=angular_correction)
+        self.publish_move_command(linear=0.15, angular=-angular_correction)
 
 
 
