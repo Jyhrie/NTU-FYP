@@ -170,9 +170,10 @@ class Mapper:
         dy = y_front - y_back
 
         wall_angle = math.atan2(dy, dx)  # radians
-        wall_angle_deg = math.degrees(wall_angle)
+        wall_angle_deg = math.degrees(wall_angle) - 90
 
         print(f"Wall angle: {wall_angle_deg:.2f}°")
+
 
 
         # front_valid = [r for r in front_ranges if r is not None and np.isfinite(r)]
