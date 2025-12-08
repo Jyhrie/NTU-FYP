@@ -118,7 +118,7 @@ class Mapper:
             #     continue
             # pass
             right_wall_dist = self.get_right_wall()
-            if right_wall_dist > 1 or right_wall_dist is None:
+            if right_wall_dist is None or right_wall_dist > 1:
                 self.publish_move_command(0,0)  # turn right
             else:
                 self.publish_move_command(LINEAR_SPEED, 0)  # move forward
