@@ -147,12 +147,9 @@ class Mapper:
                     back_edge_index = i
                     print("Back edge detected at index", i)
 
-        sample_index = 0
+
         normalized_distance_index = front_edge_index if front_edge_index < back_edge_index else back_edge_index
-        if normalized_distance_index == len(front_ranges):
-            sample_index = len(front_ranges) -patience
-        else:
-            sample_index = normalized_distance_index
+        sample_index = max(0, normalized_distance_index - 5)
         print("sampling_index", sample_index)
         print("Front Distance at sample index:", front_ranges[sample_index])
         print("Back Distance at sample index:", back_ranges[sample_index])
