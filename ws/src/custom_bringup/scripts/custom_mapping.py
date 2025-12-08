@@ -164,6 +164,9 @@ class Mapper:
 
 
 def start_mapping():
+    mapper = Mapper()
+    mapper.set_start_transform()
+    mapper.run()
     pass
 
 def start_coroutine():
