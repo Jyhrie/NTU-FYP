@@ -56,27 +56,17 @@ class Mapper:
         self.start_transform = Transform((0,0,0), Quaternion(0,0,0,1))
         pass
 
-    def get_right_wall(self, spread_deg=90):
+    def get_right_wall(self, spread_samples=45):
         if self.scan is None:
             return None
 
-        scan = self.scan
+        scan = self.scan 
+        
+        right_angle = -math.pi / 2  # -90° in radians
+        index = int(round((right_angle - scan.angle_min) / scan.angle_increment))
 
-        # Convert degrees to radians
-        spread_rad = math.radians(spread_deg)
-
-        east_angle = 0       
-
-        # Compute start/end angles
-        start_angle = east_angle - spread_rad
-        end_angle   = east_angle + spread_rad
-
-        # Helper to convert angle -> index
-        def angle_to_index(angle):
-            return int((angle - scan.angle_min) / scan.angle_increment)
-
-        i_start = angle_to_index(start_angle)
-        i_end   = angle_to_index(end_angle)
+        i_start = index + spread_samples
+        i_end   = index + spread_samples
 
         # Clamp to valid array range
         i_start = max(0, i_start)
@@ -95,6 +85,9 @@ class Mapper:
         wall_ranges_sorted = sorted(wall_ranges)
         median_idx = len(wall_ranges_sorted) // 2
         return wall_ranges_sorted[median_idx]
+    
+
+
 
     def publish_move_command(self, linear, angular):
         twist = Twist()
