@@ -8,21 +8,6 @@ import numpy as np
 import math
 from enum import Enum, auto
 
-LINEAR_SPEED = 0.08     # m/s
-ANGULAR_SPEED = 0.05      # rad/s
-DESIRED_DISTANCE = 0.5   # meters from wall
-RATE_HZ = 10
-
-NODE_NAME = 'mapper_node'
-CMD_TOPIC = '/cmd_vel'
-SCAN_TOPIC = '/scan'
-MAP_TOPIC = '/map'
-
-INIT_HUG_DIST = 0.7
-HUG_THRESH = 0.2
-
-MIN_FORWARD_WALL_DISTANCE = 0.4  # meters
-
 class Transform:
     def __init__(self, translation, rotation):
         self.translation = translation
@@ -41,6 +26,25 @@ class Quaternion:
         self.y = y
         self.z = z
         self.w = w
+
+LINEAR_SPEED = 0.08     # m/s
+ANGULAR_SPEED = 0.05      # rad/s
+DESIRED_DISTANCE = 0.5   # meters from wall
+RATE_HZ = 10
+
+NODE_NAME = 'mapper_node'
+CMD_TOPIC = '/cmd_vel'
+SCAN_TOPIC = '/scan'
+MAP_TOPIC = '/map'
+
+INIT_HUG_DIST = 0.7
+HUG_THRESH = 0.2
+
+KP = 0.05
+
+MIN_FORWARD_WALL_DISTANCE = 0.4  # meters
+
+ROBOT_FOOTPRINT = Vector3(0.4, 0.5, 0.3)
 
 class State(Enum):
     INIT = auto()
@@ -101,6 +105,7 @@ class Mapper:
         self.state = State.WALL_HUG
 
     def tick_wallhug(self):
+        cmd_ang, cmd_lin = 0, 0
 
         dist_right, ang_right = self.get_horizontal_wall(dir=0) #get left wall
         dist_left, ang_left = self.get_horizontal_wall(dir=1)
@@ -110,8 +115,46 @@ class Mapper:
         print("dist_left:", dist_left, " | ang_left", ang_left)
         print("dist_right:", dist_right, " | ang_right", ang_right)
 
+
         #this is to get the robot position PHYSICALLY, relative to the robot's posn
 
+        #this is top prio after state change
+        if dist_left < INIT_HUG_DIST:
+            if dist_left > dist_right:
+                #get middle point, then try to nav to middle point then stay mid       
+                delta_x = (dist_right - dist_left)/2
+
+            if delta_x < 0.2: #if less than 0.2, let wall hug algo take over instead
+                angular_correction = KP * -ang_right  # negative to reduce error
+
+                max_angular_speed = 0.5  # rad/s
+                angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
+                cmd_ang = angular_correction
+        else:
+            if abs(dist_right - INIT_HUG_DIST) < 0.2:
+                angular_correction = KP * -ang_right  # negative to reduce error
+                max_angular_speed = 0.5  # rad/s
+                angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
+                cmd_ang = angular_correction
+            else:
+                if dist_right - INIT_HUG_DIST > 0:
+                    cmd_ang = 0.15
+                else:
+                    cmd_ang = -0.15
+
+            
+        
+
+
+
+                
+
+
+        if dist_front < 0.4:
+            self.publish_move_command(0,0)
+        else:
+            self.publish_move_command(LINEAR_SPEED, cmd_ang)
+            #stop
 
         #first check for state transition
         # if right wall doesnt exist
@@ -145,8 +188,7 @@ class Mapper:
         # max_angular_speed = 0.5  # rad/s
         # angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
 
-        pass
-
+   
     def get_front_wall(self, max_bidirectional_samples=50):
         #currently its using lidar, but swap this to use camera after
 
