@@ -147,7 +147,7 @@ class Mapper:
 
         else:
             if abs(dist_right - INIT_HUG_DIST) < 0.2:
-                angular_correction = KP * -ang_right  # negative to reduce error
+                angular_correction = KP * ang_right 
                 max_angular_speed = 0.5  # rad/s
                 angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
                 cmd_ang = angular_correction
