@@ -148,6 +148,10 @@ class Mapper:
 
         #IN FRONT got this stupid robotic arm BLOCKING.
 
+        if self.scan is None:
+            print("Scan is None")
+            return None, None
+
         scan = self.scan 
         base_angle = 0
 
