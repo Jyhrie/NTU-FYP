@@ -109,6 +109,10 @@ class Mapper:
         print("front dist: ", dist_front)
         print("dist_left:", dist_left, " | ang_left", ang_left)
         print("dist_right:", dist_right, " | ang_right", ang_right)
+
+        #this is to get the robot position PHYSICALLY, relative to the robot's posn
+
+
         #first check for state transition
         # if right wall doesnt exist
         #     if front wall doesnt exist
@@ -259,8 +263,6 @@ class Mapper:
 
         wall_angle = math.atan2(dy, dx)  # radians
         wall_angle_deg = math.degrees(wall_angle) - 90
-
-        
 
         numerator   = abs(x_back * y_front - y_back * x_front)
         denominator = math.sqrt((y_back - y_front)**2 + (x_back - x_front)**2)

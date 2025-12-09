@@ -1,0 +1,14 @@
+<launch>
+    <!-- Launch gmapping -->
+    <include file="$(find transbot_nav)/launch/transbot_map.launch">
+        <arg name="map_type" value="gmapping"/>
+    </include>
+
+    <!-- Launch your Python script  -->
+    <node pkg="custom_bringup"
+          type="custom_mapping.py"
+          name="custom_mapper"
+          output="screen"
+          launch-prefix="bash -c 'sleep 3; $0 $@' ">
+    </node>
+</launch>
