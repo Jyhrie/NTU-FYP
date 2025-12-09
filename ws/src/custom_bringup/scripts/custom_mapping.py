@@ -40,6 +40,8 @@ MAP_TOPIC = '/map'
 INIT_HUG_DIST = 0.8
 HUG_THRESH = 0.2
 
+MAX_WALL_ANGLE = 0.2  # radians (~11°), tune to your robot
+
 KP = 0.05
 
 MIN_FORWARD_WALL_DISTANCE = 0.4  # meters
@@ -155,12 +157,19 @@ class Mapper:
                 cmd_ang = angular_correction
                 print("trying to hug")
             else:
-                if dist_right - INIT_HUG_DIST > 0:
-                    cmd_ang = -0.15
-                    print("Rotating In")
+                if abs(ang_right) > MAX_WALL_ANGLE:
+                    angular_correction = KP * ang_right 
+                    max_angular_speed = 0.5  # rad/s
+                    angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
+                    cmd_ang = angular_correction
+                    print("snapBack")
                 else:
-                    cmd_ang = 0.15
-                    print("Rotating Out")
+                    if dist_right - INIT_HUG_DIST > 0:
+                        cmd_ang = -0.15
+                        print("Rotating In")
+                    else:
+                        cmd_ang = 0.15
+                        print("Rotating Out")
 
             
 
