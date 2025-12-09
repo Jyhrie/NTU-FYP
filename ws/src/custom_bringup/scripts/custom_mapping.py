@@ -40,7 +40,7 @@ MAP_TOPIC = '/map'
 INIT_HUG_DIST = 0.8
 HUG_THRESH = 0.2
 
-MAX_WALL_ANGLE = 0.2  # radians (~11°), tune to your robot
+MAX_WALL_ANGLE = 30  # this is in degrees
 
 KP = 0.05
 
