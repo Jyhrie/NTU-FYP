@@ -35,7 +35,7 @@ def map_stream():
 
 @app.route('/')
 def index():
-    return render_template('map_viewer_img.html')
+    return render_template('map_viewer.html')
 
 if __name__ == '__main__':
     rospy.init_node('map_flask_stream', anonymous=True)
