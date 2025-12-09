@@ -178,6 +178,7 @@ class Mapper:
         :param dir: 0 for left, 1 for right
         """
         if self.scan is None:
+            print("Scan is None")
             return None
 
         scan = self.scan 
