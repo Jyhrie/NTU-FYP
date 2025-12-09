@@ -153,7 +153,7 @@ class Mapper:
             return None, None
 
         scan = self.scan 
-        base_angle = 0
+        base_angle = math.pi
 
         index = int(round((base_angle - scan.angle_min) / scan.angle_increment))
 
