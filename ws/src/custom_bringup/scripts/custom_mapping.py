@@ -119,6 +119,11 @@ class Mapper:
         #this is to get the robot position PHYSICALLY, relative to the robot's posn
 
         #this is top prio after state change
+        if dist_right is None or ang_right is None \
+            or dist_left is None or ang_left is None \
+            or dist_front is None:
+            return
+            
         if dist_left < INIT_HUG_DIST:
             if dist_left > dist_right:
                 #get middle point, then try to nav to middle point then stay mid       
@@ -143,12 +148,6 @@ class Mapper:
                     cmd_ang = -0.15
 
             
-        
-
-
-
-                
-
 
         if dist_front < 0.4:
             self.publish_move_command(0,0)
