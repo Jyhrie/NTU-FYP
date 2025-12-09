@@ -4,6 +4,8 @@ from nav_msgs.msg import OccupancyGrid
 import numpy as np
 import cv2
 from cv_bridge import CvBridge
+import threading
+import time
 
 app = Flask(__name__)
 bridge = CvBridge()
@@ -13,6 +15,7 @@ map_img = None
 # ROS subscriber callback
 def map_callback(msg):
     global map_img
+    print("map callback recieved")
     # Convert occupancy values to 0-255 image
     data = np.array(msg.data, dtype=np.uint8).reshape((msg.info.height, msg.info.width))
     img = 255 - (data * 255 / 100).astype(np.uint8)  # occupied=black, free=white
@@ -28,6 +31,8 @@ def generate_map_stream():
             frame = jpeg.tobytes()
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+        else:
+            time.sleep(0.05)
 
 @app.route('/map_stream')
 def map_stream():
@@ -40,4 +45,7 @@ def index():
 if __name__ == '__main__':
     rospy.init_node('map_flask_stream', anonymous=True)
     rospy.Subscriber('/map', OccupancyGrid, map_callback)
-    app.run(host='0.0.0.0', port=8000, debug=True, threaded=True, use_reloader=False)
+    try:
+        app.run(host='0.0.0.0', port=8000, debug=False, threaded=True, use_reloader=False)
+    except KeyboardInterrupt:
+        print("Shutting down Flask + ROS map streamer...")
