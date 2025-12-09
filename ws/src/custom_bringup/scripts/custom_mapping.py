@@ -110,7 +110,7 @@ class Mapper:
 
         dist_right, ang_right = self.get_horizontal_wall(dir=0) #get left wall
         dist_left, ang_left = self.get_horizontal_wall(dir=1)
-        dist_front = self.get_front_wall()
+        dist_front = self.get_front_wall(max_bidirectional_samples=20)
 
         print("front dist: ", dist_front)
         print("dist_left:", dist_left, " | ang_left", ang_left)
