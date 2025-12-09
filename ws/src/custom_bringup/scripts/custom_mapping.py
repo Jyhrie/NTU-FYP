@@ -6,8 +6,9 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
 import math
+from enum import Enum, auto
 
-LINEAR_SPEED = 0.15      # m/s
+LINEAR_SPEED = 0.08     # m/s
 ANGULAR_SPEED = 0.05      # rad/s
 DESIRED_DISTANCE = 0.5   # meters from wall
 RATE_HZ = 10
@@ -16,6 +17,9 @@ NODE_NAME = 'mapper_node'
 CMD_TOPIC = '/cmd_vel'
 SCAN_TOPIC = '/scan'
 MAP_TOPIC = '/map'
+
+INIT_HUG_DIST = 0.7
+HUG_THRESH = 0.2
 
 MIN_FORWARD_WALL_DISTANCE = 0.4  # meters
 
@@ -38,24 +42,226 @@ class Quaternion:
         self.z = z
         self.w = w
 
+class State(Enum):
+    INIT = auto()
+    START = auto()
+    WALL_HUG = auto()
+    REFLEX_CORNER = auto()
+    ACTUAL_CORNER = auto()
+    DEAD_END = auto()             # WIP
+    EXPLORED_AREA = auto()
+    FLOOD_FILL = auto()           # WIP
+    ASTAR = auto()  # WIP
+    COMPLETE = auto()             # WIP
+
 class Mapper:
+    """
+        robot will always try to align with right wall
+        at distance scan_max-leeway
+        if left wall is ALSO detected, it will try to center itself between the 2 walls
+
+    """
 
     def __init__(self):
         rospy.init_node(NODE_NAME, anonymous=False)
         rospy.loginfo("--- Custom Mapping Algoritm ---")
 
+        self.state = State.INIT
+        self.mask = None
         self.scan = None
         self.start_transform = None
-        self.map_data = None
+        self.map_mask = None
         self.forward_wall = None
+        self.target_wall_distance = INIT_HUG_DIST
 
         self.cmd_pub = rospy.Publisher(CMD_TOPIC, Twist, queue_size=1)
         rospy.Subscriber(SCAN_TOPIC, LaserScan, self.scan_callback)
         rospy.Subscriber(MAP_TOPIC, OccupancyGrid, self.map_callback)
 
+    #init
+    
     def set_start_transform(self):
         self.start_transform = Transform((0,0,0), Quaternion(0,0,0,1))
         pass
+
+    #runtime
+
+    def tick(self):
+        if self.state == State.INIT:
+            self.tick_init()
+            pass
+        if self.state == State.START:
+            pass
+        if self.state == State.WALL_HUG:
+            self.tick_wallhug()
+            pass
+        pass
+
+    def tick_init(self):
+        self.state = State.WALL_HUG
+
+    def tick_wallhug(self):
+
+        dist_right, ang_right = self.get_horizontal_wall(dir=0) #get left wall
+        dist_left, ang_left = self.get_horizontal_wall(dir=1)
+        dist_front = self.get_front_wall()
+
+        print("front dist: ", dist_front)
+        print("dist_left:", dist_left, " | ang_left", ang_left)
+        print("dist_right:", dist_right, " | ang_right", ang_right)
+        #first check for state transition
+        # if right wall doesnt exist
+        #     if front wall doesnt exist
+        #         turn right with with turning radius based on hug dist up to 270 deg until right wall is found
+        #     if front wall does exist
+        #         if right wall doesnt exist
+        #             do on the spot right turn 90 deg and move forward till a either front or right wall is found.
+        # if right wall does exist
+        #     if front wall does exist
+        #         if left wall doesnt exist
+        #              mark as acute corner, then turn left, front wall is now right wall
+        #         if left wall does exist
+        #             check the map, and fill dead end with "dead end" cells
+        #             reverse, turn 90deg left and go forward until dead end is passed.
+
+            
+        # dist, ang = self.parallel_alignment()
+
+        # #this takes precedence
+        # if dist < INIT_HUG_DIST + HUG_THRESH:
+        #     pass
+        # if dist > INIT_HUG_DIST - HUG_THRESH:
+        #     pass
+
+
+        # Kp = 0.05  # proportional gain (tune as needed)
+        # angular_correction = -Kp * wall_angle_deg  # negative to reduce error
+
+        # # Clamp max rotation speed
+        # max_angular_speed = 0.5  # rad/s
+        # angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
+
+        pass
+
+    def get_front_wall(self, max_bidirectional_samples=50):
+        #currently its using lidar, but swap this to use camera after
+
+        #IN FRONT got this stupid robotic arm BLOCKING.
+
+        scan = self.scan 
+        base_angle = 0
+
+        index = int(round((base_angle - scan.angle_min) / scan.angle_increment))
+
+        i_start = index - max_bidirectional_samples
+        i_end   = index + max_bidirectional_samples
+
+        i_start = max(0, i_start)
+        i_end   = min(len(scan.ranges), i_end)
+
+        wall_ranges = scan.ranges[i_start:i_end]
+
+        # Filter out any inf or nan values
+        valid = [d for d in wall_ranges if math.isfinite(d)]
+
+        if valid:
+            max_dist = max(valid)
+        else:
+            max_dist = None   # or some default value
+
+        return max_dist
+
+    def get_horizontal_wall(self, dir=0, max_bidirectional_samples=50, max_falloff=0.2):
+        """
+        get_horizontal_wall
+        
+        :param dir: 0 for left, 1 for right
+        """
+        if self.scan is None:
+            return None
+
+        scan = self.scan 
+        if dir == 0:
+            base_angle = math.pi / 2
+        elif dir == 1:
+            base_angle = -math.pi / 2
+
+        index = int(round((base_angle - scan.angle_min) / scan.angle_increment))
+
+        i_start = index - max_bidirectional_samples
+        i_end   = index + max_bidirectional_samples
+
+        i_start = max(0, i_start)
+        i_end   = min(len(scan.ranges), i_end)
+
+        wall_ranges = scan.ranges[i_start:i_end]
+        num_beams = len(wall_ranges)
+        half = num_beams // 2
+        front_ranges = wall_ranges[half:]  # first half → front side of wall
+        back_ranges  = wall_ranges[:half][::-1]  # second half → back side of wall
+
+        prev_front_dist = front_ranges[0]
+        prev_back_dist = back_ranges[0]
+        falloff_count_front = 0
+        falloff_count_back = 0
+        front_edge_index = len(front_ranges)
+        back_edge_index = len(back_ranges)
+        patience = 5
+        for i in range(0,max_bidirectional_samples):
+            front_dist = front_ranges[i]  # LiDAR beam at front-side
+            back_dist  = back_ranges[i]   # LiDAR beam at back-side
+
+            if prev_front_dist is not None and falloff_count_front < patience:
+                if abs(front_dist - prev_front_dist) > max_falloff:
+                    falloff_count_front += 1
+                else:
+                    prev_front_dist = front_dist
+                    falloff_count_front = 0  # reset if distance normalizes
+                if falloff_count_front >= patience:
+                    front_edge_index = i
+                    print("Front edge detected at index", i)
+                    print("Front Edges: ", front_ranges[i-5], front_ranges[i-4],front_ranges[i-3], front_ranges[i-2], front_ranges[i-1], front_ranges[i])
+
+
+            if prev_back_dist is not None  and falloff_count_back < patience:
+                if abs(back_dist - prev_back_dist) > max_falloff:
+                    falloff_count_back += 1
+                else:
+                    prev_back_dist = back_dist
+                    falloff_count_back = 0
+                if falloff_count_back >= patience:
+                    back_edge_index = i
+                    print("Back edge detected at index", i)
+
+
+        normalized_distance_index = front_edge_index if front_edge_index < back_edge_index else back_edge_index
+        sample_index = max(0, normalized_distance_index - 5)
+
+        d_front = front_ranges[sample_index]  # distance to wall at front
+        d_back  = back_ranges[sample_index]   # distance to wall at back
+
+        theta_front = sample_index * scan.angle_increment  # radians
+        theta_back  = sample_index * -scan.angle_increment
+
+        x_front = d_front * math.cos(theta_front)
+        y_front = d_front * math.sin(theta_front)
+
+        x_back  = d_back  * math.cos(theta_back)
+        y_back  = d_back  * math.sin(theta_back)
+
+        dx = x_front - x_back
+        dy = y_front - y_back
+
+        wall_angle = math.atan2(dy, dx)  # radians
+        wall_angle_deg = math.degrees(wall_angle) - 90
+
+
+        numerator   = abs(x_back * y_front - y_back * x_front)
+        denominator = math.sqrt((y_back - y_front)**2 + (x_back - x_front)**2)
+        wall_distance = numerator / denominator
+
+        return wall_distance, wall_angle_deg
+
 
     def get_right_wall(self, spread_samples=10):
         if self.scan is None:
@@ -88,6 +294,8 @@ class Mapper:
         median_idx = len(wall_ranges_sorted) // 2
         return wall_ranges_sorted[median_idx]
     
+    #utils
+
     def publish_move_command(self, linear, angular):
         twist = Twist()
         twist.linear.x = linear
@@ -150,9 +358,6 @@ class Mapper:
 
         normalized_distance_index = front_edge_index if front_edge_index < back_edge_index else back_edge_index
         sample_index = max(0, normalized_distance_index - 5)
-        print("sampling_index", sample_index)
-        print("Front Distance at sample index:", front_ranges[sample_index])
-        print("Back Distance at sample index:", back_ranges[sample_index])
 
         d_front = front_ranges[sample_index]  # distance to wall at front
         d_back  = back_ranges[sample_index]   # distance to wall at back
@@ -172,35 +377,12 @@ class Mapper:
         wall_angle = math.atan2(dy, dx)  # radians
         wall_angle_deg = math.degrees(wall_angle) - 90
 
-        print(f"Wall angle: {wall_angle_deg:.2f}°")
 
-        Kp = 0.05  # proportional gain (tune as needed)
-        angular_correction = -Kp * wall_angle_deg  # negative to reduce error
+        numerator   = abs(x_back * y_front - y_back * x_front)
+        denominator = math.sqrt((y_back - y_front)**2 + (x_back - x_front)**2)
+        wall_distance = numerator / denominator
 
-        # Clamp max rotation speed
-        max_angular_speed = 0.5  # rad/s
-        angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
-
-        self.publish_move_command(linear=0.15, angular=-angular_correction)
-
-
-
-        # front_valid = [r for r in front_ranges if r is not None and np.isfinite(r)]
-        # back_valid  = [r for r in back_ranges  if r is not None and np.isfinite(r)]
-
-        
-
-        # median_front = np.median(front_valid) if front_valid else float('inf')
-        # median_back  = np.median(back_valid)  if back_valid else float('inf')
-
-        # print("Median Front Distance:", median_front)
-        # print("Median Back Distance:", median_back)
-
-        
-
-        #wall_ranges = [r for r in wall_ranges if scan.range_min < r < scan.range_max]
-
-        pass
+        return wall_distance, wall_angle_deg
 
     def run(self):
         rate = rospy.Rate(20)  # 10 Hz
@@ -209,13 +391,15 @@ class Mapper:
             #     rospy.loginfo("Waiting for SCAN and MAP data...")
             #     continue
             # pass
-            right_wall_dist = self.get_right_wall()
-            self.parallel_alignment()
-            # print(f"Right wall distance: {right_wall_dist}")
-            # if right_wall_dist is None or right_wall_dist > 1:
-            #     self.publish_move_command(0,0)  # turn right
-            # else:
-            #     self.publish_move_command(LINEAR_SPEED, 0)  # move forward
+
+            self.tick()
+            # right_wall_dist = self.get_right_wall()
+            # self.parallel_alignment()
+            # # print(f"Right wall distance: {right_wall_dist}")
+            # # if right_wall_dist is None or right_wall_dist > 1:
+            # #     self.publish_move_command(0,0)  # turn right
+            # # else:
+            # #     self.publish_move_command(LINEAR_SPEED, 0)  # move forward
             rate.sleep()
 
         
@@ -246,17 +430,11 @@ class Mapper:
             #if flood fill literally FILLS the entire map, then mapping is complete, stop robot.
             #if robot is back at the start location, stop robot.
 
-
-
-
-
-
     def scan_callback(self, msg):
         self.scan = msg
 
     def map_callback(self, msg):
         self.map_data = msg
-
 
 def start_mapping():
     mapper = Mapper()
