@@ -165,11 +165,11 @@ class Mapper:
         valid = [d for d in wall_ranges if math.isfinite(d)]
 
         if valid:
-            max_dist = max(valid)
+            min_dist = min(valid)
         else:
-            max_dist = None   # or some default value
+            min_dist = None   # or some default value
 
-        return max_dist
+        return min_dist
 
     def get_horizontal_wall(self, dir=0, max_bidirectional_samples=50, max_falloff=0.2):
         """
