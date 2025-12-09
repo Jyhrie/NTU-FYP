@@ -127,10 +127,9 @@ class Mapper:
             
         delta_x = 0
         if dist_left < INIT_HUG_DIST:
-            if dist_left > dist_right:
-                #get middle point, then try to nav to middle point then stay mid     
-                midpoint_distance = (dist_right + dist_left)/2  
-                delta_x = (dist_right - dist_left)/2
+            #get middle point, then try to nav to middle point then stay mid     
+            midpoint_distance = (dist_right + dist_left)/2  
+            delta_x = (dist_right - dist_left)/2
 
             if delta_x < 0.1: #if less than 0.2, let wall hug algo take over instead
                 angular_correction = KP * ang_right  # negative to reduce error
