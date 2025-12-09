@@ -166,11 +166,11 @@ class Mapper:
                 else:
                     if dist_right - INIT_HUG_DIST > 0:
                         cmd_ang = -0.30
-                        cmd_lin = 0
+                        cmd_lin = -0.15
                         print("Rotating In")
                     else:
                         cmd_ang = 0.30
-                        cmd_lin = 0
+                        cmd_lin = -0.15
                         print("Rotating Out")
 
             
