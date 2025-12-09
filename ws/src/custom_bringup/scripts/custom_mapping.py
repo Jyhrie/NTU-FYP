@@ -179,7 +179,7 @@ class Mapper:
         """
         if self.scan is None:
             print("Scan is None")
-            return None
+            return None, None
 
         scan = self.scan 
         if dir == 0:
@@ -393,9 +393,9 @@ class Mapper:
             #     continue
             # pass
 
-            # self.tick()
+            self.tick()
             # right_wall_dist = self.get_right_wall()
-            self.parallel_alignment()
+            #self.parallel_alignment()
             # # print(f"Right wall distance: {right_wall_dist}")
             # # if right_wall_dist is None or right_wall_dist > 1:
             # #     self.publish_move_command(0,0)  # turn right
