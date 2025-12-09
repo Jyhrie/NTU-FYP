@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from flask import Flask, Response, render_template
 import rospy
 from nav_msgs.msg import OccupancyGrid
@@ -6,23 +7,25 @@ import cv2
 from cv_bridge import CvBridge
 import threading
 import time
+import signal
+import sys
 
 app = Flask(__name__)
 bridge = CvBridge()
-
 map_img = None
 
-# ROS subscriber callback
+# ---- ROS Map Callback ----
 def map_callback(msg):
     global map_img
-    print("map callback recieved")
-    # Convert occupancy values to 0-255 image
-    data = np.array(msg.data, dtype=np.uint8).reshape((msg.info.height, msg.info.width))
+    # Convert occupancy grid to 0-255 image
+    data = np.array(msg.data, dtype=np.int8).reshape((msg.info.height, msg.info.width))
+    # Unknown cells (-1) -> gray 128
+    data[data < 0] = 50
     img = 255 - (data * 255 / 100).astype(np.uint8)  # occupied=black, free=white
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    map_img = cv2.flip(img, 0)  # flip if needed
+    map_img = cv2.flip(img, 0)  # flip vertically for correct orientation
 
-# Stream as MJPEG
+# ---- MJPEG Stream Generator ----
 def generate_map_stream():
     global map_img
     while True:
@@ -31,21 +34,37 @@ def generate_map_stream():
             frame = jpeg.tobytes()
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+            time.sleep(0.05)  # ~20 FPS
         else:
             time.sleep(0.05)
 
+# ---- Flask Routes ----
 @app.route('/map_stream')
 def map_stream():
-    return Response(generate_map_stream(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate_map_stream(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/')
 def index():
-    return render_template('map_viewer.html')
+    return render_template('map_viewer.html')  # Your HTML template in ./templates/
 
+# ---- Ctrl+C Handler ----
+def signal_handler(sig, frame):
+    print("\nShutting down Flask + ROS map streamer...")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+
+# ---- Main ----
 if __name__ == '__main__':
+    # Initialize ROS node
     rospy.init_node('map_flask_stream', anonymous=True)
     rospy.Subscriber('/map', OccupancyGrid, map_callback)
-    try:
-        app.run(host='0.0.0.0', port=8000, debug=False, threaded=True, use_reloader=False)
-    except KeyboardInterrupt:
-        print("Shutting down Flask + ROS map streamer...")
+
+    # Start ROS spinning in background thread
+    spin_thread = threading.Thread(target=rospy.spin)
+    spin_thread.daemon = True
+    spin_thread.start()
+
+    # Start Flask app
+    app.run(host='0.0.0.0', port=8000, debug=False, threaded=True, use_reloader=False)
