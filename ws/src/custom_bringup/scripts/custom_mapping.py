@@ -37,7 +37,7 @@ CMD_TOPIC = '/cmd_vel'
 SCAN_TOPIC = '/scan'
 MAP_TOPIC = '/map'
 
-INIT_HUG_DIST = 0.4
+INIT_HUG_DIST = 0.8
 HUG_THRESH = 0.2
 
 KP = 0.05
