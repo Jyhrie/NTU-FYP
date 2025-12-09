@@ -154,10 +154,10 @@ class Mapper:
                 print("trying to hug")
             else:
                 if dist_right - INIT_HUG_DIST > 0:
-                    cmd_ang = 0.15
+                    cmd_ang = -0.15
                     print("Rotating In")
                 else:
-                    cmd_ang = -0.15
+                    cmd_ang = 0.15
                     print("Rotating Out")
 
             
