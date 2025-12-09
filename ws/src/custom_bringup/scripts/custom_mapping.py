@@ -125,25 +125,25 @@ class Mapper:
             or dist_front is None:
             return
             
-        delta_x = 0
-        if dist_left < INIT_HUG_DIST:
-            if dist_left > dist_right:
-                #get middle point, then try to nav to middle point then stay mid       
-                delta_x = (dist_right - dist_left)/2
+        # delta_x = 0
+        # if dist_left < INIT_HUG_DIST:
+        #     if dist_left > dist_right:
+        #         #get middle point, then try to nav to middle point then stay mid       
+        #         delta_x = (dist_right - dist_left)/2
 
-            if delta_x < 0.2: #if less than 0.2, let wall hug algo take over instead
-                angular_correction = KP * -ang_right  # negative to reduce error
+        #     if delta_x < 0.2: #if less than 0.2, let wall hug algo take over instead
+        #         angular_correction = KP * -ang_right  # negative to reduce error
 
-                max_angular_speed = 0.5  # rad/s
-                angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
-                cmd_ang = angular_correction
-                print("Hugging Via Midpoint")
-            else:
-                angular_correction = KP * -ang_right  # negative to reduce error
-                max_angular_speed = 0.5  # rad/s
-                angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
-                cmd_ang = angular_correction
-                print("Midpoint Correction")
+        #         max_angular_speed = 0.5  # rad/s
+        #         angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
+        #         cmd_ang = angular_correction
+        #         print("Hugging Via Midpoint")
+        #     else:
+        #         angular_correction = KP * -ang_right  # negative to reduce error
+        #         max_angular_speed = 0.5  # rad/s
+        #         angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
+        #         cmd_ang = angular_correction
+        #         print("Midpoint Correction")
 
         else:
             if abs(dist_right - INIT_HUG_DIST) < 0.2:
@@ -154,10 +154,10 @@ class Mapper:
                 print("trying to hug")
             else:
                 if dist_right - INIT_HUG_DIST > 0:
-                    cmd_ang = 0.15
+                    cmd_ang = -0.15
                     print("Rotating In")
                 else:
-                    cmd_ang = -0.15
+                    cmd_ang = 0.15
                     print("Rotating Out")
 
             
