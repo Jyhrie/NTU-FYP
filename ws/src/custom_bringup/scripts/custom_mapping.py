@@ -124,6 +124,7 @@ class Mapper:
             or dist_front is None:
             return
             
+        delta_x = 0
         if dist_left < INIT_HUG_DIST:
             if dist_left > dist_right:
                 #get middle point, then try to nav to middle point then stay mid       
