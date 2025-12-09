@@ -260,9 +260,13 @@ class Mapper:
         wall_angle = math.atan2(dy, dx)  # radians
         wall_angle_deg = math.degrees(wall_angle) - 90
 
+        
 
         numerator   = abs(x_back * y_front - y_back * x_front)
         denominator = math.sqrt((y_back - y_front)**2 + (x_back - x_front)**2)
+
+        if denominator == 0:
+            return None, None
         wall_distance = numerator / denominator
 
         return wall_distance, wall_angle_deg
