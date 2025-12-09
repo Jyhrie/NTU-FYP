@@ -37,7 +37,7 @@ CMD_TOPIC = '/cmd_vel'
 SCAN_TOPIC = '/scan'
 MAP_TOPIC = '/map'
 
-INIT_HUG_DIST = 0.7
+INIT_HUG_DIST = 0.5
 HUG_THRESH = 0.2
 
 KP = 0.05
@@ -91,6 +91,7 @@ class Mapper:
     #runtime
 
     def tick(self):
+        print("\033[2J\033[H", end="")
         if self.state == State.INIT:
             self.tick_init()
             pass
@@ -136,17 +137,28 @@ class Mapper:
                 max_angular_speed = 0.5  # rad/s
                 angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
                 cmd_ang = angular_correction
+                print("Hugging Via Midpoint")
+            else:
+                angular_correction = KP * -ang_right  # negative to reduce error
+                max_angular_speed = 0.5  # rad/s
+                angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
+                cmd_ang = angular_correction
+                print("Midpoint Correction")
+
         else:
             if abs(dist_right - INIT_HUG_DIST) < 0.2:
                 angular_correction = KP * -ang_right  # negative to reduce error
                 max_angular_speed = 0.5  # rad/s
                 angular_correction = max(-max_angular_speed, min(max_angular_speed, angular_correction))
                 cmd_ang = angular_correction
+                print("trying to hug")
             else:
                 if dist_right - INIT_HUG_DIST > 0:
                     cmd_ang = 0.15
+                    print("Rotating In")
                 else:
                     cmd_ang = -0.15
+                    print("Rotating Out")
 
             
 
