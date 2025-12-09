@@ -40,4 +40,4 @@ def index():
 if __name__ == '__main__':
     rospy.init_node('map_flask_stream', anonymous=True)
     rospy.Subscriber('/map', OccupancyGrid, map_callback)
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=8000, debug=True, threaded=True, use_reloader=False)
