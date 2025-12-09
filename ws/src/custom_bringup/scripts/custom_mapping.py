@@ -108,7 +108,7 @@ class Mapper:
         self.state = State.WALL_HUG
 
     def tick_wallhug(self):
-        cmd_ang, cmd_lin = 0, 0
+        cmd_ang, cmd_lin = 0, LINEAR_SPEED
 
         dist_right, ang_right = self.get_horizontal_wall(dir=0, max_bidirectional_samples=25) #get left wall
         dist_left, ang_left = self.get_horizontal_wall(dir=1, max_bidirectional_samples=25)
@@ -165,10 +165,12 @@ class Mapper:
                     print("snapBack")
                 else:
                     if dist_right - INIT_HUG_DIST > 0:
-                        cmd_ang = -0.15
+                        cmd_ang = -0.30
+                        cmd_lin = 0
                         print("Rotating In")
                     else:
-                        cmd_ang = 0.15
+                        cmd_ang = 0.30
+                        cmd_lin = 0
                         print("Rotating Out")
 
             
@@ -176,7 +178,7 @@ class Mapper:
         if dist_front < 0.4:
             self.publish_move_command(0,0)
         else:
-            self.publish_move_command(LINEAR_SPEED, cmd_ang)
+            self.publish_move_command(cmd_lin, cmd_ang)
             #stop
 
         #first check for state transition
