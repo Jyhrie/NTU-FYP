@@ -9,10 +9,7 @@ import threading
 import time
 import signal
 import sys
-
-from scipy.ndimage import maximum_filter
 import heapq
-import math
 
 app = Flask(__name__)
 bridge = CvBridge()
@@ -38,87 +35,123 @@ def map_callback(msg):
     # A small red arrow to show robot facing direction (upwards)
     cv2.line(img, (cx, cy), (cx, cy - 5), (0, 0, 255), 1)
 
-    draw_route(data, img, block_size=5, occ_threshold=50)
+    mark_top_right_corner(data, img, block_size=5, occ_threshold=50)
 
     # Flip vertically to match visualization orientation
     map_img = img
 
-def draw_route(data, img, robot_size=(0.3,0.4), resolution=0.02, block_size=5, occ_threshold=50):
+def mark_top_right_corner(data, img, block_size=5, occ_threshold=50):
+    """
+    Finds the top-right-most block_size x block_size free area
+    and marks it on the given OpenCV image.
 
-    footprint_w = int(robot_size[0]/resolution)
-    footprint_h = int(robot_size[1]/resolution)
-    inflated = maximum_filter(data, size=(footprint_h, footprint_w))
+    Parameters:
+        data: 2D numpy array of occupancy grid (0=free, 100=occupied)
+        img: BGR image corresponding to the map
+        block_size: size of the square to check
+        occ_threshold: value >= threshold is considered occupied
 
-    # Convert inflated to binary 0=free, 100=occupied for A*
-    inflated_bin = np.where(inflated >= occ_threshold, 100, 0)
-
+    Returns:
+        (x, y) center of the selected block in grid coordinates, or None if not found
+    """
     h, w = data.shape
 
-    # --- pick target ---
-    target = None
+    # scan top → bottom, right → left
     for iy in range(h):
-        for ix in range(w-block_size, -1, -1):
+        for ix in range(w - block_size, -1, -1):
             block = data[iy:iy+block_size, ix:ix+block_size]
             if np.all(block < occ_threshold):
-                cx = ix + block_size//2
-                cy = iy + block_size//2
-                target = (cx, cy)
-                break
-        if target:
-            break
-    if target is None:
-        return None
+                # found a free 5x5 block
+                cx = ix + block_size // 2
+                cy = iy + block_size // 2
 
-    start = (w//2, h//2)
-    goal = target
+                # mark on img (cv2 uses x=cols, y=rows)
+                cv2.circle(img, (cx, cy), 5, (255, 0, 0), 2)  # blue circle
+                return cx, cy
+    return None, None
 
-    path = astar(inflated_bin, start, goal)
-    if path:
-        for i in range(len(path)-1):
-            x1, y1 = path[i]
-            x2, y2 = path[i+1]
-            cv2.line(img, (x1, y1), (x2, y2), (0,255,0), 1)
-
-    cv2.circle(img, target, 5, (255,0,0), 2)
-    return target, path
-
-
-# --- A* helper ---
 def heuristic(a, b):
-    return math.hypot(a[0]-b[0], a[1]-b[1])
+    # Euclidean distance
+    return np.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)
 
-def astar(grid, start, goal):
-    h, w = grid.shape
+def draw_route(data, img, start, goal):
+    """
+    Calculates A* path and draws it on the image.
+    start/goal are tuples (x, y).
+    """
+    path = astar_path(data, start, goal, footprint=5, occ_threshold=50)
+    
+    if path:
+        # Convert path points to numpy array for polylines
+        pts = np.array(path, np.int32)
+        pts = pts.reshape((-1, 1, 2))
+        # Draw the path in Green
+        cv2.polylines(img, [pts], False, (0, 255, 0), 2)
+
+def astar_path(data, start, goal, footprint=5, occ_threshold=50):
+    """
+    A* Pathfinding Algorithm on Occupancy Grid.
+    """
+    h_map, w_map = data.shape
+    
+    # Priority Queue: (f_score, g_score, (x, y))
     open_set = []
-    heapq.heappush(open_set, (heuristic(start, goal), 0, start, None))
+    heapq.heappush(open_set, (0, 0, start))
+    
     came_from = {}
     g_score = {start: 0}
+    
+    # Offsets for 8-connected neighbors (diagonal movement allowed)
+    neighbors = [
+        (0, 1), (0, -1), (1, 0), (-1, 0), 
+        (1, 1), (1, -1), (-1, 1), (-1, -1)
+    ]
+
+    half_fp = footprint // 2
 
     while open_set:
-        f, g, current, parent = heapq.heappop(open_set)
-        if current == goal:
-            path = [current]
-            while parent:
-                path.append(parent)
-                parent = came_from[parent]
-            return path[::-1]
+        _, current_g, current = heapq.heappop(open_set)
 
-        if current in came_from:
-            continue
-        came_from[current] = parent
+        if current == goal:
+            # Reconstruct path
+            path = []
+            while current in came_from:
+                path.append(current)
+                current = came_from[current]
+            path.append(start)
+            return path[::-1] # Return reversed path
 
         x, y = current
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
+
+        for dx, dy in neighbors:
+            nx, ny = x + dx, y + dy
+
+            # 1. Boundary Check
+            if 0 <= nx < w_map and 0 <= ny < h_map:
+                
+                # 2. Footprint/Collision Check
+                # We check the 5x5 block around the neighbor node
+                y1 = max(0, ny - half_fp)
+                y2 = min(h_map, ny + half_fp + 1)
+                x1 = max(0, nx - half_fp)
+                x2 = min(w_map, nx + half_fp + 1)
+                
+                # If any pixel in the footprint is occupied, skip this neighbor
+                if np.any(data[y1:y2, x1:x2] >= occ_threshold):
                     continue
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < w and 0 <= ny < h and grid[ny, nx] < occ_threshold:
-                    tentative_g = g + math.hypot(dx, dy)
-                    if (nx, ny) not in g_score or tentative_g < g_score[(nx, ny)]:
-                        g_score[(nx, ny)] = tentative_g
-                        heapq.heappush(open_set, (tentative_g + heuristic((nx, ny), goal), tentative_g, (nx, ny), current))
-    return None
+
+                # 3. Calculate Cost
+                # Cost is 1 for straight, 1.414 for diagonal
+                move_cost = 1.414 if dx != 0 and dy != 0 else 1.0
+                new_g = current_g + move_cost
+
+                if (nx, ny) not in g_score or new_g < g_score[(nx, ny)]:
+                    g_score[(nx, ny)] = new_g
+                    f = new_g + heuristic((nx, ny), goal)
+                    heapq.heappush(open_set, (f, new_g, (nx, ny)))
+                    came_from[(nx, ny)] = current
+
+    return None # No path found
 
 # ---- MJPEG Stream Generator ----
 def generate_map_stream():
