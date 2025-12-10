@@ -37,7 +37,7 @@ def map_callback(msg):
     cv2.line(img, (cx, cy), (cx, cy - 15), (0, 0, 255), 2)
 
     # Flip vertically to match visualization orientation
-    map_img = cv2.flip(img, 0)
+    map_img = img
 
 # ---- MJPEG Stream Generator ----
 def generate_map_stream():
