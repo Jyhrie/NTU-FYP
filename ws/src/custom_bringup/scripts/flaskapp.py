@@ -9,7 +9,6 @@ import threading
 import time
 import signal
 import sys
-import heapq
 
 app = Flask(__name__)
 bridge = CvBridge()
@@ -35,13 +34,7 @@ def map_callback(msg):
     # A small red arrow to show robot facing direction (upwards)
     cv2.line(img, (cx, cy), (cx, cy - 5), (0, 0, 255), 1)
 
-    # ---- Find Target ----
-    # Note: We pass block_size=5 to match robot footprint
-    goal_x, goal_y = mark_top_right_corner(data, img, block_size=5, occ_threshold=50)
-
-    # ---- Draw Route ----
-    if goal_x is not None and goal_y is not None:
-        draw_route(data, img, (cx, cy), (goal_x, goal_y))
+    mark_top_right_corner(data, img, block_size=5, occ_threshold=50)
 
     # Flip vertically to match visualization orientation
     map_img = img
@@ -75,89 +68,6 @@ def mark_top_right_corner(data, img, block_size=5, occ_threshold=50):
                 cv2.circle(img, (cx, cy), 5, (255, 0, 0), 2)  # blue circle
                 return cx, cy
     return None, None
-
-def heuristic(a, b):
-    # Euclidean distance
-    return np.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)
-
-def draw_route(data, img, start, goal):
-    """
-    Calculates A* path and draws it on the image.
-    start/goal are tuples (x, y).
-    """
-    path = astar_path(data, start, goal, footprint=5, occ_threshold=50)
-    
-    if path:
-        # Convert path points to numpy array for polylines
-        pts = np.array(path, np.int32)
-        pts = pts.reshape((-1, 1, 2))
-        # Draw the path in Green
-        cv2.polylines(img, [pts], False, (0, 255, 0), 2)
-
-def astar_path(data, start, goal, footprint=5, occ_threshold=50):
-    """
-    A* Pathfinding Algorithm on Occupancy Grid.
-    """
-    h_map, w_map = data.shape
-    
-    # Priority Queue: (f_score, g_score, (x, y))
-    open_set = []
-    heapq.heappush(open_set, (0, 0, start))
-    
-    came_from = {}
-    g_score = {start: 0}
-    
-    # Offsets for 8-connected neighbors (diagonal movement allowed)
-    neighbors = [
-        (0, 1), (0, -1), (1, 0), (-1, 0), 
-        (1, 1), (1, -1), (-1, 1), (-1, -1)
-    ]
-
-    half_fp = footprint // 2
-
-    while open_set:
-        _, current_g, current = heapq.heappop(open_set)
-
-        if current == goal:
-            # Reconstruct path
-            path = []
-            while current in came_from:
-                path.append(current)
-                current = came_from[current]
-            path.append(start)
-            return path[::-1] # Return reversed path
-
-        x, y = current
-
-        for dx, dy in neighbors:
-            nx, ny = x + dx, y + dy
-
-            # 1. Boundary Check
-            if 0 <= nx < w_map and 0 <= ny < h_map:
-                
-                # 2. Footprint/Collision Check
-                # We check the 5x5 block around the neighbor node
-                y1 = max(0, ny - half_fp)
-                y2 = min(h_map, ny + half_fp + 1)
-                x1 = max(0, nx - half_fp)
-                x2 = min(w_map, nx + half_fp + 1)
-                
-                # If any pixel in the footprint is occupied, skip this neighbor
-                if np.any(data[y1:y2, x1:x2] >= occ_threshold):
-                    continue
-
-                # 3. Calculate Cost
-                # Cost is 1 for straight, 1.414 for diagonal
-                move_cost = 1.414 if dx != 0 and dy != 0 else 1.0
-                new_g = current_g + move_cost
-
-                if (nx, ny) not in g_score or new_g < g_score[(nx, ny)]:
-                    g_score[(nx, ny)] = new_g
-                    f = new_g + heuristic((nx, ny), goal)
-                    heapq.heappush(open_set, (f, new_g, (nx, ny)))
-                    came_from[(nx, ny)] = current
-
-    return None # No path found
 
 # ---- MJPEG Stream Generator ----
 def generate_map_stream():
