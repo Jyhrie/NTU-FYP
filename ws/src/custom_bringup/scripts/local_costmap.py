@@ -1,90 +1,99 @@
 #!/usr/bin/env python3
 import rospy
 import numpy as np
-from sensor_msgs.msg import LaserScan
 import math
 
+from sensor_msgs.msg import LaserScan
+from nav_msgs.msg import OccupancyGrid
+from geometry_msgs.msg import Pose
 
-class LocalCostmap:
+
+class LocalCostmapPublisher:
     def __init__(self,
-                 size_m=3.0,          # size of local map in meters
-                 resolution=0.02):    # 2cm per cell (adjust as needed)
-
+                 size_m=3.0,       # total local window size (3m x 3m)
+                 resolution=0.03): # 3cm resolution
+                 
         self.size_m = size_m
         self.resolution = resolution
 
-        # grid size in cells
         self.n = int(self.size_m / self.resolution)
+        self.c = self.n // 2  # robot center index
 
-        # center index (robot is at center of grid)
-        self.c = self.n // 2    
-
-        # allocate empty occupancy grid
         self.grid = np.zeros((self.n, self.n), dtype=np.int8)
-
         self.scan = None
+
+        # ROS
         rospy.Subscriber("/scan", LaserScan, self.scan_cb)
+        self.pub = rospy.Publisher("/local_costmap", OccupancyGrid, queue_size=1)
 
-
-    def scan_cb(self, msg: LaserScan):
+    def scan_cb(self, msg):
         self.scan = msg
 
-
-    def build(self):
+    def build_costmap(self):
         """
-        Convert the latest lidar scan into a robot-centered occupancy grid.
+        Convert LaserScan → local occupancy grid (robot-centered)
         """
-
-        # Clear previous grid
-        self.grid.fill(0)
-
         if self.scan is None:
-            return self.grid
+            self.grid.fill(0)
+            return
 
-        msg = self.scan
-        angle = msg.angle_min
+        self.grid.fill(0)
+        angle = self.scan.angle_min
 
-        for d in msg.ranges:
-            # ignore invalid values
+        for d in self.scan.ranges:
             if math.isinf(d) or math.isnan(d):
-                angle += msg.angle_increment
+                angle += self.scan.angle_increment
                 continue
 
-            # ignore points outside local map window
             if d > self.size_m:
-                angle += msg.angle_increment
+                angle += self.scan.angle_increment
                 continue
 
-            # convert polar → robot-centric (meters)
+            # polar → Cartesian
             x = d * math.cos(angle)
             y = d * math.sin(angle)
 
-            # convert meters → grid coordinates
-            ix = int(self.c + (x / self.resolution))
-            iy = int(self.c + (y / self.resolution))
+            # Cartesian → grid index
+            ix = int(self.c + x / self.resolution)
+            iy = int(self.c + y / self.resolution)
 
-            # skip if out of bounds
             if 0 <= ix < self.n and 0 <= iy < self.n:
-                self.grid[ix, iy] = 100  # occupied
+                self.grid[ix, iy] = 100  # OCCUPIED
 
-            angle += msg.angle_increment
+            angle += self.scan.angle_increment
 
-        return self.grid
-    
+    def publish_costmap(self):
+        """
+        Publish occupancy map message
+        """
+        msg = OccupancyGrid()
+        msg.header.stamp = rospy.Time.now()
+        msg.header.frame_id = "base_link"  # robot-centered map
+
+        msg.info.resolution = self.resolution
+        msg.info.width = self.n
+        msg.info.height = self.n
+
+        # map origin so robot is at center
+        msg.info.origin = Pose()
+        msg.info.origin.position.x = -self.size_m / 2.0
+        msg.info.origin.position.y = -self.size_m / 2.0
+        msg.info.origin.position.z = 0.0
+
+        # flatten grid row-major
+        msg.data = self.grid.flatten().tolist()
+
+        self.pub.publish(msg)
+
+    def run(self):
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            self.build_costmap()
+            self.publish_costmap()
+            rate.sleep()
+
+
 if __name__ == "__main__":
-    rospy.init_node("local_costmap_test")
-
-    costmap = LocalCostmap(size_m=3.0, resolution=0.03)
-
-    rate = rospy.Rate(10)
-
-    while not rospy.is_shutdown():
-        grid = costmap.build()
-
-        # Example: check front occupancy
-        front_slice = grid[costmap.c-10:costmap.c+10, costmap.c+40:costmap.c+70]
-        front_blocked = np.any(front_slice == 100)
-
-        print("Front blocked:", front_blocked)
-
-        rate.sleep()
+    rospy.init_node("local_costmap_publisher")
+    node = LocalCostmapPublisher(size_m=3.0, resolution=0.03)
+    node.run()
