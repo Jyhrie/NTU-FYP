@@ -14,16 +14,31 @@ app = Flask(__name__)
 bridge = CvBridge()
 map_img = None
 
-# ---- ROS Map Callback ----
 def map_callback(msg):
     global map_img
+
     # Convert occupancy grid to 0-255 image
     data = np.array(msg.data, dtype=np.int8).reshape((msg.info.height, msg.info.width))
-    # Unknown cells (-1) -> gray 128
+
+    # Unknown (-1) = darker gray
     data[data < 0] = 50
-    img = 255 - (data * 255 / 100).astype(np.uint8)  # occupied=black, free=white
+
+    img = 255 - (data * 255 / 100).astype(np.uint8)
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    map_img = cv2.flip(img, 0)  # flip vertically for correct orientation
+
+    # ---- Mark Robot in the Center ----
+    cx = msg.info.width // 2
+    cy = msg.info.height // 2
+
+    # A small red circle to mark robot position
+    cv2.circle(img, (cx, cy), 5, (0, 0, 255), -1)         # filled red
+    cv2.circle(img, (cx, cy), 12, (0, 0, 255), 2)         # outer ring
+
+    # A small red arrow to show robot facing direction (upwards)
+    cv2.line(img, (cx, cy), (cx, cy - 30), (0, 0, 255), 2)
+
+    # Flip vertically to match visualization orientation
+    map_img = cv2.flip(img, 0)
 
 # ---- MJPEG Stream Generator ----
 def generate_map_stream():
