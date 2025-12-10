@@ -90,7 +90,7 @@ def process_map_loop():
 
         # -- Step E: Update Display --
         # Flip for browser viewing
-        final_img = cv2.flip(img, 0)
+        final_img = img
         display_img = final_img
         
         # Cap update rate to save CPU (10 Hz is plenty)
