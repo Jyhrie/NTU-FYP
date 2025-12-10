@@ -43,58 +43,45 @@ def map_callback(msg):
     # Flip vertically to match visualization orientation
     map_img = img
 
-def draw_route(data, img, robot_size=(0.3, 0.4), resolution=0.02, block_size=5, occ_threshold=50):
-    """
-    Draws A* path from robot center to top-right-most free block considering robot footprint.
+def draw_route(data, img, robot_size=(0.3,0.4), resolution=0.02, block_size=5, occ_threshold=50):
 
-    Parameters:
-        data: 2D numpy array of occupancy grid (0=free, 100=occupied)
-        img: BGR image corresponding to the map
-        robot_size: tuple (width_m, length_m)
-        resolution: meters per cell
-        block_size: size of square to find target
-        occ_threshold: occupancy threshold for obstacle
-    """
-
-    # --- 1. Inflate obstacles ---
-    footprint_w = int(robot_size[0] / resolution)
-    footprint_h = int(robot_size[1] / resolution)
+    footprint_w = int(robot_size[0]/resolution)
+    footprint_h = int(robot_size[1]/resolution)
     inflated = maximum_filter(data, size=(footprint_h, footprint_w))
+
+    # Convert inflated to binary 0=free, 100=occupied for A*
+    inflated_bin = np.where(inflated >= occ_threshold, 100, 0)
 
     h, w = data.shape
 
-    # --- 2. Pick top-right-most valid block ---
+    # --- pick target ---
     target = None
     for iy in range(h):
-        for ix in range(w - block_size, -1, -1):
+        for ix in range(w-block_size, -1, -1):
             block = data[iy:iy+block_size, ix:ix+block_size]
             if np.all(block < occ_threshold):
-                cx = ix + block_size // 2
-                cy = iy + block_size // 2
+                cx = ix + block_size//2
+                cy = iy + block_size//2
                 target = (cx, cy)
                 break
         if target:
             break
-
     if target is None:
-        return None  # no valid target found
+        return None
 
-    # --- 3. A* on inflated map ---
-    start = (w//2, h//2)  # robot at center
+    start = (w//2, h//2)
     goal = target
 
-    path = astar(inflated, start, goal)
-    if path is not None:
-        # --- 4. Draw path ---
+    path = astar(inflated_bin, start, goal)
+    if path:
         for i in range(len(path)-1):
             x1, y1 = path[i]
             x2, y2 = path[i+1]
-            cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 1)  # green path
+            cv2.line(img, (x1, y1), (x2, y2), (0,255,0), 1)
 
-    # --- 5. Draw target ---
-    cv2.circle(img, target, 5, (255, 0, 0), 2)  # blue circle
-
+    cv2.circle(img, target, 5, (255,0,0), 2)
     return target, path
+
 
 # --- A* helper ---
 def heuristic(a, b):
