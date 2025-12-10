@@ -10,6 +10,10 @@ import time
 import signal
 import sys
 
+from scipy.ndimage import maximum_filter
+import heapq
+import math
+
 app = Flask(__name__)
 bridge = CvBridge()
 map_img = None
@@ -31,45 +35,103 @@ def map_callback(msg):
     cy = msg.info.height // 2
 
     # A small red circle to mark robot position
-    cv2.circle(img, (cx, cy), 5, (0, 0, 255), 2)         # outer ring
-
     # A small red arrow to show robot facing direction (upwards)
-    cv2.line(img, (cx, cy), (cx, cy - 15), (0, 0, 255), 2)
+    cv2.line(img, (cx, cy), (cx, cy - 5), (0, 0, 255), 1)
 
-    mark_top_right_corner(data, img, block_size=5, occ_threshold=50)
+    draw_route(data, img, block_size=5, occ_threshold=50)
 
     # Flip vertically to match visualization orientation
     map_img = img
 
-def mark_top_right_corner(data, img, block_size=5, occ_threshold=50):
+def draw_route(data, img, robot_size=(0.3, 0.4), resolution=0.02, block_size=5, occ_threshold=50):
     """
-    Finds the top-right-most block_size x block_size free area
-    and marks it on the given OpenCV image.
+    Draws A* path from robot center to top-right-most free block considering robot footprint.
 
     Parameters:
         data: 2D numpy array of occupancy grid (0=free, 100=occupied)
         img: BGR image corresponding to the map
-        block_size: size of the square to check
-        occ_threshold: value >= threshold is considered occupied
-
-    Returns:
-        (x, y) center of the selected block in grid coordinates, or None if not found
+        robot_size: tuple (width_m, length_m)
+        resolution: meters per cell
+        block_size: size of square to find target
+        occ_threshold: occupancy threshold for obstacle
     """
+
+    # --- 1. Inflate obstacles ---
+    footprint_w = int(robot_size[0] / resolution)
+    footprint_h = int(robot_size[1] / resolution)
+    inflated = maximum_filter(data, size=(footprint_h, footprint_w))
+
     h, w = data.shape
 
-    # scan top → bottom, right → left
+    # --- 2. Pick top-right-most valid block ---
+    target = None
     for iy in range(h):
         for ix in range(w - block_size, -1, -1):
             block = data[iy:iy+block_size, ix:ix+block_size]
             if np.all(block < occ_threshold):
-                # found a free 5x5 block
                 cx = ix + block_size // 2
                 cy = iy + block_size // 2
+                target = (cx, cy)
+                break
+        if target:
+            break
 
-                # mark on img (cv2 uses x=cols, y=rows)
-                cv2.circle(img, (cx, cy), 5, (255, 0, 0), 2)  # blue circle
-                return cx, cy
-    return None, None
+    if target is None:
+        return None  # no valid target found
+
+    # --- 3. A* on inflated map ---
+    start = (w//2, h//2)  # robot at center
+    goal = target
+
+    path = astar(inflated, start, goal)
+    if path is not None:
+        # --- 4. Draw path ---
+        for i in range(len(path)-1):
+            x1, y1 = path[i]
+            x2, y2 = path[i+1]
+            cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 1)  # green path
+
+    # --- 5. Draw target ---
+    cv2.circle(img, target, 5, (255, 0, 0), 2)  # blue circle
+
+    return target, path
+
+# --- A* helper ---
+def heuristic(a, b):
+    return math.hypot(a[0]-b[0], a[1]-b[1])
+
+def astar(grid, start, goal):
+    h, w = grid.shape
+    open_set = []
+    heapq.heappush(open_set, (heuristic(start, goal), 0, start, None))
+    came_from = {}
+    g_score = {start: 0}
+
+    while open_set:
+        f, g, current, parent = heapq.heappop(open_set)
+        if current == goal:
+            path = [current]
+            while parent:
+                path.append(parent)
+                parent = came_from[parent]
+            return path[::-1]
+
+        if current in came_from:
+            continue
+        came_from[current] = parent
+
+        x, y = current
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < w and 0 <= ny < h and grid[ny, nx] < occ_threshold:
+                    tentative_g = g + math.hypot(dx, dy)
+                    if (nx, ny) not in g_score or tentative_g < g_score[(nx, ny)]:
+                        g_score[(nx, ny)] = tentative_g
+                        heapq.heappush(open_set, (tentative_g + heuristic((nx, ny), goal), tentative_g, (nx, ny), current))
+    return None
 
 # ---- MJPEG Stream Generator ----
 def generate_map_stream():
