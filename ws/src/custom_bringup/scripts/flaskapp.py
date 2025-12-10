@@ -36,29 +36,8 @@ def map_callback(msg):
     # A small red arrow to show robot facing direction (upwards)
     cv2.line(img, (cx, cy), (cx, cy - 15), (0, 0, 255), 2)
 
-    target_ix, target_iy = pick_navigation_to_position(data)
-
-    img_x = target_ix
-    img_y = msg.info.height - target_iy  # flip y to match cv2 image coords
-
-    cv2.circle(img, (img_x, img_y), 5, (0, 255, 0), -1)  # filled green circle
-
     # Flip vertically to match visualization orientation
-    map_img = img
-
-def pick_navigation_to_position(self):
-    """
-    Pick a valid target position for the robot to navigate to.
-    Returns (ix, iy) grid coordinates in self.grid.
-    """
-    # Scan from top-right to bottom-left
-    for iy in range(self.n-1, -1, -1):       # top → bottom
-        for ix in range(self.n-1, -1, -1):   # right → left
-            if self.grid[iy, ix] == 0:       # free cell
-                return (ix, iy)
-    
-    # fallback if no free cell found
-    return (self.c, self.c)  # stay in place
+    map_img = cv2.flip(img, 0)
 
 # ---- MJPEG Stream Generator ----
 def generate_map_stream():
