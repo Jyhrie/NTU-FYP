@@ -31,7 +31,7 @@ def map_callback(msg):
     cy = msg.info.height // 2
 
     # A small red arrow to show robot facing direction (upwards)
-    cv2.line(img, (cx, cy), (cx, cy - 5), (0, 0, 255), 2)
+    cv2.rectangle(img, (cx-10, cy-10), (cx+10, cy+10), (0,255,255,0), -1)
 
     # Flip vertically to match visualization orientation
     map_img = img
