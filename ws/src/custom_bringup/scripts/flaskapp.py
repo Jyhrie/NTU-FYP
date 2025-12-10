@@ -78,11 +78,15 @@ def process_map_loop():
             # Draw Target
             cv2.circle(img, (goal_x, goal_y), 5, (255, 0, 0), 2)
             
-            # Run A* on the INFLATED grid
-            path = astar_fast(inflated_grid, (cx, cy), (goal_x, goal_y))
+            # 1. Calculate raw grid path
+            raw_path = astar_fast(inflated_grid, (cx, cy), (goal_x, goal_y))
             
-            if path:
-                pts = np.array(path, np.int32).reshape((-1, 1, 2))
+            if raw_path:
+                # 2. SMOOTH IT
+                final_path = smooth_path(raw_path, inflated_grid)
+                
+                # 3. Draw
+                pts = np.array(final_path, np.int32).reshape((-1, 1, 2))
                 cv2.polylines(img, [pts], False, (0, 255, 0), 2)
 
         # Robot marker
@@ -118,34 +122,46 @@ def find_safe_corner(data, block_size=5):
 
 def astar_fast(grid, start, goal):
     """
-    A* on a binary grid (0=Free, 1=Obstacle).
-    No footprint checks needed here because the map is already inflated.
+    A* that assumes the robot starts facing UP (0, -1).
+    Penalizes reversing and encourages straight lines.
     """
     h, w = grid.shape
     
-    # Heuristic: Manhattan distance (Faster than Euclidean)
+    # 1. HARDCODED START ORIENTATION: UP
+    # (dx, dy) = (0, -1)
+    start_facing = (0, -1) 
+
+    # Penalties
+    REVERSE_PENALTY = 200  # Massive penalty for reversing
+    TURN_PENALTY = 10      # Medium penalty for turning
+    MOVE_COST = 1          # Base cost
+
     def h_cost(a, b):
+        # Manhattan distance
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
+    # Priority Queue: (f_score, g_score, (x, y), last_move_dir)
     open_set = []
-    heapq.heappush(open_set, (0, start))
+    
+    # Initialize with start_facing as the "previous direction"
+    heapq.heappush(open_set, (0, 0, start, start_facing))
     
     came_from = {}
     g_score = {start: 0}
     
-    # 4-connectivity is much faster than 8-connectivity and usually sufficient
-    neighbors = [(0, 1), (0, -1), (1, 0), (-1, 0)] 
+    # Neighbors: Down, Up, Right, Left
+    neighbors = [(0, 1), (0, -1), (1, 0), (-1, 0)]
     
-    # Limit iterations to prevent freeze on unreachable goals
     max_iter = 5000
     iters = 0
 
     while open_set:
         iters += 1
         if iters > max_iter:
-            return None # Path too long or complex
+            return None
 
-        _, current = heapq.heappop(open_set)
+        # Pop node
+        f, current_g, current, last_dir = heapq.heappop(open_set)
 
         if current == goal:
             path = []
@@ -160,20 +176,110 @@ def astar_fast(grid, start, goal):
         for dx, dy in neighbors:
             nx, ny = x + dx, y + dy
 
-            # Bounds check
+            # Bounds Check
             if 0 <= nx < w and 0 <= ny < h:
-                # Collision Check: Just read the array (O(1))
+                # Collision Check (Assuming grid is already inflated/dilated)
                 if grid[ny, nx] == 1: 
                     continue
                 
-                new_g = g_score[current] + 1
+                # --- COST LOGIC ---
+                extra_cost = 0
                 
+                # Compare new move (dx, dy) against previous move (last_dir)
+                # Dot product:
+                #   1  = Continuing Straight
+                #   0  = 90 Degree Turn
+                #  -1  = 180 Degree Reverse
+                alignment = (last_dir[0] * dx) + (last_dir[1] * dy)
+                
+                if alignment == -1: 
+                    extra_cost = REVERSE_PENALTY
+                elif alignment == 0:
+                    extra_cost = TURN_PENALTY
+                
+                new_g = current_g + MOVE_COST + extra_cost
+
                 if (nx, ny) not in g_score or new_g < g_score[(nx, ny)]:
                     g_score[(nx, ny)] = new_g
                     f = new_g + h_cost((nx, ny), goal)
-                    heapq.heappush(open_set, (f, (nx, ny)))
+                    
+                    # Push new state, recording (dx, dy) as the new direction
+                    heapq.heappush(open_set, (f, new_g, (nx, ny), (dx, dy)))
                     came_from[(nx, ny)] = current
+
     return None
+
+def smooth_path(path, grid):
+    """
+    Simplifies the path by removing unnecessary waypoints.
+    If point A and point C have 'Line of Sight' (no obstacles), 
+    we skip point B.
+    """
+    if not path or len(path) < 3:
+        return path
+
+    smoothed = [path[0]]
+    current_idx = 0
+    
+    while current_idx < len(path) - 1:
+        # Check from the furthest point back towards current
+        # We try to connect 'current' to the furthest possible 'next' point
+        next_idx = current_idx + 1
+        
+        for i in range(len(path) - 1, current_idx, -1):
+            # Check if we can drive straight from current to i
+            start_pt = path[current_idx]
+            end_pt = path[i]
+            
+            if has_line_of_sight(grid, start_pt, end_pt):
+                next_idx = i
+                break
+        
+        smoothed.append(path[next_idx])
+        current_idx = next_idx
+
+    return smoothed
+
+def has_line_of_sight(grid, p1, p2):
+    """
+    Checks if a straight line between p1 and p2 hits any obstacles using Bresenham's Line Algorithm.
+    Returns True if safe, False if obstacle detected.
+    """
+    x1, y1 = p1
+    x2, y2 = p2
+    
+    dx = abs(x2 - x1)
+    dy = abs(y2 - y1)
+    
+    x_step = 1 if x1 < x2 else -1
+    y_step = 1 if y1 < y2 else -1
+    
+    err = dx - dy
+    
+    x, y = x1, y1
+    
+    # We check every grid cell the line passes through
+    while True:
+        # Boundary check (just in case)
+        if not (0 <= x < grid.shape[1] and 0 <= y < grid.shape[0]):
+            return False
+            
+        # Collision check (1 = Obstacle)
+        if grid[y, x] == 1:
+            return False
+            
+        if x == x2 and y == y2:
+            break
+            
+        e2 = 2 * err
+        if e2 > -dy:
+            err -= dy
+            x += x_step
+        if e2 < dx:
+            err += dx
+            y += y_step
+            
+    return True
 
 
 # ---- Boilerplate (Server & Main) ----
