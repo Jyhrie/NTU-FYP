@@ -35,7 +35,13 @@ def map_callback(msg):
     # A small red arrow to show robot facing direction (upwards)
     cv2.line(img, (cx, cy), (cx, cy - 5), (0, 0, 255), 1)
 
-    mark_top_right_corner(data, img, block_size=5, occ_threshold=50)
+    # ---- Find Target ----
+    # Note: We pass block_size=5 to match robot footprint
+    goal_x, goal_y = mark_top_right_corner(data, img, block_size=5, occ_threshold=50)
+
+    # ---- Draw Route ----
+    if goal_x is not None and goal_y is not None:
+        draw_route(data, img, (cx, cy), (goal_x, goal_y))
 
     # Flip vertically to match visualization orientation
     map_img = img
