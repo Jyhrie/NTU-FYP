@@ -36,8 +36,40 @@ def map_callback(msg):
     # A small red arrow to show robot facing direction (upwards)
     cv2.line(img, (cx, cy), (cx, cy - 15), (0, 0, 255), 2)
 
+    mark_top_right_corner(data, img, block_size=5, occ_threshold=50)
+
     # Flip vertically to match visualization orientation
     map_img = img
+
+def mark_top_right_corner(data, img, block_size=5, occ_threshold=50):
+    """
+    Finds the top-right-most block_size x block_size free area
+    and marks it on the given OpenCV image.
+
+    Parameters:
+        data: 2D numpy array of occupancy grid (0=free, 100=occupied)
+        img: BGR image corresponding to the map
+        block_size: size of the square to check
+        occ_threshold: value >= threshold is considered occupied
+
+    Returns:
+        (x, y) center of the selected block in grid coordinates, or None if not found
+    """
+    h, w = data.shape
+
+    # scan top → bottom, right → left
+    for iy in range(h):
+        for ix in range(w - block_size, -1, -1):
+            block = data[iy:iy+block_size, ix:ix+block_size]
+            if np.all(block < occ_threshold):
+                # found a free 5x5 block
+                cx = ix + block_size // 2
+                cy = iy + block_size // 2
+
+                # mark on img (cv2 uses x=cols, y=rows)
+                cv2.circle(img, (cx, cy), 5, (255, 0, 0), 2)  # blue circle
+                return cx, cy
+    return None, None
 
 # ---- MJPEG Stream Generator ----
 def generate_map_stream():
