@@ -68,33 +68,39 @@ class LocalOccupancyNavigator:
         grid[:, robot_origin.x] = 3   # cost value 1
 
     def boxcast_area(self, root, pos_halfwidth, pos_halfheight, root_offset, grid):
-        pos = root.add(root_offset)
+            pos = root.add(root_offset)
 
-        pt1 = pos.add(Vector2(pos_halfwidth, pos_halfheight))
-        pt2 = pos.subtract(Vector2(pos_halfwidth, pos_halfheight))
+            pt1 = pos.add(Vector2(pos_halfwidth, pos_halfheight))
+            pt2 = pos.subtract(Vector2(pos_halfwidth, pos_halfheight))
 
-        map_h, map_w = grid.shape
+            map_h, map_w = grid.shape
 
-        #sort coordinates
-        start_x = int(min(pt1.x, pt2.x))
-        end_x   = int(max(pt1.x, pt2.x))
-        start_y = int(min(pt1.y, pt2.y))
-        end_y   = int(max(pt1.y, pt2.y))
+            # 1. Sort coordinates (Raw, unclamped)
+            start_x = int(min(pt1.x, pt2.x))
+            end_x   = int(max(pt1.x, pt2.x))
+            start_y = int(min(pt1.y, pt2.y))
+            end_y   = int(max(pt1.y, pt2.y))
 
-        #clamp vals
-        x0 = max(0, start_x)
-        x1 = min(map_w, end_x + 1)
-        
-        y0 = max(0, start_y)
-        y1 = min(map_h, end_y + 1)
+            # 2. NEW: Check Bounds - Treat Map Edges as Walls
+            # If any part of the box sticks out of the map, it's a hit.
+            if start_x < 0 or end_x >= map_w:
+                return True
+            if start_y < 0 or end_y >= map_h:
+                return True
 
-        # 5. Safety Check: If the box is off-screen, x1 might be <= x0
-        if x1 <= x0 or y1 <= y0:
-            return False
+            # 3. Clamp vals for NumPy slicing
+            # (Technically redundant now if we return True above, but good for safety)
+            x0 = max(0, start_x)
+            x1 = min(map_w, end_x + 1)
+            y0 = max(0, start_y)
+            y1 = min(map_h, end_y + 1)
 
-        # 6. The actual check
-        # Returns True if ANY pixel in this box is >= 100
-        return np.max(grid[y0:y1, x0:x1]) >= 100
+            # 4. Safety Check: If slice is invalid (shouldn't happen due to step 2, but keep it)
+            if x1 <= x0 or y1 <= y0:
+                return False
+
+            # 5. The actual obstacle check
+            return np.max(grid[y0:y1, x0:x1]) >= 100
 
     def raycast(self):
         self.grid = self.map
