@@ -86,7 +86,7 @@ class LocalOccupancyNavigator:
             if start_x < 0 or end_x >= map_w:
                 return True
             if start_y < 0 or end_y >= map_h:
-                return True
+                return True 
 
             # 3. Clamp vals for NumPy slicing
             # (Technically redundant now if we return True above, but good for safety)
@@ -129,28 +129,40 @@ class LocalOccupancyNavigator:
         pass
         
     def draw_boxcast_hit(self, center_pos, half_w, half_h, offset, grid, print_number):
-            # 1. Define corners
-            center_pos = center_pos.add(offset)
-            pt1 = center_pos.add(Vector2(half_w, half_h))
-            pt2 = center_pos.subtract(Vector2(half_w, half_h))
-
             map_h, map_w = grid.shape
 
-            # 2. Sort & Clamp (Standard boilerplate)
-            start_x = max(0, int(min(pt1.x, pt2.x)))
-            end_x   = min(map_w, int(max(pt1.x, pt2.x)) + 1)
+            # 1. Calculate Target Position
+            target_pos = center_pos.add(offset)
             
-            start_y = max(0, int(min(pt1.y, pt2.y)))
-            end_y   = min(map_h, int(max(pt1.y, pt2.y)) + 1)
+            # --- NEW: Clamp the Center to be visible ---
+            # We ensure the center is at least 'half_w' away from edges.
+            # This guarantees the full box is drawn at the very edge of the map
+            # if the actual hit was further out.
+            draw_x = max(half_w, min(map_w - 1 - half_w, int(target_pos.x)))
+            draw_y = max(half_h, min(map_h - 1 - half_h, int(target_pos.y)))
+            
+            # 2. Define corners using the CLAMPED center
+            # We use standard integers here since we clamped them manually above
+            pt1_x = draw_x + half_w
+            pt1_y = draw_y + half_h
+            pt2_x = draw_x - half_w
+            pt2_y = draw_y - half_h
 
-            # 3. Draw
+            # 3. Sort & Clamp Indices (Standard boilerplate)
+            # We still need this in case 'half_w' is larger than the map itself
+            start_x = max(0, min(pt1_x, pt2_x))
+            end_x   = min(map_w, max(pt1_x, pt2_x) + 1)
+            
+            start_y = max(0, min(pt1_y, pt2_y))
+            end_y   = min(map_h, max(pt1_y, pt2_y) + 1)
+
+            # 4. Draw
             if start_x < end_x and start_y < end_y:
-                        # 1. Get a "view" of the area we want to paint (this references the original grid)
-                        roi = self.grid[start_y:end_y, start_x:end_x]
-                        
-                        # 2. Update only the cells that are NOT 100 (walls)
-                        # This logic says: "Inside this box, wherever the value is NOT 100, set it to print_number"
-                        roi[roi != 100] = print_number
+                # Note: Changed 'self.grid' to 'grid' to avoid the NoneType error
+                roi = grid[start_y:end_y, start_x:end_x]
+                
+                # Update only cells that are NOT 100
+                roi[roi != 100] = print_number
 
 
     # def draw_horizontal_boxcasts(self, start_x, start_y, grid):
