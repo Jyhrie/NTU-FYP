@@ -73,6 +73,8 @@ class LocalOccupancyNavigator:
 
         map_h, map_w = grid.shape
 
+        self.grid == None
+
         #sort coordinates
         start_x = int(min(pt1.x, pt2.x))
         end_x   = int(max(pt1.x, pt2.x))
@@ -136,7 +138,7 @@ class LocalOccupancyNavigator:
 
             # 3. Draw
             if start_x < end_x and start_y < end_y:
-                grid[start_y:end_y, start_x:end_x] = 3
+                self.grid[start_y:end_y, start_x:end_x] = 3
 
 
     # def draw_horizontal_boxcasts(self, start_x, start_y, grid):
@@ -183,7 +185,7 @@ class LocalOccupancyNavigator:
         msg.info.height = self.map_height
         msg.info.origin = self.map_origin
 
-        msg.data = msg.data = grid.astype(np.int8).ravel()
+        msg.data = msg.data = self.grid.astype(np.int8).ravel()
 
         self.debug_pub.publish(msg)
 
