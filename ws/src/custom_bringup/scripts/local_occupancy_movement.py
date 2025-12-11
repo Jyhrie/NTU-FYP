@@ -139,6 +139,7 @@ class LocalOccupancyNavigator:
                 if prev_x is None and prev_y is None:
                     prev_x, prev_y = x, y
                     continue
+
                 vec_x = x - prev_x
                 vec_y = y - prev_y
 
@@ -152,6 +153,7 @@ class LocalOccupancyNavigator:
                     norm_x, norm_y = 0.0, 0.0
 
                 if prev_vec_x is not None and prev_vec_y is not None:
+                    print(prev_x, prev_y, "->", x, y)
                     #dot product to get angle difference
                     dot_val = (norm_x * prev_vec_x) + (norm_y * prev_vec_y)
                     print(dot_val)
