@@ -61,7 +61,7 @@ def generate_map_stream():
     global map_img
     while True:
         if map_img is not None:
-            ret, jpeg = cv2.imencode('.jpg', map_img)
+            ret, jpeg = cv2.imencode('.png', map_img)
             frame = jpeg.tobytes()
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
