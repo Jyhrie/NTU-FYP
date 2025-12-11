@@ -28,7 +28,6 @@ class Transform:
         self.pos = pos
         self.rot = rot
 
-
 class LocalOccupancyNavigator:
     def __init__(self):
         rospy.init_node("local_occupancy_debug")
@@ -108,19 +107,71 @@ class LocalOccupancyNavigator:
         self.grid = self.map
         if self.grid is None:
             return
-        self.vert_boxcasts(self.grid)
+        hitpoints, vert_endpoint = self.vert_boxcasts(self.grid)
+
+        outliers, inliers = self.extract_outliers(hitpoints)
+
+        for outlier in outliers:
+            self.grid[outlier.x, outlier.y] = 5
+
+        
+        for inlier in inliers:
+            self.grid[inlier.x, inlier.y] = 6
+
+
+        #wall is at vert_endpoint.
+        
+    def extract_outliers(self, hitpoints, thresh=5):
+            if not hitpoints: return [], []
+
+            inliers = [hitpoints[0]]
+            outliers = []
+            
+            # Optimization: Pre-calculate square threshold
+            # If thresh is 5, thresh_sq is 25.
+            thresh_sq = thresh * thresh
+            
+            smoothness_broken = False
+
+            for i in range(1, len(hitpoints)):
+                curr = hitpoints[i]
+                prev = hitpoints[i-1]
+
+                if smoothness_broken:
+                    outliers.append(curr)
+                else:
+                    dx = curr.x - prev.x
+                    dy = curr.y - prev.y
+                    
+                    # Check squared distance directly (Much faster for CPU)
+                    dist_sq = dx*dx + dy*dy
+
+                    if dist_sq > thresh_sq:
+                        smoothness_broken = True
+                        outliers.append(curr)
+                    else:
+                        inliers.append(curr)
+
+            return outliers, inliers
+    
+
+    def get_reference_wall(self):
+        pass
+
 
     def vert_boxcasts(self, grid, scan_dist = 50):
         robot_origin = Vector2(self.map_width // 2, self.map_height // 2)
-
+        hitpoints = []
         for i in range(scan_dist):
             step_offset = Vector2(0,-i)
             hit = self.boxcast_area(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid)
-            self.horizontal_boxcast(robot_origin.add(step_offset), grid, scan_dist)
+            hit_horizontal = self.horizontal_boxcast(robot_origin.add(step_offset), grid, scan_dist)
+            hitpoints.append((hit_horizontal, i))
             if hit:
                 self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 3)
-                return i
+                return hitpoints, i
         self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 3)
+        return -1
         
             
     def horizontal_boxcast(self, root, grid, scan_dist = 50):
@@ -132,6 +183,7 @@ class LocalOccupancyNavigator:
                 self.draw_boxcast_hit(root.add(step_offset), 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid, 99)
                 return i
         self.draw_boxcast_hit(root.add(step_offset), 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid, 3)
+        return -1
         
     def draw_boxcast_hit(self, center_pos, half_w, half_h, offset, grid, print_number):
             map_h, map_w = grid.shape
@@ -168,16 +220,6 @@ class LocalOccupancyNavigator:
                 
                 # Update only cells that are NOT 100
                 roi[roi != 100] = print_number
-
-
-    # def draw_horizontal_boxcasts(self, start_x, start_y, grid):
-    #     # horizontal rectangle bounds (same size as vertical BoxCast, but along x)
-    #     x_start = max(start_x - 7, 0)
-    #     x_end   = min(start_x + 7 + 1, self.map_width)
-    #     y_start = max(start_y - 12, 0)
-    #     y_end   = min(start_y + 5 + 1, self.map_height)
-
-    #     grid[y_start:y_end, x_start:x_end] = 99
 
 
     def draw_robot_footprint(self, grid):
