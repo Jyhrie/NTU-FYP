@@ -64,7 +64,7 @@ def generate_map_stream():
             ret, jpeg = cv2.imencode('.png', map_img)
             frame = jpeg.tobytes()
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+                   b'Content-Type: image/png\r\n\r\n' + frame + b'\r\n\r\n')
             time.sleep(0.05)  # ~20 FPS
         else:
             time.sleep(0.05)
