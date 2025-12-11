@@ -114,14 +114,15 @@ class LocalOccupancyNavigator:
         hitpoints, vert_endpoint = self.vert_boxcasts(self.grid)
 
         for hitpoint in hitpoints:
-            self.grid[hitpoint.x, hitpoint.y] = 2
+            if hitpoint.x != -1 and hitpoint.y != -1:
+                self.grid[hitpoint.x, hitpoint.y] = 2
 
-        for outlier in outliers:
-            self.grid[outlier.x, outlier.y] = 5
+        # for outlier in outliers:
+        #     self.grid[outlier.x, outlier.y] = 5
 
         
-        for inlier in inliers:
-            self.grid[inlier.x, inlier.y] = 6
+        # for inlier in inliers:
+        #     self.grid[inlier.x, inlier.y] = 6
 
 
         #wall is at vert_endpoint.
@@ -171,7 +172,7 @@ class LocalOccupancyNavigator:
             step_offset = Vector2(0,-i)
             hit = self.boxcast_area(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid)
             hit_horizontal = self.horizontal_boxcast(robot_origin.add(step_offset), grid, scan_dist)
-            hitpoints.append(Vector2(robot_origin.x - hit_horizontal, robot_origin.y - i))
+            hitpoints.append(Vector2(robot_origin.x + hit_horizontal, robot_origin.y - i))
             if hit:
                 self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 3)
                 return hitpoints, i
