@@ -119,11 +119,8 @@ class LocalOccupancyNavigator:
         pass
         
     def draw_boxcast_hit(self, center_pos, half_w, half_h, offset, grid):
-            """
-            Simplified: Just draws a box at 'center_pos'.
-            Does not do offset math. logic is handled by the caller.
-            """
             # 1. Define corners
+            print("drawing boxcast hit at:", center_pos.x, center_pos.y)
             center_pos = center_pos.add(offset)
             pt1 = center_pos.add(Vector2(half_w, half_h))
             pt2 = center_pos.subtract(Vector2(half_w, half_h))
