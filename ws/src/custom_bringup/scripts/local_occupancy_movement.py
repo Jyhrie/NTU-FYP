@@ -52,37 +52,25 @@ class LocalOccupancyNavigator:
 
         # Step forward in y (decreasing y = forward)
         for dy in range(y_end, -1, -1):
-            # current vertical slice
+            self.draw_horizontal_boxcasts(grid)
+            # extract the current “slice” rectangle at this y position
             rect = grid[dy:y_end, x_start:x_end]
 
+            # check if any obstacle is present (value >= 100)
             if np.any(rect >= 100):
-                # first obstacle detected in vertical slice, mark cost 2
+                # first obstacle detected, mark this row with cost 2
                 grid[dy:y_end, x_start:x_end] = 2
-                break
+                break  # stop stepping forward
 
-            # perform horizontal BoxCast at this vertical step
-            self.draw_horizontal_boxcasts(grid, dy, x_start, x_end, y_start, y_end)
+    def draw_horizontal_boxcasts(start_x, start_y, self, grid):
+        # horizontal rectangle bounds (same size as vertical BoxCast, but along x)
+        x_start = max(start_x - 7, 0)
+        x_end   = min(start_x + 7 + 1, self.map_width)
+        y_start = max(start_y - 12, 0)
+        y_end   = min(start_y + 5 + 1, self.map_height)
 
+        grid[y_start:y_end, x_start:x_end] = 99
 
-    def draw_horizontal_boxcasts(self, grid, vertical_step_y, x_start, x_end, y_start, y_end):
-        """
-        Horizontal BoxCast starting at vertical_step_y
-        """
-        # width of footprint
-        width = x_end - x_start
-
-        # Step right in x starting from end of current footprint
-        for dx in range(x_end, self.map_width):
-            # horizontal slice at current vertical_step_y
-            rect = grid[vertical_step_y:y_end, dx:dx + width]
-
-            if rect.shape[1] == 0:
-                break  # reached edge of map
-
-            if np.any(rect >= 100):
-                # first obstacle detected, mark cost 2
-                grid[vertical_step_y:y_end, dx:dx + width] = 2
-                break
 
     def draw_robot_footprint(self, grid):
         cx = self.map_width // 2
