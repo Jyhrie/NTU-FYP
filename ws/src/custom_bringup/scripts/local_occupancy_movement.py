@@ -110,19 +110,18 @@ class LocalOccupancyNavigator:
             hit = self.boxcast_area(robot_origin.add(step_offset), 7, 5, self.sensor_offset, grid)
             self.horizontal_boxcast(robot_origin.add(step_offset), grid, scan_dist)
             if hit:
-                self.draw_boxcast_hit(robot_origin.add(step_offset), 7, 5, self.sensor_offset, grid)
-                self.horizontal_boxcast(robot_origin.add(step_offset), grid, scan_dist)
+                self.draw_boxcast_hit(robot_origin.add(step_offset), 7, 5, self.sensor_offset, grid, 3)
                 return i
             
     def horizontal_boxcast(self, root, grid, scan_dist = 20):
         for i in range(scan_dist):
             hit = self.boxcast_area(root.add(Vector2(i,0)), 5, 7, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid)
             if hit:
-                self.draw_boxcast_hit(root.add(Vector2(i,0)), 5, 7, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid)
+                self.draw_boxcast_hit(root.add(Vector2(i,0)), 5, 7, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 99)
                 return i
         pass
         
-    def draw_boxcast_hit(self, center_pos, half_w, half_h, offset, grid):
+    def draw_boxcast_hit(self, center_pos, half_w, half_h, offset, grid, print_number):
             # 1. Define corners
             print("drawing boxcast hit at:", center_pos.x, center_pos.y)
             center_pos = center_pos.add(offset)
@@ -140,7 +139,7 @@ class LocalOccupancyNavigator:
 
             # 3. Draw
             if start_x < end_x and start_y < end_y:
-                self.grid[start_y:end_y, start_x:end_x] = 3
+                self.grid[start_y:end_y, start_x:end_x] = print_number
 
 
     # def draw_horizontal_boxcasts(self, start_x, start_y, grid):
