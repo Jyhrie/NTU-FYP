@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 import numpy as np
+import math
 from nav_msgs.msg import OccupancyGrid
 
 
@@ -115,50 +116,55 @@ class LocalOccupancyNavigator:
 
         for hitpoint in hitpoints:
             if hitpoint.x != -1 and hitpoint.y != -1:
-                self.grid[hitpoint.x, hitpoint.y] = 2
+                self.grid[hitpoint.y, hitpoint.x] = 2
 
-        # for outlier in outliers:
-        #     self.grid[outlier.x, outlier.y] = 5
+        for outlier in outliers:
+            self.grid[outlier.x, outlier.y] = 5
 
         
-        # for inlier in inliers:
-        #     self.grid[inlier.x, inlier.y] = 6
+        for inlier in inliers:
+            self.grid[inlier.x, inlier.y] = 6
 
 
         #wall is at vert_endpoint.
         
-    def extract_outliers(self, hitpoints, thresh=5):
+    def extract_outliers(self, hitpoints):
             if not hitpoints: return [], []
+            prev_x, prev_y = None, None
+            prev_vec_x, prev_vec_y = None, None
+            stop_point = len(hitpoints)
+            for i in range(0, hitpoints):
+                hp = hitpoints[i]
+                x, y = hp.x, hp.y
+                if prev_x is None and prev_y is None:
+                    prev_x, prev_y = x, y
+                    continue
+                vec_x = x - prev_x
+                vec_y = y - prev_y
 
-            inliers = [hitpoints[0]]
-            outliers = []
-            
-            # Optimization: Pre-calculate square threshold
-            # If thresh is 5, thresh_sq is 25.
-            thresh_sq = thresh * thresh
-            
-            smoothness_broken = False
+                length = math.sqrt(vec_x**2 + vec_y**2)
 
-            for i in range(1, len(hitpoints)):
-                curr = hitpoints[i]
-                prev = hitpoints[i-1]
-
-                if smoothness_broken:
-                    outliers.append(curr)
+                if length > 0:
+                    norm_x = vec_x / length
+                    norm_y = vec_y / length
                 else:
-                    dx = curr.x - prev.x
-                    dy = curr.y - prev.y
-                    
-                    # Check squared distance directly (Much faster for CPU)
-                    dist_sq = dx*dx + dy*dy
+                    # Points are identical; direction is undefined (zero vector)
+                    norm_x, norm_y = 0.0, 0.0
 
-                    if dist_sq > thresh_sq:
-                        smoothness_broken = True
-                        outliers.append(curr)
-                    else:
-                        inliers.append(curr)
+                if prev_vec_x is not None and prev_vec_y is not None:
+                    #dot product to get angle difference
+                    dot_val = (norm_x * prev_vec_x) + (norm_y * prev_vec_y)
 
-            return outliers, inliers
+                if prev_dot is not None:
+                    if dot_val <= 0.706: #cos 45 degrees + leeway
+                        stop_point = i
+                        break
+                prev_vec_x, prev_vec_y = norm_x, norm_y
+
+            outliers = hitpoints[stop_point:]
+            inliers = hitpoints[:stop_point]
+
+            return inliers, outliers
     
 
     def get_reference_wall(self):
@@ -172,7 +178,7 @@ class LocalOccupancyNavigator:
             step_offset = Vector2(0,-i)
             hit = self.boxcast_area(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid)
             hit_horizontal = self.horizontal_boxcast(robot_origin.add(step_offset), grid, scan_dist)
-            hitpoints.append(Vector2(robot_origin.y - i, hit_horizontal + robot_origin.x))
+            hitpoints.append(Vector2(hit_horizontal + robot_origin.x, robot_origin.y - i))
             if hit:
                 self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 3)
                 return hitpoints, i
