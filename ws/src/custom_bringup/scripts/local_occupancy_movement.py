@@ -90,12 +90,13 @@ class LocalOccupancyNavigator:
     # MAIN LOGIC TICK
     # ------------------------------------------------------------
     def tick(self):
-        debug_grid = self.map.copy()
-        cx = self.map_width // 2
-        debug_grid[:, cx] = 1
+        if self.map:
+            debug_grid = self.map.copy()
+            cx = self.map_width // 2
+            debug_grid[:, cx] = 1
 
-        self.publish_debug_map(debug_grid)
-        pass
+            self.publish_debug_map(debug_grid)
+            pass
 
 
     def wallhug(self):
