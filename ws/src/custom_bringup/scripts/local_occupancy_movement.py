@@ -126,12 +126,12 @@ class LocalOccupancyNavigator:
     def horizontal_boxcast(self, root, grid, scan_dist = 50):
         for i in range(scan_dist):
             step_offset = Vector2(i, 0)
-            hit = self.boxcast_area(root.add(step_offset), 7, 5, Vector2(-self.sensor_offset.y, self.sensor_offset.x), grid)
+            hit = self.boxcast_area(root.add(step_offset), 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid)
             #self.draw_boxcast_hit(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 2)
             if hit:
-                self.draw_boxcast_hit(root.add(step_offset), 7, 5, Vector2(-self.sensor_offset.y, self.sensor_offset.x), grid, 99)
+                self.draw_boxcast_hit(root.add(step_offset), 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid, 99)
                 return i
-        self.draw_boxcast_hit(root.add(step_offset), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 3)
+        self.draw_boxcast_hit(root.add(step_offset), 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid, 3)
         
     def draw_boxcast_hit(self, center_pos, half_w, half_h, offset, grid, print_number):
             map_h, map_w = grid.shape
