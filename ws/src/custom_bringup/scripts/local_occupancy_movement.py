@@ -93,7 +93,11 @@ class LocalOccupancyNavigator:
         # 6. The actual check
         # Returns True if ANY pixel in this box is >= 100
         return np.max(grid[y0:y1, x0:x1]) >= 100
-        
+
+    def raycast(self):
+        grid = self.map
+        self.vert_boxcasts(grid)
+
     def vert_boxcasts(self, grid, scan_dist = 20):
         robot_origin = Vector2(self.map_width // 2, self.map_height // 2)
 
@@ -168,8 +172,7 @@ class LocalOccupancyNavigator:
 
         grid = self.map.copy()
 
-        self.draw_vertical_line(grid)
-        self.draw_robot_footprint(grid)
+
         self.draw_vert_boxcasts(grid)
 
         msg = OccupancyGrid()
