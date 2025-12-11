@@ -36,7 +36,24 @@ class LocalOccupancyNavigator:
     # ------------------------------------------------------------
     def draw_vertical_line(self, grid):
         cx = self.map_width // 2
-        grid[:, cx] = 1   # cost value 1
+        cy = self.map_height // 2
+
+        
+
+        grid[:, cx] = 3   # cost value 1
+
+    def draw_robot_footprint(self, grid):
+        cx = self.map_width // 2
+        cy = self.map_height // 2
+
+        # Define footprint bounds
+        x_start = max(cx - 7, 0)
+        x_end   = min(cx + 7 + 1, self.map_width)   # +1 because slicing is exclusive
+        y_start = max(cy - 12, 0)
+        y_end   = min(cy + 5 + 1, self.map_height)
+
+        # Set the rectangle area to occupancy value 1
+        grid[y_start:y_end, x_start:x_end] = 1
 
     # ------------------------------------------------------------
     # CREATE debug map and publish it

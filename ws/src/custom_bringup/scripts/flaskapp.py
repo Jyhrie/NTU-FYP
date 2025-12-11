@@ -39,13 +39,11 @@ def map_callback(msg):
     # 2 = green
     img[data == 2] = (0, 255, 0)
 
+    # 3 = red
+    img[data == 2] = (0, 0, 255)
+
     # Unknown values (<0) = dark gray
     img[data < 0] = (60, 60, 60)
-
-    # ---- Draw robot (center of map) ----
-    cx = w // 2
-    cy = h // 2
-    cv2.rectangle(img, (cx-7, cy-12), (cx+7, cy+5), (0, 255, 255), -1)
 
     map_img = img
 
