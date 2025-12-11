@@ -84,8 +84,10 @@ class LocalOccupancyNavigator:
             # 2. NEW: Check Bounds - Treat Map Edges as Walls
             # If any part of the box sticks out of the map, it's a hit.
             if start_x < 0 or end_x >= map_w:
+                print("Boxcast hit map edge on X axis")
                 return True
             if start_y < 0 or end_y >= map_h:
+                print("Boxcast hit map edge on Y axis")
                 return True 
 
             # 3. Clamp vals for NumPy slicing
@@ -123,6 +125,7 @@ class LocalOccupancyNavigator:
     def horizontal_boxcast(self, root, grid, scan_dist = 50):
         for i in range(scan_dist):
             hit = self.boxcast_area(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid)
+            self.draw_boxcast_hit(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 2)
             if hit:
                 self.draw_boxcast_hit(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 99)
                 return i
