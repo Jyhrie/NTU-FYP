@@ -104,15 +104,14 @@ class LocalOccupancyNavigator:
             # 5. The actual obstacle check
             return np.max(grid[y0:y1, x0:x1]) >= 100
 
-    def raycast(self):
-        self.grid = self.map
-        if self.grid is None:
+    def raycast(self, grid):
+        if grid is None:
             return
-        hitpoints, vert_endpoint = self.vert_boxcasts(self.grid)
+        hitpoints, vert_endpoint = self.vert_boxcasts(grid)
 
         outliers, inliers = self.extract_outliers(hitpoints)
 
-        hitpoints, vert_endpoint = self.vert_boxcasts(self.grid)
+        hitpoints, vert_endpoint = self.vert_boxcasts(grid)
 
         for hitpoint in hitpoints:
             if hitpoint.x != -1 and hitpoint.y != -1:
@@ -139,7 +138,8 @@ class LocalOccupancyNavigator:
                 if prev_x is None and prev_y is None:
                     prev_x, prev_y = x, y
                     continue
-
+                
+                prev_x, prev_y = x, y
                 vec_x = x - prev_x
                 vec_y = y - prev_y
 
@@ -162,6 +162,7 @@ class LocalOccupancyNavigator:
                         stop_point = i
                         break
                 prev_vec_x, prev_vec_y = norm_x, norm_y
+
 
             outliers = hitpoints[stop_point:]
             inliers = hitpoints[:stop_point]
@@ -255,9 +256,11 @@ class LocalOccupancyNavigator:
     def publish_debug_map(self):
         if self.map is None or self.map_origin is None:
             return
+        
+        self.grid = self.map
 
         self.draw_robot_footprint(self.grid)
-        self.raycast()
+        self.raycast(self.grid)
 
 
         if self.grid is not None:
