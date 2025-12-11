@@ -29,6 +29,8 @@ class LocalOccupancyNavigator:
         self.footprint_width = 0.4
         self.footprint_length = 0.4
 
+        self.map_origin = None
+
         # cell_width  = int(self.footprint_width / self.resolution)
         # cell_length = int(self.footprint_length / self.resolution)
 
