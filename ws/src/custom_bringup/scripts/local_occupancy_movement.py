@@ -138,8 +138,7 @@ class LocalOccupancyNavigator:
                 if prev_x is None and prev_y is None:
                     prev_x, prev_y = x, y
                     continue
-                
-                prev_x, prev_y = x, y
+        
                 vec_x = x - prev_x
                 vec_y = y - prev_y
 
@@ -161,6 +160,8 @@ class LocalOccupancyNavigator:
                     if abs(dot_val) <= 0.706: #cos 45 degrees + leeway
                         stop_point = i
                         break
+
+                prev_x, prev_y = x, y
                 prev_vec_x, prev_vec_y = norm_x, norm_y
 
 
