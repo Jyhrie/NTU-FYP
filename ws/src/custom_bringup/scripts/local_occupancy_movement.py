@@ -46,7 +46,7 @@ class LocalOccupancyNavigator:
 
         self.sensor_offset = Vector2(0,-7)
 
-        self.rate = rospy.Rate(20)
+        self.rate = rospy.Rate(10)
 
     # ------------------------------------------------------------
     # SAVE incoming costmap
@@ -139,7 +139,12 @@ class LocalOccupancyNavigator:
 
             # 3. Draw
             if start_x < end_x and start_y < end_y:
-                self.grid[start_y:end_y, start_x:end_x] = print_number
+                        # 1. Get a "view" of the area we want to paint (this references the original grid)
+                        roi = self.grid[start_y:end_y, start_x:end_x]
+                        
+                        # 2. Update only the cells that are NOT 100 (walls)
+                        # This logic says: "Inside this box, wherever the value is NOT 100, set it to print_number"
+                        roi[roi != 100] = print_number
 
 
     # def draw_horizontal_boxcasts(self, start_x, start_y, grid):
