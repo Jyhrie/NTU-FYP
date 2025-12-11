@@ -46,7 +46,7 @@ class LocalOccupancyNavigator:
 
         self.sensor_offset = Vector2(0,7)
 
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(5)
 
     # ------------------------------------------------------------
     # SAVE incoming costmap
@@ -107,6 +107,7 @@ class LocalOccupancyNavigator:
 
         for i in range(scan_dist):
             step_offset = Vector2(0,-i)
+            print("scanning step:", i)
             hit = self.boxcast_area(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid)
             self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 2)
             self.horizontal_boxcast(robot_origin.add(step_offset), grid, scan_dist)
@@ -124,7 +125,6 @@ class LocalOccupancyNavigator:
         
     def draw_boxcast_hit(self, center_pos, half_w, half_h, offset, grid, print_number):
             # 1. Define corners
-            print("drawing boxcast hit at:", center_pos.x, center_pos.y)
             center_pos = center_pos.add(offset)
             pt1 = center_pos.add(Vector2(half_w, half_h))
             pt2 = center_pos.subtract(Vector2(half_w, half_h))
