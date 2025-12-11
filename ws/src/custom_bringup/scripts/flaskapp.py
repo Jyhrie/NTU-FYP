@@ -17,24 +17,38 @@ map_img = None
 def map_callback(msg):
     global map_img
 
-    # Convert occupancy grid to 0-255 image
-    data = np.array(msg.data, dtype=np.int8).reshape((msg.info.height, msg.info.width))
+    h = msg.info.height
+    w = msg.info.width
 
-    # Unknown (-1) = darker gray
-    data[data < 0] = 50
+    # Convert occupancy values to numpy array
+    data = np.array(msg.data, dtype=np.int16).reshape((h, w))
 
-    img = 255 - (data * 255 / 100).astype(np.uint8)
-    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    # Create color image
+    img = np.zeros((h, w, 3), dtype=np.uint8)
 
-    # ---- Mark Robot in the Center ----
-    cx = msg.info.width // 2
-    cy = msg.info.height // 2
+    # ---- Color Mapping ----
+    # 0 = free = white
+    img[data == 0] = (255, 255, 255)
 
-    # A small red arrow to show robot facing direction (upwards)
-    cv2.rectangle(img, (cx-7, cy-12), (cx+7, cy+5), (0,255,255,0), -1)
+    # 100 = occupied = black
+    img[data == 100] = (0, 0, 0)
 
-    # Flip vertically to match visualization orientation
+    # 1 = blue
+    img[data == 1] = (255, 0, 0)
+
+    # 2 = green
+    img[data == 2] = (0, 255, 0)
+
+    # Unknown values (<0) = dark gray
+    img[data < 0] = (60, 60, 60)
+
+    # ---- Draw robot (center of map) ----
+    cx = w // 2
+    cy = h // 2
+    cv2.rectangle(img, (cx-7, cy-12), (cx+7, cy+5), (0, 255, 255), -1)
+
     map_img = img
+
 
 # ---- MJPEG Stream Generator ----
 def generate_map_stream():
@@ -70,7 +84,7 @@ signal.signal(signal.SIGINT, signal_handler)
 if __name__ == '__main__':
     # Initialize ROS node
     rospy.init_node('map_flask_stream', anonymous=True)
-    rospy.Subscriber('/local_costmap', OccupancyGrid, map_callback)
+    rospy.Subscriber('/debug_map', OccupancyGrid, map_callback)
 
     # Start ROS spinning in background thread
     spin_thread = threading.Thread(target=rospy.spin)

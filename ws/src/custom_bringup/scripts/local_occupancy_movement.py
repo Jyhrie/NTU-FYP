@@ -11,8 +11,8 @@ class LocalOccupancyNavigator:
         rospy.init_node("local_occupancy_navigator")
 
         # --- Subscribers ---
-        rospy.Subscriber("/localoccupancy", OccupancyGrid, self.map_callback)
-
+        rospy.Subscriber("/local_costmap", OccupancyGrid, self.map_callback)
+        self.debug_pub = rospy.Publisher("/debug_map", OccupancyGrid, queue_size=10)
         # --- Publisher ---
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
 
@@ -34,9 +34,24 @@ class LocalOccupancyNavigator:
 
         self.rate = rospy.Rate(10)  # 10 Hz tick
 
-    # ------------------------------------------------------------
-    # MAP CALLBACK
-    # ------------------------------------------------------------
+    def publish_debug_map(self, grid_np):
+        """
+        Publish a numpy grid as an OccupancyGrid message.
+        """
+        msg = OccupancyGrid()
+        msg.header.stamp = rospy.Time.now()
+        msg.header.frame_id = "map"  # or whatever your original map uses
+
+        msg.info.resolution = self.resolution
+        msg.info.width  = self.map_width
+        msg.info.height = self.map_height
+        msg.info.origin = self.map_origin  # save this in map_callback
+
+        # Flatten back into list of int8
+        msg.data = list(grid_np.flatten().astype(np.int8))
+        
+        self.debug_pub.publish(msg)
+
     def map_callback(self, msg: OccupancyGrid):
         """Convert OccupancyGrid into numpy and store internally."""
         self.map_width = msg.info.width
@@ -53,6 +68,7 @@ class LocalOccupancyNavigator:
         # center of map = robot position
         self.cx = self.map_width // 2
         self.cy = self.map_height // 2
+        
 
     def pick_navigation_to_position(self):
         """
@@ -74,32 +90,13 @@ class LocalOccupancyNavigator:
     # MAIN LOGIC TICK
     # ------------------------------------------------------------
     def tick(self):
+        debug_grid = self.map.copy()
+        cx = self.map_width // 2
+        debug_grid[:, cx] = 1
+
+        self.publish_debug_map(debug_grid)
         pass
 
-    # def get_right_wall(self, max_scan_distance=40, threshold=50):
-    #     strip_width = int(self.robot_width / self.resolution / 2)
-    #     max_cells = int(max_scan_distance / self.resolution)
-
-    #     # Slice map
-    #     right_strip = self.map[self.cy - strip_width:self.cy + strip_width + 1,
-    #                         self.cx + 1:self.cx + max_cells + 1]
-        
-    #     occupied_mask = right_strip >= threshold
-    #     ys, xs = np.where(occupied_mask)
-
-    #     xs_map = xs + self.cx + 1
-    #     ys_map = ys + self.cy - strip_width
-    #     points = list(zip(xs_map, ys_map))
-
-    #     if not points:
-    #         distance = None  # no wall detected
-
-    #     else:
-    #         dx_min = min([x - self.cx for x, y in points])
-    #         distance = dx_min * self.resolution  # convert cells to meters
-
-
-    #     return distance
 
     def wallhug(self):
         pass
