@@ -133,7 +133,7 @@ class LocalOccupancyNavigator:
             prev_x, prev_y = None, None
             prev_vec_x, prev_vec_y = None, None
             stop_point = len(hitpoints)
-            for i in range(0, hitpoints):
+            for i in range(0, len(hitpoints)):
                 hp = hitpoints[i]
                 x, y = hp.x, hp.y
                 if prev_x is None and prev_y is None:
@@ -155,8 +155,7 @@ class LocalOccupancyNavigator:
                     #dot product to get angle difference
                     dot_val = (norm_x * prev_vec_x) + (norm_y * prev_vec_y)
 
-                if prev_dot is not None:
-                    if dot_val <= 0.706: #cos 45 degrees + leeway
+                    if abs(dot_val) <= 0.706: #cos 45 degrees + leeway
                         stop_point = i
                         break
                 prev_vec_x, prev_vec_y = norm_x, norm_y
