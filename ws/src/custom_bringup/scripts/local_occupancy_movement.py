@@ -38,9 +38,28 @@ class LocalOccupancyNavigator:
         cx = self.map_width // 2
         cy = self.map_height // 2
 
-
-
         grid[:, cx] = 3   # cost value 1
+
+    def draw_vert_boxcasts(self, grid):
+        cx = self.map_width // 2
+        cy = self.map_height // 2
+
+        # initial rectangle in front of robot
+        x_start = max(cx - 7, 0)
+        x_end   = min(cx + 7 + 1, self.map_width)
+        y_start = max(cy - 12, 0)
+        y_end   = min(cy + 5 + 1, self.map_height)
+
+        # Step forward in y (decreasing y = forward)
+        for dy in range(y_end, -1, -1):
+            # extract the current “slice” rectangle at this y position
+            rect = grid[dy:y_end, x_start:x_end]
+
+            # check if any obstacle is present (value >= 100)
+            if np.any(rect >= 100):
+                # first obstacle detected, mark this row with cost 2
+                grid[dy:y_end, x_start:x_end] = 2
+                break  # stop stepping forward
 
     def draw_robot_footprint(self, grid):
         cx = self.map_width // 2
@@ -66,6 +85,7 @@ class LocalOccupancyNavigator:
 
         self.draw_vertical_line(grid)
         self.draw_robot_footprint(grid)
+        self.draw_vert_boxcasts(grid)
 
         msg = OccupancyGrid()
         msg.header.stamp = rospy.Time.now()
