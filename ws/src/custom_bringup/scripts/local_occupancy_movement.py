@@ -174,6 +174,7 @@ class LocalOccupancyNavigator:
             return
 
         self.raycast()
+        self.draw_robot_footprint(self.grid)
 
         if self.grid is not None:
 
