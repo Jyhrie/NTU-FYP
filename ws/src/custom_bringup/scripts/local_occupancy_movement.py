@@ -256,8 +256,9 @@ class LocalOccupancyNavigator:
         if self.map is None or self.map_origin is None:
             return
 
-        self.raycast()
         self.draw_robot_footprint(self.grid)
+        self.raycast()
+
 
         if self.grid is not None:
 
