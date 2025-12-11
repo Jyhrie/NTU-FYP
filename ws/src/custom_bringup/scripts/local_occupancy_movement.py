@@ -90,7 +90,7 @@ class LocalOccupancyNavigator:
     # MAIN LOGIC TICK
     # ------------------------------------------------------------
     def tick(self):
-        if self.map:
+        if self.map is not None:
             debug_grid = self.map.copy()
             cx = self.map_width // 2
             debug_grid[:, cx] = 1
