@@ -52,7 +52,7 @@ class LocalOccupancyNavigator:
 
         # Step forward in y (decreasing y = forward)
         for dy in range(y_end, -1, -1):
-            self.draw_horizontal_boxcasts(grid)
+            self.draw_horizontal_boxcasts(self, dy, cy, grid)
             # extract the current “slice” rectangle at this y position
             rect = grid[dy:y_end, x_start:x_end]
 
@@ -62,7 +62,7 @@ class LocalOccupancyNavigator:
                 grid[dy:y_end, x_start:x_end] = 2
                 break  # stop stepping forward
 
-    def draw_horizontal_boxcasts(start_x, start_y, self, grid):
+    def draw_horizontal_boxcasts(self, start_x, start_y, grid):
         # horizontal rectangle bounds (same size as vertical BoxCast, but along x)
         x_start = max(start_x - 7, 0)
         x_end   = min(start_x + 7 + 1, self.map_width)
