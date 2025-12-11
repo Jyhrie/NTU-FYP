@@ -46,7 +46,7 @@ class LocalOccupancyNavigator:
 
         self.sensor_offset = Vector2(0,-7)
 
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(2)
 
     # ------------------------------------------------------------
     # SAVE incoming costmap
@@ -119,11 +119,11 @@ class LocalOccupancyNavigator:
                 self.grid[hitpoint.y, hitpoint.x] = 2
 
         for outlier in outliers:
-            self.grid[outlier.x, outlier.y] = 5
+            self.grid[outlier.y, outlier.x] = 5
 
         
         for inlier in inliers:
-            self.grid[inlier.x, inlier.y] = 6
+            self.grid[inlier.y, inlier.x] = 6
 
 
         #wall is at vert_endpoint.
@@ -154,6 +154,7 @@ class LocalOccupancyNavigator:
                 if prev_vec_x is not None and prev_vec_y is not None:
                     #dot product to get angle difference
                     dot_val = (norm_x * prev_vec_x) + (norm_y * prev_vec_y)
+                    print(dot_val)
 
                     if abs(dot_val) <= 0.706: #cos 45 degrees + leeway
                         stop_point = i
