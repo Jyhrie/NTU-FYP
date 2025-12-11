@@ -44,7 +44,7 @@ class LocalOccupancyNavigator:
 
         self.grid = None
 
-        self.sensor_offset = Vector2(0,7)
+        self.sensor_offset = Vector2(0,-7)
 
         self.rate = rospy.Rate(5)
 
