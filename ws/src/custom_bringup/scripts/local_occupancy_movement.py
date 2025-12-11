@@ -173,7 +173,7 @@ class LocalOccupancyNavigator:
         grid = self.map.copy()
 
 
-        self.raycast(grid)
+        self.raycast()
 
         msg = OccupancyGrid()
         msg.header.stamp = rospy.Time.now()
