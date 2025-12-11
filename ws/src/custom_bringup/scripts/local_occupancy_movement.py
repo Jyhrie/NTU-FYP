@@ -97,8 +97,10 @@ class LocalOccupancyNavigator:
         return np.max(grid[y0:y1, x0:x1]) >= 100
 
     def raycast(self):
-        grid = self.map
-        self.vert_boxcasts(grid)
+        self.grid = self.map
+        if self.grid is None:
+            return
+        self.vert_boxcasts(self.grid)
 
     def vert_boxcasts(self, grid, scan_dist = 20):
         robot_origin = Vector2(self.map_width // 2, self.map_height // 2)
