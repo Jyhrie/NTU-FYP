@@ -42,6 +42,8 @@ class LocalOccupancyNavigator:
         self.resolution = 0.0
         self.map_origin = None
 
+        self.grid = None
+
         self.sensor_offset = Vector2(0,7)
 
         self.rate = rospy.Rate(10)
@@ -72,8 +74,6 @@ class LocalOccupancyNavigator:
         pt2 = pos.subtract(Vector2(pos_halfwidth, pos_halfheight))
 
         map_h, map_w = grid.shape
-
-        self.grid == None
 
         #sort coordinates
         start_x = int(min(pt1.x, pt2.x))
@@ -171,23 +171,22 @@ class LocalOccupancyNavigator:
         if self.map is None or self.map_origin is None:
             return
 
-        grid = self.map.copy()
-
-
         self.raycast()
 
-        msg = OccupancyGrid()
-        msg.header.stamp = rospy.Time.now()
-        msg.header.frame_id = "map"
+        if self.grid is not None:
 
-        msg.info.resolution = self.resolution
-        msg.info.width = self.map_width
-        msg.info.height = self.map_height
-        msg.info.origin = self.map_origin
+            msg = OccupancyGrid()
+            msg.header.stamp = rospy.Time.now()
+            msg.header.frame_id = "map"
 
-        msg.data = msg.data = self.grid.astype(np.int8).ravel()
+            msg.info.resolution = self.resolution
+            msg.info.width = self.map_width
+            msg.info.height = self.map_height
+            msg.info.origin = self.map_origin
 
-        self.debug_pub.publish(msg)
+            msg.data = msg.data = self.grid.astype(np.int8).ravel()
+
+            self.debug_pub.publish(msg)
 
     def run(self):
         while not rospy.is_shutdown():
