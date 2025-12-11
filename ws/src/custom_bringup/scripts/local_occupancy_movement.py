@@ -172,7 +172,7 @@ class LocalOccupancyNavigator:
             step_offset = Vector2(0,-i)
             hit = self.boxcast_area(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid)
             hit_horizontal = self.horizontal_boxcast(robot_origin.add(step_offset), grid, scan_dist)
-            hitpoints.append(Vector2(robot_origin.y - i, 5))
+            hitpoints.append(Vector2(robot_origin.y - i, hit_horizontal + robot_origin.x))
             if hit:
                 self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 3)
                 return hitpoints, i
