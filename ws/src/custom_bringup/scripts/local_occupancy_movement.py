@@ -116,20 +116,22 @@ class LocalOccupancyNavigator:
         for i in range(scan_dist):
             step_offset = Vector2(0,-i)
             hit = self.boxcast_area(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid)
-            #self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 2)
             self.horizontal_boxcast(robot_origin.add(step_offset), grid, scan_dist)
             if hit:
                 self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 3)
                 return i
+        self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 3)
+        
             
     def horizontal_boxcast(self, root, grid, scan_dist = 50):
         for i in range(scan_dist):
-            hit = self.boxcast_area(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid)
-            self.draw_boxcast_hit(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 2)
+            step_offset = Vector2(i, 0)
+            hit = self.boxcast_area(root.add(step_offset), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid)
+            #self.draw_boxcast_hit(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 2)
             if hit:
-                self.draw_boxcast_hit(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 99)
+                self.draw_boxcast_hit(root.add(step_offset), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 99)
                 return i
-        pass
+        self.draw_boxcast_hit(root.add(step_offset), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 3)
         
     def draw_boxcast_hit(self, center_pos, half_w, half_h, offset, grid, print_number):
             map_h, map_w = grid.shape
