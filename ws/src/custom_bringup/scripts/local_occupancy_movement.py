@@ -107,17 +107,17 @@ class LocalOccupancyNavigator:
 
         for i in range(scan_dist):
             step_offset = Vector2(0,-i)
-            hit = self.boxcast_area(robot_origin.add(step_offset), 7, 5, self.sensor_offset, grid)
+            hit = self.boxcast_area(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid)
             self.horizontal_boxcast(robot_origin.add(step_offset), grid, scan_dist)
             if hit:
-                self.draw_boxcast_hit(robot_origin.add(step_offset), 7, 5, self.sensor_offset, grid, 3)
+                self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 3)
                 return i
             
     def horizontal_boxcast(self, root, grid, scan_dist = 20):
         for i in range(scan_dist):
-            hit = self.boxcast_area(root.add(Vector2(i,0)), 5, 7, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid)
+            hit = self.boxcast_area(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid)
             if hit:
-                self.draw_boxcast_hit(root.add(Vector2(i,0)), 5, 7, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 99)
+                self.draw_boxcast_hit(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 99)
                 return i
         pass
         
