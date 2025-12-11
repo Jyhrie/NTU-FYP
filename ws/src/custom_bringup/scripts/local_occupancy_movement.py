@@ -38,7 +38,7 @@ class LocalOccupancyNavigator:
         cx = self.map_width // 2
         cy = self.map_height // 2
 
-        
+
 
         grid[:, cx] = 3   # cost value 1
 
@@ -65,6 +65,7 @@ class LocalOccupancyNavigator:
         grid = self.map.copy()
 
         self.draw_vertical_line(grid)
+        self.draw_robot_footprint(grid)
 
         msg = OccupancyGrid()
         msg.header.stamp = rospy.Time.now()
