@@ -306,8 +306,16 @@ class LocalOccupancyNavigator:
     # ------------------------------------------------------------
     # CREATE debug map and publish it
     # ------------------------------------------------------------
-    def trigger(self, grid):
-        self.grid = grid
+    def trigger(self, msg):
+        self.map_width  = msg.info.width
+        self.map_height = msg.info.height
+        self.resolution = msg.info.resolution
+        self.map_origin = msg.info.origin
+
+        data = np.array(msg.data, dtype=np.int8)
+        self.map = data.reshape((self.map_height, self.map_width))
+
+        self.grid = self.map
 
         self.draw_robot_footprint(self.grid)
         self.raycast(self.grid)
