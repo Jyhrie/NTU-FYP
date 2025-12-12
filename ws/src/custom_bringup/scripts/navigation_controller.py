@@ -82,8 +82,12 @@ class NavigationController:
         res = self.local_occupancy_movement.resolution
 
         # Compute relative position in meters
-        dx = (end_position.x - origin.x) * res
-        dy = (end_position.y - origin.y) * res  # NEGATE dy because -Y is forward
+        dx_rel = end_position.x - origin.x
+        dy_rel = origin.y - end_position.y  # NEGATE dy because -Y is forward
+        dx = dx_rel * res
+        dy = dy_rel * res  # NEGATE dy because -Y is forward
+
+        print(dx_rel, dy_rel)
 
         # ----------------------
         # Rotate to face the goal
