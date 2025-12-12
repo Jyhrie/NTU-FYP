@@ -90,7 +90,7 @@ class NavigationController:
         # ----------------------
         target_angle = math.atan2(dx, dy)
         current_yaw = self.get_yaw_from_odom(self.odom)
-        angle_error = angle_normalize(target_angle - current_yaw)
+        angle_error = -angle_normalize(target_angle - current_yaw)
 
         twist = Twist()
         while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
