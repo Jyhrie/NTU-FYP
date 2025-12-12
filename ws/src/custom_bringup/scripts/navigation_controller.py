@@ -4,119 +4,227 @@ import numpy as np
 import math
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 
 import local_occupancy_movement as lom
+
+
+def angle_normalize(a):
+    """Normalize angle to [-pi, pi]."""
+    return math.atan2(math.sin(a), math.cos(a))
 
 
 class NavigationController:
     def __init__(self):
         rospy.init_node("navigation_controller")
 
-        rospy.Subscriber("/local_costmap", OccupancyGrid, self.local_occupancy_callback)
-        self.debug_pub = rospy.Publisher("/debug_map", OccupancyGrid, queue_size=10)
-        self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
+        # subscribers
+        rospy.Subscriber("/local_costmap", OccupancyGrid, self.local_costmap_cb)
+        rospy.Subscriber("/odom", Odometry, self.odom_cb)
 
+        # publishers
+        self.debug_pub = rospy.Publisher("/debug_map", OccupancyGrid, queue_size=1)
+        self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
+
+        # occupancy movement module (your object)
         self.local_occupancy_movement = lom.LocalOccupancyNavigator()
 
-        self.local_map_data = None
-        self.received_first_map = False
+        # storage
+        self.local_map_msg = None         # raw OccupancyGrid msg used by trigger()
+        self.have_map = False
 
-    def run_once(self):
-        """Runs ONE cycle: wait for map → trigger → move → rotate → exit."""
-        rospy.loginfo("Waiting for first /local_costmap...")
-        rate = rospy.Rate(20)
+        self.odom = None                  # latest Odometry msg
+        self.have_odom = False
 
-        # Block until callback gives us a map
-        while not rospy.is_shutdown() and not self.received_first_map:
-            rate.sleep()
+        # control parameters (tweak to taste)
+        self.rot_k = 1.2          # angular P gain
+        self.rot_max = 0.8        # max angular speed (rad/s)
+        self.lin_k = 0.8          # linear P gain (used to scale speed by distance)
+        self.lin_max = 0.35       # max linear speed (m/s)
 
-        rospy.loginfo("Local costmap received. Running trigger...")
+        # thresholds
+        self.angle_tol = 0.04     # rad ~ 2.3 deg
+        self.dist_tol = 0.03      # meters
 
-        # Run your algorithm
-        msg, origin, end_position, goal_forward_vector = \
-            self.local_occupancy_movement.trigger(self.local_map_data)
+    # -------------------------
+    # ROS callbacks
+    # -------------------------
+    def local_costmap_cb(self, msg: OccupancyGrid):
+        self.local_map_msg = msg
+        self.have_map = True
 
-        # Publish debug map
-        if msg:
-            self.publish_debug_map(msg)
+    def odom_cb(self, msg: Odometry):
+        self.odom = msg
+        self.have_odom = True
 
-        # Perform movement
-        self.move_to(end_position)
+    # -------------------------
+    # helpers: odom pose
+    # -------------------------
+    def get_odom_pose(self):
+        """Return (x, y, yaw) from latest odom message."""
+        if not self.have_odom:
+            return None
+        px = self.odom.pose.pose.position.x
+        py = self.odom.pose.pose.position.y
+        q = self.odom.pose.pose.orientation
+        # convert quaternion to yaw
+        siny = 2.0 * (q.w * q.z + q.x * q.y)
+        cosy = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        yaw = math.atan2(siny, cosy)
+        return px, py, yaw
 
-        # Rotate to final facing direction
-        self.rotate_to(goal_forward_vector)
+    # -------------------------
+    # coordinate conversion
+    # -------------------------
+    def robot_relative_to_world(self, rel_x, rel_y, odom_yaw, odom_x, odom_y):
+        """
+        Convert your robot-relative coordinates (rel_x, rel_y) into world coords.
+        User's convention: -Y is forward, +X is right.
+        We map that to the standard robot frame (x_forward, y_left):
+            x_forward = -rel_y
+            y_left    = -rel_x
+        Then rotate by odom_yaw (standard) and translate by odom position.
+        """
+        x_fwd = -rel_y
+        y_left = -rel_x
 
-        rospy.loginfo("Navigation complete. Exiting.")
-        rospy.signal_shutdown("Task complete.")
+        wx = x_fwd * math.cos(odom_yaw) - y_left * math.sin(odom_yaw)
+        wy = x_fwd * math.sin(odom_yaw) + y_left * math.cos(odom_yaw)
 
-    # --------------------------------------------------------------
-    # Movement and Rotation
-    # --------------------------------------------------------------
+        return odom_x + wx, odom_y + wy
 
-    def move_to(self, end_position):
-        """Move robot straight to the target point (robot-relative)."""
-        ex, ey = end_position
-        dist = math.sqrt(ex*ex + ey*ey)
+    def robot_vector_to_world_vector(self, fx, fy, odom_yaw):
+        """Convert a robot-relative direction vector (fx, fy) to world direction vector."""
+        # map to standard robot-frame (x forward, y left)
+        x_fwd = -fy
+        y_left = -fx
 
-        rospy.loginfo(f"Moving {dist:.2f}m toward {end_position}")
+        wx = x_fwd * math.cos(odom_yaw) - y_left * math.sin(odom_yaw)
+        wy = x_fwd * math.sin(odom_yaw) + y_left * math.cos(odom_yaw)
 
+        return wx, wy
+
+    # -------------------------
+    # low-level motion primitives (blocking)
+    # -------------------------
+    def rotate_to_angle(self, desired_yaw):
+        """Rotate to desired yaw (world frame) using odom yaw feedback."""
         rate = rospy.Rate(30)
-        remaining = dist
-
-        while remaining > 0.05 and not rospy.is_shutdown():
-            tw = Twist()
-            tw.linear.x = 0.2
-            self.cmd_pub.publish(tw)
-
-            # approximate travel
-            remaining -= 0.2 * (1/30.0)
+        while not rospy.is_shutdown():
+            pose = self.get_odom_pose()
+            if pose is None:
+                rospy.sleep(0.02)
+                continue
+            _, _, yaw = pose
+            err = angle_normalize(desired_yaw - yaw)
+            if abs(err) < self.angle_tol:
+                break
+            cmd = Twist()
+            cmd.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * err))
+            # small linear damp to avoid drift (optional)
+            cmd.linear.x = 0.0
+            self.cmd_pub.publish(cmd)
             rate.sleep()
 
+        # stop
         self.cmd_pub.publish(Twist())
+        rospy.sleep(0.08)
 
-
-    def rotate_to(self, forward_vec):
-        """Rotate robot until facing the desired forward vector (robot-relative)."""
-        fx, fy = forward_vec
-        goal_angle = math.atan2(fx, fy)
-
-        rospy.loginfo(f"Rotating to angle {goal_angle:.2f} rad")
-
+    def drive_to_point(self, target_x, target_y):
+        """Drive to (target_x, target_y) in world frame using odom feedback.
+           Keeps heading toward the point by commanding angular vel to reduce heading error.
+        """
         rate = rospy.Rate(30)
+        while not rospy.is_shutdown():
+            pose = self.get_odom_pose()
+            if pose is None:
+                rospy.sleep(0.02)
+                continue
+            ox, oy, yaw = pose
+            dx = target_x - ox
+            dy = target_y - oy
+            dist = math.hypot(dx, dy)
+            if dist < self.dist_tol:
+                break
 
-        while abs(goal_angle) > 0.05 and not rospy.is_shutdown():
-            tw = Twist()
-            tw.angular.z = 0.4 * math.copysign(1, goal_angle)
-            self.cmd_pub.publish(tw)
+            # desired angle in world to face the target
+            target_angle = math.atan2(dy, dx)
+            ang_err = angle_normalize(target_angle - yaw)
+
+            # proportional controllers
+            lin = min(self.lin_max, self.lin_k * dist)
+            ang = max(-self.rot_max, min(self.rot_max, self.rot_k * ang_err))
+
+            cmd = Twist()
+            cmd.linear.x = lin
+            cmd.angular.z = ang
+            self.cmd_pub.publish(cmd)
             rate.sleep()
 
+        # stop
         self.cmd_pub.publish(Twist())
+        rospy.sleep(0.08)
 
+    # -------------------------
+    # main one-shot routine
+    # -------------------------
+    def run_once(self, timeout=10.0):
+        """Wait for a map + odom, run trigger(), move and rotate, then exit."""
+        start_t = rospy.Time.now()
+        rate = rospy.Rate(10)
 
-    # --------------------------------------------------------------
-    # ROS Callbacks
-    # --------------------------------------------------------------
+        rospy.loginfo("Waiting for /local_costmap and /odom...")
+        while not rospy.is_shutdown():
+            if self.have_map and self.have_odom:
+                break
+            if (rospy.Time.now() - start_t).to_sec() > timeout:
+                rospy.logerr("Timed out waiting for map/odom")
+                return
+            rate.sleep()
 
-    def local_occupancy_callback(self, msg):
-        """Receive one map and store it."""
-        self.local_map_data = msg
-        self.received_first_map = True
+        rospy.loginfo("Got map & odom — running trigger()")
+        # call your trigger with raw OccupancyGrid message (your trigger expects msg)
+        msg, origin, end_position, goal_forward_vector = self.local_occupancy_movement.trigger(self.local_map_msg)
 
+        # publish debug map if returned
+        if msg is not None:
+            msg.header.stamp = rospy.Time.now()
+            msg.header.frame_id = "map"
+            self.debug_pub.publish(msg)
 
-    # --------------------------------------------------------------
-    # Debug map publishing
-    # --------------------------------------------------------------
+        # get current odom pose
+        od = self.get_odom_pose()
+        if od is None:
+            rospy.logerr("No odom pose available")
+            return
+        od_x, od_y, od_yaw = od
 
-    def publish_debug_map(self, msg):
-        rospy.loginfo("Publishing debug map")
-        msg.header.stamp = rospy.Time.now()
-        msg.header.frame_id = "map"
-        self.debug_pub.publish(msg)
+        # convert end_position (robot-relative) -> world
+        ex_r, ey_r = end_position      # user coords: +X right, -Y forward
+        target_world_x, target_world_y = self.robot_relative_to_world(ex_r, ey_r, od_yaw, od_x, od_y)
 
+        rospy.loginfo(f"Target world: ({target_world_x:.3f}, {target_world_y:.3f})")
 
-# --------------------------------------------------------------
-# MAIN
-# --------------------------------------------------------------
+        # 1) rotate to face target
+        target_angle = math.atan2(target_world_y - od_y, target_world_x - od_x)
+        self.rotate_to_angle(target_angle)
+
+        # 2) drive to target (closed-loop using odom)
+        self.drive_to_point(target_world_x, target_world_y)
+
+        # 3) compute goal facing angle (from goal_forward_vector) -> rotate to it
+        gf_x, gf_y = goal_forward_vector
+        gwx, gwy = self.robot_vector_to_world_vector(gf_x, gf_y, od_yaw)
+        desired_yaw = math.atan2(gwy, gwx)
+        self.rotate_to_angle(desired_yaw)
+
+        rospy.loginfo("Move + final rotation complete.")
+
+        # stop and exit
+        self.cmd_pub.publish(Twist())
+        rospy.sleep(0.2)
+        rospy.signal_shutdown("One-shot navigation complete.")
+
 
 if __name__ == "__main__":
     nav = NavigationController()

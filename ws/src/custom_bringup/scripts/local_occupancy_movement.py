@@ -106,10 +106,10 @@ class LocalOccupancyNavigator:
             # 2. NEW: Check Bounds - Treat Map Edges as Walls
             # If any part of the box sticks out of the map, it's a hit.
             if start_x < 0 or end_x >= map_w:
-                print("Boxcast hit map edge on X axis")
+                #print("Boxcast hit map edge on X axis")
                 return True
             if start_y < 0 or end_y >= map_h:
-                print("Boxcast hit map edge on Y axis")
+                #print("Boxcast hit map edge on Y axis")
                 return True 
 
             # 3. Clamp vals for NumPy slicing
@@ -203,10 +203,10 @@ class LocalOccupancyNavigator:
                     norm_x, norm_y = 0.0, 0.0
 
                 if prev_vec_x is not None and prev_vec_y is not None:
-                    print(prev_x, prev_y, "->", x, y)
+                    #print(prev_x, prev_y, "->", x, y)
                     #dot product to get angle difference
                     dot_val = (norm_x * prev_vec_x) + (norm_y * prev_vec_y)
-                    print(dot_val)
+                    # print(dot_val)
 
                     if abs(dot_val) <= 0.706: #cos 45 degrees + leeway
                         stop_point = i
@@ -336,36 +336,3 @@ class LocalOccupancyNavigator:
 
         return msg, origin, end_position, goal_forward_vector
 
-    # def publish_debug_map(self):
-    #     if self.map is None or self.map_origin is None:
-    #         return
-        
-    #     self.grid = self.map
-
-    #     self.draw_robot_footprint(self.grid)
-    #     self.raycast(self.grid)
-
-
-    #     if self.grid is not None:
-
-    #         msg = OccupancyGrid()
-    #         msg.header.stamp = rospy.Time.now()
-    #         msg.header.frame_id = "map"
-
-    #         msg.info.resolution = self.resolution
-    #         msg.info.width = self.map_width
-    #         msg.info.height = self.map_height
-    #         msg.info.origin = self.map_origin
-
-    #         msg.data = msg.data = self.grid.astype(np.int8).ravel()
-
-    #         self.debug_pub.publish(msg)
-
-    # def run(self):
-    #     while not rospy.is_shutdown():
-    #         self.publish_debug_map()
-    #         self.rate.sleep()
-
-# if __name__ == "__main__":
-#     nav = LocalOccupancyNavigator()
-    # nav.run()
