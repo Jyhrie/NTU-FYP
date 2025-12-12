@@ -186,7 +186,7 @@ class LocalOccupancyNavigator:
                     if abs(dot_val) <= 0.706: #cos 45 degrees + leeway
                         stop_point = i
                         break
-                    average_vector.add(norm_x, norm_y)
+                    average_vector.add(Vector2(norm_x, norm_y))
 
                 prev_x, prev_y = x, y
                 prev_vec_x, prev_vec_y = norm_x, norm_y
