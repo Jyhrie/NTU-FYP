@@ -92,7 +92,8 @@ class NavigationController:
         # ----------------------
         # Rotate to face the goal
         # ----------------------
-        target_angle = math.atan2(dx, dy)
+        target_angle = math.atan2(dy, dx)
+        print(target_angle)
         current_yaw = self.get_yaw_from_odom(self.odom)
         angle_error = angle_normalize(target_angle - current_yaw)
         angle_error = (target_angle - current_yaw + math.pi) % (2*math.pi) - math.pi
