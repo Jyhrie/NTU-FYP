@@ -33,7 +33,7 @@ class Vector2:
         return self
 
     def normal(self):
-        return Vector2(-self.y, self.x)
+        return Vector2(-self.y, -self.x)
     
     def zero(self):
         if self.x == 0 and self.y == 0:
@@ -160,6 +160,9 @@ class LocalOccupancyNavigator:
         count = len(inliers)
 
         avg_inlier = Vector2(sum_x / count, sum_y / count)
+        
+        self.grid[int(avg_inlier.y), int(avg_inlier.x)] = 1
+ 
         normal_vec = average_vector.normal()
 
         for i in range (0,5):
