@@ -91,6 +91,7 @@ class NavigationController:
         target_angle = math.atan2(dx, dy)
         current_yaw = self.get_yaw_from_odom(self.odom)
         angle_error = angle_normalize(target_angle - current_yaw)
+        angle_error = (target_angle - current_yaw + math.pi) % (2*math.pi) - math.pi
 
         twist = Twist()
         while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
@@ -104,7 +105,8 @@ class NavigationController:
         # # ----------------------
         # # Move straight to goal
         # # ----------------------
-        # distance = math.hypot(dx, dy)
+        distance = math.hypot(dx, dy)
+        print(distance)
         # while distance > self.dist_tol and not rospy.is_shutdown():
         #     twist.linear.x = max(-self.lin_max, min(self.lin_max, self.lin_k * distance))
         #     twist.angular.z = 0.0
