@@ -88,7 +88,7 @@ class NavigationController:
         dy = dy_rel * res  # NEGATE dy because -Y is forward
 
         print(dx_rel, dy_rel)
-        
+
         twist = Twist()
 
         # ----------------------
@@ -127,7 +127,7 @@ class NavigationController:
         # # ----------------------
         # # Rotate to match goal orientation
         # # ----------------------
-        goal_angle = math.atan2(goal_forward_vector.y, goal_forward_vector.x)
+        goal_angle = math.atan2(-goal_forward_vector.y, goal_forward_vector.x)
         current_yaw = self.get_yaw_from_odom(self.odom)
         angle_error = angle_normalize(goal_angle - current_yaw)
 
