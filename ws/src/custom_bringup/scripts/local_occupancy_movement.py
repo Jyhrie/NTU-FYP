@@ -11,13 +11,13 @@ class Vector2:
         self.y = y
 
     def add(self, other):
-        self.x + other.x
-        self.y + other.y
+        self.x = self.x + other.x
+        self.y = self.y + other.y
         return self
     
     def subtract(self, other):
-        self.x - other.x
-        self.y - other.y
+        self.x = self.x - other.x
+        self.y = self.y - other.y
         return self
 
     def copy(self):
@@ -25,12 +25,9 @@ class Vector2:
     
     def normalize(self):
         mag = math.hypot(self.x, self.y)   # fast sqrt(x*x + y*y)
-        if mag == 0:
-            self.x = 0
-            self.y = 0
-        else:
-            self.x / mag
-            self.y / mag
+        if not mag == 0:
+            self.x = self.x / mag
+            self.y = self.y / mag
         return self
     
 class Quaternion:
@@ -207,7 +204,9 @@ class LocalOccupancyNavigator:
             step_offset = Vector2(0,-i)
             robot_origin.add(step_offset)
             hit = self.boxcast_area(robot_origin, 5, 7, self.sensor_offset, grid)
+
             hit_horizontal = self.horizontal_boxcast(robot_origin.copy(), grid, scan_dist)
+
             hitpoints.append(Vector2(hit_horizontal + robot_origin.x, robot_origin.y - i))
             if hit:
                 print("hit at distance: ", i)
