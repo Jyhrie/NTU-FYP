@@ -61,4 +61,7 @@
     <!-- add physical offset to lidar-->
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser"
           args="-0.03 0 0.13 3.1416 0 0  /base_link /laser  30"/>
+
+    <node pkg="custom_bringup" type="local_costmap.py" name="costmap" required="true" output="screen">
+    </node>
 </launch>

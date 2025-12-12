@@ -5,7 +5,6 @@ import math
 from nav_msgs.msg import OccupancyGrid
 
 
-
 class Vector2:
     def __init__(self, x=0.0, y=0.0):
         self.x = x
@@ -125,7 +124,31 @@ class LocalOccupancyNavigator:
             self.grid[inlier.y, inlier.x] = 6
 
 
+        #target location will be the midpoint of the reference wall, multiplied by the normal vector, that the robot is facing
+        #target_location = ""
         #wall is at vert_endpoint.
+
+    def get_vector_from_points(self, points):
+        if len(points) < 2:
+            return (0, 0)
+
+        sx = 0
+        sy = 0
+
+        count = 0
+        for i in range(len(points) - 1):
+            dx = points[i+1].x - points[i].x
+            dy = points[i+1].y - points[i].y
+            sx += dx
+            sy += dy
+            count += 1
+
+        return Vector2(sx / count, sy / count)
+
+    def normal_vector(self, vector):
+        return
+
+
         
     def extract_outliers(self, hitpoints):
             if not hitpoints: return [], []
@@ -170,10 +193,6 @@ class LocalOccupancyNavigator:
 
             return inliers, outliers
     
-
-    def get_reference_wall(self):
-        pass
-
 
     def vert_boxcasts(self, grid, scan_dist = 50):
         robot_origin = Vector2(self.map_width // 2, self.map_height // 2)
