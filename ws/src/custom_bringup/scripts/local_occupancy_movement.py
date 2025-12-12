@@ -123,6 +123,13 @@ class LocalOccupancyNavigator:
         for inlier in inliers:
             self.grid[inlier.y, inlier.x] = 6
 
+        wall_vector = self.get_vector_from_points(inliers)
+        for i in range(0,50):
+            step = Vector2(wall_vector.x * i, wall_vector.y * i)
+            self.grid[int(hitpoints[0].y + step.y), int(hitpoints[0].x + step.x)] = 99
+
+
+
 
         #target location will be the midpoint of the reference wall, multiplied by the normal vector, that the robot is facing
         #target_location = ""
