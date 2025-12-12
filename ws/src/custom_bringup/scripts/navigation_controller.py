@@ -20,14 +20,16 @@ class NavigationController:
         local_resolution = None
         local_map_origin = None
 
+        
+        self.local_map_data = None
         self.local_map = None
         self.map_data = None
 
     def run(self):
         rate = rospy.Rate(5)  # 5 Hz
         while not rospy.is_shutdown():
-            if self.local_map is not None:
-                self.local_map = self.local_occupancy_movement.trigger(self.local_map)
+            if self.local_map_data is not None:
+                self.local_map = self.local_occupancy_movement.trigger(self.local_map_data)
                 self.publish_debug_map()
             rate.sleep()
 
@@ -56,13 +58,15 @@ class NavigationController:
 
     def local_occupancy_callback(self, msg):
         self.local_map_data = msg
-        self.local_map_width  = msg.info.width
-        self.local_map_height = msg.info.height
-        self.local_resolution = msg.info.resolution
-        self.local_map_origin = msg.info.origin
+        # self.local_map_width  = msg.info.width
+        # self.local_map_height = msg.info.height
+        # self.local_resolution = msg.info.resolution
+        # self.local_map_origin = msg.info.origin
 
-        data = np.array(msg.data, dtype=np.int8)
-        self.local_map = data.reshape((self.local_map_height, self.local_map_width))
+        # data = np.array(msg.data, dtype=np.int8)
+        # self.local_map = data.reshape((self.local_map_height, self.local_map_width))
+
+        
 
 
 if __name__ == "__main__":
