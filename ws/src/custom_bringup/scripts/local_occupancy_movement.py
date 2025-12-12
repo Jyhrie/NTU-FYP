@@ -181,7 +181,7 @@ class LocalOccupancyNavigator:
 
         self.grid[int(avg_inlier.y), int(avg_inlier.x)] = 1
         origin = Vector2(self.map_width // 2, self.map_height // 2)
-        relative_end_position =  origin.copy().add(avg_inlier + Vector2(normal_vec.x * 3, normal_vec.y *3))
+        relative_end_position =  avg_inlier + Vector2(normal_vec.x * 3, normal_vec.y *3)
         goal_forward_vector = average_vector
         return origin, relative_end_position, goal_forward_vector
         # print("Average Vector : ", average_vector.x, average_vector.y)
