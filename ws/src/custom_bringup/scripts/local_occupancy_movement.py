@@ -28,8 +28,9 @@ class Vector2:
         if mag == 0:
             self.x = 0
             self.y = 0
-        self.x / mag
-        self.y / mag
+        else:
+            self.x / mag
+            self.y / mag
         return self
     
 class Quaternion:
