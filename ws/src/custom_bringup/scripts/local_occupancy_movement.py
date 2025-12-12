@@ -54,10 +54,9 @@ class Transform:
 
 class LocalOccupancyNavigator:
     def __init__(self):
-        rospy.init_node("local_occupancy_debug")
-
-        rospy.Subscriber("/local_costmap", OccupancyGrid, self.map_callback)
-        self.debug_pub = rospy.Publisher("/debug_map", OccupancyGrid, queue_size=10)
+        # rospy.init_node("local_occupancy_debug")
+        # rospy.Subscriber("/local_costmap", OccupancyGrid, self.map_callback)
+        # self.debug_pub = rospy.Publisher("/debug_map", OccupancyGrid, queue_size=10)
 
         self.map = None
         self.map_width = 0
@@ -68,7 +67,6 @@ class LocalOccupancyNavigator:
         self.grid = None
 
         self.sensor_offset = Vector2(0,-7)
-
         self.rate = rospy.Rate(2)
 
     # ------------------------------------------------------------
@@ -90,9 +88,7 @@ class LocalOccupancyNavigator:
         robot_origin = Vector2(self.map_width // 2, self.map_height // 2)
         grid[:, robot_origin.x] = 3   # cost value 1
 
-    def boxcast_area(self, root, pos_halfwidth, pos_halfheight, root_offset, grid):
-            
-            
+    def boxcast_area(self, root, pos_halfwidth, pos_halfheight, root_offset, grid):  
             pos = root.copy()
             pos.add(root_offset)
 
@@ -169,9 +165,6 @@ class LocalOccupancyNavigator:
             self.grid[int(avg_inlier.y + (normal_vec.y * i)), int(avg_inlier.x - (normal_vec.x * i))] = 2
 
         self.grid[int(avg_inlier.y), int(avg_inlier.x)] = 1
-
-
-
         print("Average Vector : ", average_vector.x, average_vector.y)
 
         
@@ -313,36 +306,44 @@ class LocalOccupancyNavigator:
     # ------------------------------------------------------------
     # CREATE debug map and publish it
     # ------------------------------------------------------------
-    def publish_debug_map(self):
-        if self.map is None or self.map_origin is None:
-            return
-        
-        self.grid = self.map
+    def trigger(self, grid):
+        self.grid = grid
 
         self.draw_robot_footprint(self.grid)
         self.raycast(self.grid)
 
+        return self.grid
 
-        if self.grid is not None:
+    # def publish_debug_map(self):
+    #     if self.map is None or self.map_origin is None:
+    #         return
+        
+    #     self.grid = self.map
 
-            msg = OccupancyGrid()
-            msg.header.stamp = rospy.Time.now()
-            msg.header.frame_id = "map"
+    #     self.draw_robot_footprint(self.grid)
+    #     self.raycast(self.grid)
 
-            msg.info.resolution = self.resolution
-            msg.info.width = self.map_width
-            msg.info.height = self.map_height
-            msg.info.origin = self.map_origin
 
-            msg.data = msg.data = self.grid.astype(np.int8).ravel()
+    #     if self.grid is not None:
 
-            self.debug_pub.publish(msg)
+    #         msg = OccupancyGrid()
+    #         msg.header.stamp = rospy.Time.now()
+    #         msg.header.frame_id = "map"
 
-    def run(self):
-        while not rospy.is_shutdown():
-            self.publish_debug_map()
-            self.rate.sleep()
+    #         msg.info.resolution = self.resolution
+    #         msg.info.width = self.map_width
+    #         msg.info.height = self.map_height
+    #         msg.info.origin = self.map_origin
 
-if __name__ == "__main__":
-    nav = LocalOccupancyNavigator()
-    nav.run()
+    #         msg.data = msg.data = self.grid.astype(np.int8).ravel()
+
+    #         self.debug_pub.publish(msg)
+
+    # def run(self):
+    #     while not rospy.is_shutdown():
+    #         self.publish_debug_map()
+    #         self.rate.sleep()
+
+# if __name__ == "__main__":
+#     nav = LocalOccupancyNavigator()
+    # nav.run()
