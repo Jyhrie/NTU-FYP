@@ -137,20 +137,27 @@ class LocalOccupancyNavigator:
 
     def get_vector_from_points(self, points):
         if len(points) < 2:
-            return Vector2(0,0)
+            return Vector2(0, 0)
 
         sx = 0
         sy = 0
+        count = len(points) - 1
 
-        count = 0
-        for i in range(len(points) - 1):
-            dx = points[i+1].x - points[i].x
-            dy = points[i+1].y - points[i].y
-            sx += dx
-            sy += dy
-            count += 1
+        # accumulate direction deltas
+        for i in range(count):
+            sx += points[i+1].x - points[i].x
+            sy += points[i+1].y - points[i].y
 
-        return Vector2(sx / count, sy / count)
+        # average direction
+        vx = sx / count
+        vy = sy / count
+
+        # normalize
+        mag = math.hypot(vx, vy)
+        if mag == 0:
+            return Vector2(0, 0)
+
+        return Vector2(vx / mag, vy / mag)
 
     def normal_vector(self, vector):
         return
