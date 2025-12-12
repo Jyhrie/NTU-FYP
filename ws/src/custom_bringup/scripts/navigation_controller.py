@@ -26,8 +26,8 @@ class NavigationController:
     def run(self):
         rate = rospy.Rate(5)  # 5 Hz
         while not rospy.is_shutdown():
-            if self.map_data is not None:
-                self.map_data = self.local_occupancy_movement.trigger(self.map_data)
+            if self.local_map is not None:
+                self.local_map = self.local_occupancy_movement.trigger(self.local_map)
                 self.publish_debug_map()
             rate.sleep()
 
