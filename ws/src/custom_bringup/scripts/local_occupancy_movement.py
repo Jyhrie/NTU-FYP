@@ -128,7 +128,7 @@ class LocalOccupancyNavigator:
 
     def raycast(self, grid):
         if grid is None:
-            return
+            return None, None, None, None
         hitpoints, vert_endpoint = self.vert_boxcasts(grid)
 
         outliers, inliers, average_vector = self.extract_outliers(hitpoints)
@@ -156,16 +156,18 @@ class LocalOccupancyNavigator:
             count = len(inliers)
 
             avg_inlier = Vector2(sum_x / count, sum_y / count)
-        
-        
- 
+
         normal_vec = average_vector.normal()
 
         for i in range (0,5):
             self.grid[int(avg_inlier.y + (normal_vec.y * i)), int(avg_inlier.x - (normal_vec.x * i))] = 2
 
         self.grid[int(avg_inlier.y), int(avg_inlier.x)] = 1
-        print("Average Vector : ", average_vector.x, average_vector.y)
+        origin = Vector2(self.map_width // 2, self.map_height // 2)
+        relative_end_position =  origin.copy().add(avg_inlier + Vector2(normal_vec.x * 3, normal_vec.y *3))
+        goal_forward_vector = average_vector
+        return origin, relative_end_position, goal_forward_vector
+        # print("Average Vector : ", average_vector.x, average_vector.y)
 
         
 
@@ -234,7 +236,6 @@ class LocalOccupancyNavigator:
 
             hitpoints.append(Vector2(hit_horizontal + robot_origin.x, robot_origin.y))
             if hit:
-                print("hit at distance: ", i)
                 self.draw_boxcast_hit(robot_origin, 5, 7, self.sensor_offset, grid, 3)
                 return hitpoints, i
         self.draw_boxcast_hit(robot_origin, 5, 7, self.sensor_offset, grid, 3)
@@ -318,7 +319,7 @@ class LocalOccupancyNavigator:
         self.grid = self.map
 
         self.draw_robot_footprint(self.grid)
-        self.raycast(self.grid)
+        origin, end_position, goal_forward_vector =  self.raycast(self.grid)
 
         if self.grid is not None:
 
@@ -333,7 +334,7 @@ class LocalOccupancyNavigator:
 
             msg.data = msg.data = self.grid.astype(np.int8).ravel()
 
-        return msg
+        return msg, origin, end_position, goal_forward_vector
 
     # def publish_debug_map(self):
     #     if self.map is None or self.map_origin is None:
