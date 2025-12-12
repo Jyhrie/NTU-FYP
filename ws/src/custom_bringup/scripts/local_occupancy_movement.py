@@ -202,27 +202,30 @@ class LocalOccupancyNavigator:
     def vert_boxcasts(self, grid, scan_dist = 50):
         robot_origin = Vector2(self.map_width // 2, self.map_height // 2)
         hitpoints = []
+        
         for i in range(scan_dist):
             step_offset = Vector2(0,-i)
-            hit = self.boxcast_area(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid)
+            robot_origin.add(step_offset)
+            hit = self.boxcast_area(robot_origin, 5, 7, self.sensor_offset, grid)
             hit_horizontal = self.horizontal_boxcast(robot_origin.add(step_offset), grid, scan_dist)
             hitpoints.append(Vector2(hit_horizontal + robot_origin.x, robot_origin.y - i))
             if hit:
-                self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 3)
+                self.draw_boxcast_hit(robot_origin, 5, 7, self.sensor_offset, grid, 3)
                 return hitpoints, i
-        self.draw_boxcast_hit(robot_origin.add(step_offset), 5, 7, self.sensor_offset, grid, 3)
+        self.draw_boxcast_hit(robot_origin, 5, 7, self.sensor_offset, grid, 3)
         return hitpoints, -1
         
             
     def horizontal_boxcast(self, root, grid, scan_dist = 50):
         for i in range(scan_dist):
             step_offset = Vector2(i, 0)
-            hit = self.boxcast_area(root.add(step_offset), 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid)
+            root.add(step_offset)
+            hit = self.boxcast_area(root, 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid)
             #self.draw_boxcast_hit(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 2)
             if hit:
-                self.draw_boxcast_hit(root.add(step_offset), 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid, 99)
+                self.draw_boxcast_hit(root, 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid, 99)
                 return i
-        self.draw_boxcast_hit(root.add(step_offset), 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid, 3)
+        self.draw_boxcast_hit(root, 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid, 3)
         return -1
         
     def draw_boxcast_hit(self, center_pos, half_w, half_h, offset, grid, print_number):
