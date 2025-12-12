@@ -126,7 +126,7 @@ class LocalOccupancyNavigator:
         wall_vector = self.get_vector_from_points(inliers)
         for i in range(0,50):
             step = Vector2(wall_vector.x * i, wall_vector.y * i)
-            self.grid[int(hitpoints[0].y + step.y), int(hitpoints[0].x + step.x)] = 99
+            self.grid[int(hitpoints[0].y + step.y), int(hitpoints[0].x + step.x)] = 2
 
 
 
@@ -137,7 +137,7 @@ class LocalOccupancyNavigator:
 
     def get_vector_from_points(self, points):
         if len(points) < 2:
-            return (0, 0)
+            return Vector2(0,0)
 
         sx = 0
         sy = 0
