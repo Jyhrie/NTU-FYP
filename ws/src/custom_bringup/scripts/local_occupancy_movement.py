@@ -166,7 +166,7 @@ class LocalOccupancyNavigator:
         normal_vec = average_vector.normal()
 
         for i in range (0,5):
-            self.grid[int(avg_inlier.y + normal_vec.y * i), int(avg_inlier.x + normal_vec.x+ i)] = 2
+            self.grid[int(avg_inlier.y - normal_vec.y * i), int(avg_inlier.x - normal_vec.x+ i)] = 2
 
 
 
