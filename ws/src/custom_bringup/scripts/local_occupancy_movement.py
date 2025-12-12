@@ -233,7 +233,7 @@ class LocalOccupancyNavigator:
             map_h, map_w = grid.shape
 
             # 1. Calculate Target Position
-            target_pos = center_pos.add(offset)
+            target_pos = center_pos.copy().add(offset)
             
             # --- NEW: Clamp the Center to be visible ---
             # We ensure the center is at least 'half_w' away from edges.
