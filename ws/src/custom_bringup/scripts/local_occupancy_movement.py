@@ -6,6 +6,8 @@ from nav_msgs.msg import OccupancyGrid
 
 
 class Vector2:
+    __slots__ = ('x', 'y')   # reduces memory + access cost
+
     def __init__(self, x=0.0, y=0.0):
         self.x = x
         self.y = y
@@ -29,6 +31,9 @@ class Vector2:
             self.x = self.x / mag
             self.y = self.y / mag
         return self
+
+    def normal(self):
+        return Vector2(-self.y, self.x)
     
     def zero(self):
         if self.x == 0 and self.y == 0:
@@ -144,6 +149,23 @@ class LocalOccupancyNavigator:
         
         for inlier in inliers:
             self.grid[inlier.y, inlier.x] = 6
+
+        sum_x = 0.0
+        sum_y = 0.0
+
+        for p in inliers:
+            sum_x += p.x
+            sum_y += p.y
+
+        count = len(inliers)
+
+        avg_inlier = Vector2(sum_x / count, sum_y / count)
+        normal_vec = average_vector.normal()
+
+        for i in range (0,5):
+            self.grid[int(avg_inlier.y) + normal_vec.y * i, int(avg_inlier.x) + normal_vec.x+ i] = 2
+
+
 
         print("Average Vector : ", average_vector.x, average_vector.y)
 
