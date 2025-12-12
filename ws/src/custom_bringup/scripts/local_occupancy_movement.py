@@ -12,6 +12,16 @@ class Vector2:
         self.x = x
         self.y = y
 
+    def __add__(self, other):
+        if not isinstance(other, Vector2):
+            return NotImplemented
+        return Vector2(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        if not isinstance(other, Vector2):
+            return NotImplemented
+        return Vector2(self.x - other.x, self.y - other.y)
+
     def add(self, other):
         self.x = self.x + other.x
         self.y = self.y + other.y
