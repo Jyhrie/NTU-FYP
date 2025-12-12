@@ -25,6 +25,9 @@ class Vector2:
         if not isinstance(other, Vector2):
             return NotImplemented
         return Vector2(self.x - other.x, self.y - other.y)
+    
+    def __repr__(self):
+        return f"Vector2(x={self.x:.3f}, y={self.y:.3f})"
 
     def add(self, other):
         self.x = self.x + other.x

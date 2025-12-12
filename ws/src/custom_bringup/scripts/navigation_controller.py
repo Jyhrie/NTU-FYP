@@ -69,6 +69,10 @@ class NavigationController:
         if msg is not None:
             self.debug_pub.publish(msg)
 
+        print(origin, end_position, goal_forward_vector)
+
+         # 1. Compute angle to goal
+
         res = self.local_occupancy_movement.resolution
         dx = (end_position.x - origin.x) * res
         dy = (end_position.y - origin.y) * res
