@@ -88,24 +88,26 @@ class NavigationController:
         dy = dy_rel * res  # NEGATE dy because -Y is forward
 
         print(dx_rel, dy_rel)
+        
+        twist = Twist()
 
         # ----------------------
         # Rotate to face the goal
         # ----------------------
-        target_angle = math.atan2(dy, dx)
-        print(target_angle)
-        current_yaw = self.get_yaw_from_odom(self.odom)
-        angle_error = angle_normalize(target_angle - current_yaw)
-        angle_error = (target_angle - current_yaw + math.pi) % (2*math.pi) - math.pi
+        # target_angle = math.atan2(dy, dx)
+        # print(target_angle)
+        # current_yaw = self.get_yaw_from_odom(self.odom)
+        # angle_error = angle_normalize(target_angle - current_yaw)
+        # angle_error = (target_angle - current_yaw + math.pi) % (2*math.pi) - math.pi
 
-        twist = Twist()
-        while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
-            twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
-            twist.linear.x = 0.0
-            self.cmd_pub.publish(twist)
-            rospy.sleep(0.05)
-            current_yaw = self.get_yaw_from_odom(self.odom)
-            angle_error = angle_normalize(target_angle - current_yaw)
+        
+        # while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
+        #     twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
+        #     twist.linear.x = 0.0
+        #     self.cmd_pub.publish(twist)
+        #     rospy.sleep(0.05)
+        #     current_yaw = self.get_yaw_from_odom(self.odom)
+        #     angle_error = angle_normalize(target_angle - current_yaw)
 
         # # ----------------------
         # # Move straight to goal
@@ -125,17 +127,17 @@ class NavigationController:
         # # ----------------------
         # # Rotate to match goal orientation
         # # ----------------------
-        # goal_angle = math.atan2(goal_forward_vector.y, goal_forward_vector.x)
-        # current_yaw = self.get_yaw_from_odom(self.odom)
-        # angle_error = angle_normalize(goal_angle - current_yaw)
+        goal_angle = math.atan2(goal_forward_vector.y, goal_forward_vector.x)
+        current_yaw = self.get_yaw_from_odom(self.odom)
+        angle_error = angle_normalize(goal_angle - current_yaw)
 
-        # while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
-        #     twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
-        #     twist.linear.x = 0.0
-        #     self.cmd_pub.publish(twist)
-        #     rospy.sleep(0.05)
-        #     current_yaw = self.get_yaw_from_odom(self.odom)
-        #     angle_error = angle_normalize(goal_angle - current_yaw)
+        while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
+            twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
+            twist.linear.x = 0.0
+            self.cmd_pub.publish(twist)
+            rospy.sleep(0.05)
+            current_yaw = self.get_yaw_from_odom(self.odom)
+            angle_error = angle_normalize(goal_angle - current_yaw)
 
         # Stop robot at end
         twist.linear.x = 0.0
