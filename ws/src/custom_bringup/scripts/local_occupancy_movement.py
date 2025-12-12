@@ -150,16 +150,16 @@ class LocalOccupancyNavigator:
         for inlier in inliers:
             self.grid[inlier.y, inlier.x] = 6
 
-        sum_x = 0.0
-        sum_y = 0.0
+        if not inliers:
+            avg_inlier = Vector2(0, 0)
 
-        for p in inliers:
-            sum_x += p.x
-            sum_y += p.y
+        else:
+            # Compute sum of coordinates
+            sum_x = sum(p.x for p in inliers)
+            sum_y = sum(p.y for p in inliers)
+            count = len(inliers)
 
-        count = len(inliers)
-
-        avg_inlier = Vector2(sum_x / count, sum_y / count)
+            avg_inlier = Vector2(sum_x / count, sum_y / count)
         
         self.grid[int(avg_inlier.y), int(avg_inlier.x)] = 1
  
@@ -340,7 +340,6 @@ class LocalOccupancyNavigator:
         while not rospy.is_shutdown():
             self.publish_debug_map()
             self.rate.sleep()
-
 
 if __name__ == "__main__":
     nav = LocalOccupancyNavigator()
