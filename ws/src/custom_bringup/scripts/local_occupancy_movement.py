@@ -30,6 +30,11 @@ class Vector2:
             self.y = self.y / mag
         return self
     
+    def zero(self):
+        if self.x == 0 and self.y == 0:
+            return True
+        return False
+    
 class Quaternion:
     def __init__(self, x, y, z, w):
         self.x = x
