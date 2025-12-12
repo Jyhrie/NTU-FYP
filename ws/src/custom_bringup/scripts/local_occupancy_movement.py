@@ -220,8 +220,8 @@ class LocalOccupancyNavigator:
                 prev_vec_x, prev_vec_y = norm_x, norm_y
 
 
-            outliers = hitpoints[stop_point:]
-            inliers = hitpoints[:stop_point]
+            outliers = hitpoints[:stop_point]
+            inliers = hitpoints[stop_point:]
 
             return inliers, outliers, average_vector.normalize()
     
