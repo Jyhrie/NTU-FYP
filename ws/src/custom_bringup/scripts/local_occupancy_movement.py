@@ -72,14 +72,14 @@ class LocalOccupancyNavigator:
     # ------------------------------------------------------------
     # SAVE incoming costmap
     # ------------------------------------------------------------
-    def map_callback(self, msg: OccupancyGrid):
-        self.map_width  = msg.info.width
-        self.map_height = msg.info.height
-        self.resolution = msg.info.resolution
-        self.map_origin = msg.info.origin
+    # def map_callback(self, msg: OccupancyGrid):
+    #     self.map_width  = msg.info.width
+    #     self.map_height = msg.info.height
+    #     self.resolution = msg.info.resolution
+    #     self.map_origin = msg.info.origin
 
-        data = np.array(msg.data, dtype=np.int8)
-        self.map = data.reshape((self.map_height, self.map_width))
+    #     data = np.array(msg.data, dtype=np.int8)
+    #     self.map = data.reshape((self.map_height, self.map_width))
 
     # ------------------------------------------------------------
     # DRAW a vertical line (modify the grid array directly)
@@ -320,7 +320,20 @@ class LocalOccupancyNavigator:
         self.draw_robot_footprint(self.grid)
         self.raycast(self.grid)
 
-        return self.grid
+        if self.grid is not None:
+
+            msg = OccupancyGrid()
+            msg.header.stamp = rospy.Time.now()
+            msg.header.frame_id = "map"
+
+            msg.info.resolution = self.resolution
+            msg.info.width = self.map_width
+            msg.info.height = self.map_height
+            msg.info.origin = self.map_origin
+
+            msg.data = msg.data = self.grid.astype(np.int8).ravel()
+
+        return msg
 
     # def publish_debug_map(self):
     #     if self.map is None or self.map_origin is None:

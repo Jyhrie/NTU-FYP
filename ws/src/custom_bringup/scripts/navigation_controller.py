@@ -13,45 +13,42 @@ class NavigationController:
         self.debug_pub = rospy.Publisher("/debug_map", OccupancyGrid, queue_size=10)
 
         self.local_occupancy_movement = lom.LocalOccupancyNavigator()
-
-        local_map_data = None
-        local_map_width = None
-        local_map_height = None
-        local_resolution = None
-        local_map_origin = None
-
-        
+       
         self.local_map_data = None
         self.local_map = None
+        self.local_map_origin = None
+
         self.map_data = None
 
     def run(self):
         rate = rospy.Rate(5)  # 5 Hz
         while not rospy.is_shutdown():
             if self.local_map_data is not None:
-                self.local_map = self.local_occupancy_movement.trigger(self.local_map_data)
-                self.publish_debug_map()
+                msg = self.local_occupancy_movement.trigger(self.local_map_data)
+                self.publish_debug_map(msg)
             rate.sleep()
 
-    def publish_debug_map(self):
+    def publish_debug_map(self, msg):
         print("publishing debug map")
-        if self.local_map is None or self.local_map_origin is None:
+        if msg is None:
             return
+        # if self.local_map is None or self.local_map_origin is None:
+        #     return
 
-        # Use local map instead of self.map
-        self.grid = self.local_map.copy()
+        # # Use local map instead of self.map
+        # self.grid = self.local_map.copy()
 
-        # Create OccupancyGrid message
-        msg = OccupancyGrid()
-        msg.header.stamp = rospy.Time.now()
-        msg.header.frame_id = "map"
+        # # Create OccupancyGrid message
+        # msg = OccupancyGrid()
+        # msg.header.stamp = rospy.Time.now()
+        # msg.header.frame_id = "map"
 
-        msg.info.resolution = self.local_resolution
-        msg.info.width = self.local_map_width
-        msg.info.height = self.local_map_height
-        msg.info.origin = self.local_map_origin
+        # msg.info.resolution = self.local_resolution
+        # msg.info.width = self.local_map_width
+        # msg.info.height = self.local_map_height
+        # msg.info.origin = self.local_map_origin
 
-        msg.data = self.grid.astype(np.int8).ravel()
+        # msg.data = self.grid.astype(np.int8).ravel()
 
         self.debug_pub.publish(msg)
 
