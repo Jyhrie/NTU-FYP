@@ -39,10 +39,6 @@ class NavigationController:
         # Use local map instead of self.map
         self.grid = self.local_map.copy()
 
-        # Update grid with robot footprint and raycast
-        self.draw_robot_footprint(self.grid)
-        self.raycast(self.grid)
-
         # Create OccupancyGrid message
         msg = OccupancyGrid()
         msg.header.stamp = rospy.Time.now()
