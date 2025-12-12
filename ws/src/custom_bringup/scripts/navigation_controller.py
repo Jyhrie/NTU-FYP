@@ -32,6 +32,7 @@ class NavigationController:
             rate.sleep()
 
     def publish_debug_map(self):
+        print("publishing debug map")
         if self.local_map is None or self.local_map_origin is None:
             return
 
