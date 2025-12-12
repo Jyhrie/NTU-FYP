@@ -57,6 +57,11 @@ class NavigationController:
         self.odom = msg
         self.have_odom = True
 
+    def get_yaw_from_odom(self, odom):
+        q = odom.pose.pose.orientation
+        yaw = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
+        return yaw
+
     def run_once(self):
         rospy.loginfo("Waiting for /local_costmap and /odom...")
         rate = rospy.Rate(10)  # 10 Hz
@@ -77,7 +82,45 @@ class NavigationController:
         dx = (end_position.x - origin.x) * res
         dy = (end_position.y - origin.y) * res
 
-        print("Goal relative position (m): ", dx, dy)
+        target_angle = math.atan2(dy, dx)
+
+        current_yaw = self.get_yaw_from_odom(self.odom)
+
+        angle_error = angle_normalize(target_angle - current_yaw)
+
+        
+        twist = Twist()
+        while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
+            twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
+            twist.linear.x = 0.0  # rotate in place
+            self.cmd_pub.publish(twist)
+            rospy.sleep(0.05)
+            current_yaw = self.get_yaw_from_odom(self.odom)
+            angle_error = angle_normalize(target_angle - current_yaw)
+
+        distance = math.hypot(dx, dy)
+        while distance > self.dist_tol and not rospy.is_shutdown():
+            twist.linear.x = max(-self.lin_max, min(self.lin_max, self.lin_k * distance))
+            twist.angular.z = 0.0
+            self.cmd_pub.publish(twist)
+            rospy.sleep(0.05)
+            
+            # recompute position relative to robot
+            dx = (end_position.x - origin.x) * res
+            dy = (end_position.y - origin.y) * res
+            distance = math.hypot(dx, dy)
+
+        goal_angle = math.atan2(goal_forward_vector.y, goal_forward_vector.x)
+        current_yaw = self.get_yaw_from_odom(self.odom)
+        angle_error = angle_normalize(goal_angle - current_yaw)
+
+        while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
+            twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
+            twist.linear.x = 0.0
+            self.cmd_pub.publish(twist)
+            rospy.sleep(0.05)
+            current_yaw = self.get_yaw_from_odom(self.odom)
+            angle_error = angle_normalize(goal_angle - current_yaw)
 
 
 
