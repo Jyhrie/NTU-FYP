@@ -70,46 +70,54 @@ class NavigationController:
                 break
             rate.sleep()
 
+        # get local map info
         msg, origin, end_position, goal_forward_vector = self.local_occupancy_movement.trigger(self.local_map_msg)
         if msg is not None:
             self.debug_pub.publish(msg)
 
-        print(origin, end_position, goal_forward_vector)
-
-         # 1. Compute angle to goal
+        print("Origin:", origin)
+        print("End Position:", end_position)
+        print("Goal Forward Vector:", goal_forward_vector)
 
         res = self.local_occupancy_movement.resolution
+
+        # Compute relative position in meters
         dx = (end_position.x - origin.x) * res
-        dy = (end_position.y - origin.y) * res
+        dy = (origin.y - end_position.y) * res  # NEGATE dy because -Y is forward
 
+        # ----------------------
+        # Rotate to face the goal
+        # ----------------------
         target_angle = math.atan2(dy, dx)
-
         current_yaw = self.get_yaw_from_odom(self.odom)
-
         angle_error = angle_normalize(target_angle - current_yaw)
 
-        
         twist = Twist()
         while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
             twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
-            twist.linear.x = 0.0  # rotate in place
+            twist.linear.x = 0.0
             self.cmd_pub.publish(twist)
             rospy.sleep(0.05)
             current_yaw = self.get_yaw_from_odom(self.odom)
             angle_error = angle_normalize(target_angle - current_yaw)
 
+        # ----------------------
+        # Move straight to goal
+        # ----------------------
         distance = math.hypot(dx, dy)
         while distance > self.dist_tol and not rospy.is_shutdown():
             twist.linear.x = max(-self.lin_max, min(self.lin_max, self.lin_k * distance))
             twist.angular.z = 0.0
             self.cmd_pub.publish(twist)
             rospy.sleep(0.05)
-            
-            # recompute position relative to robot
+
             dx = (end_position.x - origin.x) * res
-            dy = (end_position.y - origin.y) * res
+            dy = (origin.y - end_position.y) * res  # still negate dy
             distance = math.hypot(dx, dy)
 
+        # ----------------------
+        # Rotate to match goal orientation
+        # ----------------------
         goal_angle = math.atan2(goal_forward_vector.y, goal_forward_vector.x)
         current_yaw = self.get_yaw_from_odom(self.odom)
         angle_error = angle_normalize(goal_angle - current_yaw)
@@ -121,6 +129,11 @@ class NavigationController:
             rospy.sleep(0.05)
             current_yaw = self.get_yaw_from_odom(self.odom)
             angle_error = angle_normalize(goal_angle - current_yaw)
+
+        # Stop robot at end
+        twist.linear.x = 0.0
+        twist.angular.z = 0.0
+        self.cmd_pub.publish(twist)
 
 
 
