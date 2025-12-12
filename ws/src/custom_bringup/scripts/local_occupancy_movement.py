@@ -11,11 +11,27 @@ class Vector2:
         self.y = y
 
     def add(self, other):
-        return Vector2(self.x + other.x, self.y + other.y)
+        self.x + other.x
+        self.y + other.y
+        return self
     
     def subtract(self, other):
-        return Vector2(self.x - other.x, self.y - other.y)
+        self.x - other.x
+        self.y - other.y
+        return self
 
+    def copy(self):
+        return Vector2(self.x, self.y)
+    
+    def normalize(self):
+        mag = math.hypot(self.x, self.y)   # fast sqrt(x*x + y*y)
+        if mag == 0:
+            self.x = 0
+            self.y = 0
+        self.x / mag
+        self.y / mag
+        return self
+    
 class Quaternion:
     def __init__(self, x, y, z, w):
         self.x = x
@@ -67,10 +83,13 @@ class LocalOccupancyNavigator:
         grid[:, robot_origin.x] = 3   # cost value 1
 
     def boxcast_area(self, root, pos_halfwidth, pos_halfheight, root_offset, grid):
-            pos = root.add(root_offset)
+            
+            
+            pos = root.copy()
+            pos.add(root_offset)
 
-            pt1 = pos.add(Vector2(pos_halfwidth, pos_halfheight))
-            pt2 = pos.subtract(Vector2(pos_halfwidth, pos_halfheight))
+            pt1 = pos.copy().add(Vector2(pos_halfwidth, pos_halfheight))
+            pt2 = pos.copy().subtract(Vector2(pos_halfwidth, pos_halfheight))
 
             map_h, map_w = grid.shape
 
@@ -108,7 +127,7 @@ class LocalOccupancyNavigator:
             return
         hitpoints, vert_endpoint = self.vert_boxcasts(grid)
 
-        outliers, inliers = self.extract_outliers(hitpoints)
+        outliers, inliers, average_vector = self.extract_outliers(hitpoints)
 
         hitpoints, vert_endpoint = self.vert_boxcasts(grid)
 
@@ -123,41 +142,9 @@ class LocalOccupancyNavigator:
         for inlier in inliers:
             self.grid[inlier.y, inlier.x] = 6
 
-        wall_vector = self.get_vector_from_points(inliers)
-        for i in range(0,50):
-            step = Vector2(wall_vector.x * i, wall_vector.y * i)
-            self.grid[int(hitpoints[0].y + step.y), int(hitpoints[0].x + step.x)] = 2
+        print("Average Vector : ", average_vector.x, average_vector.y)
 
-
-
-
-        #target location will be the midpoint of the reference wall, multiplied by the normal vector, that the robot is facing
-        #target_location = ""
-        #wall is at vert_endpoint.
-
-    def get_vector_from_points(self, points):
-        if len(points) < 2:
-            return Vector2(0, 0)
-
-        sx = 0
-        sy = 0
-        count = len(points) - 1
-
-        # accumulate direction deltas
-        for i in range(count):
-            sx += points[i+1].x - points[i].x
-            sy += points[i+1].y - points[i].y
-
-        # average direction
-        vx = sx / count
-        vy = sy / count
-
-        # normalize
-        mag = math.hypot(vx, vy)
-        if mag == 0:
-            return Vector2(0, 0)
-
-        return Vector2(vx / mag, vy / mag)
+        
 
     def normal_vector(self, vector):
         return
@@ -169,6 +156,8 @@ class LocalOccupancyNavigator:
             prev_x, prev_y = None, None
             prev_vec_x, prev_vec_y = None, None
             stop_point = len(hitpoints)
+            average_vector = Vector2(0,0)
+
             for i in range(0, len(hitpoints)):
                 hp = hitpoints[i]
                 x, y = hp.x, hp.y
@@ -197,6 +186,7 @@ class LocalOccupancyNavigator:
                     if abs(dot_val) <= 0.706: #cos 45 degrees + leeway
                         stop_point = i
                         break
+                    average_vector.add(norm_x, norm_y)
 
                 prev_x, prev_y = x, y
                 prev_vec_x, prev_vec_y = norm_x, norm_y
@@ -205,7 +195,7 @@ class LocalOccupancyNavigator:
             outliers = hitpoints[stop_point:]
             inliers = hitpoints[:stop_point]
 
-            return inliers, outliers
+            return inliers, outliers, average_vector.normalize()
     
 
     def vert_boxcasts(self, grid, scan_dist = 50):
