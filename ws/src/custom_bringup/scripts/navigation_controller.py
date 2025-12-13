@@ -148,11 +148,13 @@ class NavigationController:
         dot = forward[0]*goal[0] + forward[1]*goal[1]
         cross = forward[0]*goal[1] - forward[1]*goal[0]
 
+        current_yaw = self.get_yaw_from_odom(self.odom)
+
         # angle_deg = math.degrees()
         # print("goal angle!", goal_angle)
         # current_yaw = self.get_yaw_from_odom(self.odom)
         #angle_error = angle_normalize(math.atan2(cross, dot))
-        angle_error = math.atan2(cross, dot)
+        angle_error = math.atan2(cross, dot) - current_yaw
         print(math.degrees(angle_error))
 
         while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
