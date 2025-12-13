@@ -86,10 +86,10 @@ class NavigationController:
         print("End Position:", end_position)
         print("Goal Forward Vector:", goal_forward_vector)
 
-        data = np.array(msg.data, dtype=np.int8)
-        map = data.reshape((self.map_height, self.map_width))
+        # data = np.array(msg.data, dtype=np.int8)
+        # map = data.reshape((self.map_height, self.map_width))
 
-        self.numpy_to_transform(map, origin.x, origin.y)
+        # self.numpy_to_transform(map, origin.x, origin.y)
         res = self.local_occupancy_movement.resolution
 
         # Compute relative position in meters
