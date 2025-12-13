@@ -142,8 +142,6 @@ class NavigationController:
 
         goal_angle = math.atan2(goal_forward_vector.x, goal_forward_vector.y)
 
-        import math
-
         forward = (0, -1)
         goal = (goal_forward_vector.x, goal_forward_vector.y)
 
