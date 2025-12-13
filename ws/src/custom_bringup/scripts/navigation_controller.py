@@ -138,11 +138,22 @@ class NavigationController:
         # # ----------------------
         # # Rotate to match goal orientation
         # # ----------------------
-        print(goal_forward_vector.x, -goal_forward_vector.y)
-        goal_angle = math.atan2(goal_forward_vector.x, -goal_forward_vector.y)
-        print("goal angle!", goal_angle)
-        current_yaw = self.get_yaw_from_odom(self.odom)
-        angle_error = angle_normalize(current_yaw - goal_angle)
+
+
+        goal_angle = math.atan2(goal_forward_vector.x, goal_forward_vector.y)
+
+        import math
+
+        forward = (0, -1)
+        goal = (goal_forward_vector.x, goal_forward_vector.y)
+
+        dot = forward[0]*goal[0] + forward[1]*goal[1]
+        cross = forward[0]*goal[1] - forward[1]*goal[0]
+
+        # angle_deg = math.degrees()
+        # print("goal angle!", goal_angle)
+        # current_yaw = self.get_yaw_from_odom(self.odom)
+        angle_error = angle_normalize(math.atan2(cross, dot))
 
         while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
             twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
