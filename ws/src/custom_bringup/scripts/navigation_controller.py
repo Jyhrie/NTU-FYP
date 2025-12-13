@@ -68,7 +68,7 @@ class NavigationController:
 
         return x, size_y - y - 1
     
-    def normalize_angle(a):
+    def normalize_angle(self, a):
         return math.atan2(math.sin(a), math.cos(a))
 
 
