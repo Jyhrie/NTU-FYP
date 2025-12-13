@@ -155,7 +155,7 @@ class NavigationController:
 
         rotation_angle = math.atan2(cross, dot)
 
-        target_yaw = current_yaw + rotation_angle
+        target_yaw = current_yaw - rotation_angle
         target_yaw = self.normalize_angle(target_yaw)
 
         # --- control params ---
