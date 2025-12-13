@@ -67,6 +67,9 @@ class NavigationController:
         size_y = grid.shape[0]
 
         return x, size_y - y - 1
+    
+    def normalize_angle(a):
+        return math.atan2(math.sin(a), math.cos(a))
 
 
     def run_once(self):
