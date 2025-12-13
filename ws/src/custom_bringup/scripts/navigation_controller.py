@@ -181,12 +181,12 @@ class NavigationController:
 
             cmd.linear.x = 0.0
             cmd.angular.z = ang
-            self.cmd_vel_pub.publish(cmd)
+            self.cmd_pub.publish(cmd)
 
             rate.sleep()
 
         cmd.angular.z = 0.0
-        self.cmd_vel_pub.publish(cmd)
+        self.cmd_pub.publish(cmd)
 
 
 
