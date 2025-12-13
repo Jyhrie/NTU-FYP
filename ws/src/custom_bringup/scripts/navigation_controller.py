@@ -142,7 +142,7 @@ class NavigationController:
         goal_angle = math.atan2(goal_forward_vector.x, -goal_forward_vector.y)
         print("goal angle!", goal_angle)
         current_yaw = self.get_yaw_from_odom(self.odom)
-        angle_error = angle_normalize(-(goal_angle + current_yaw))
+        angle_error = angle_normalize(current_yaw - goal_angle)
 
         while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
             twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
