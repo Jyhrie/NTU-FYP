@@ -61,6 +61,13 @@ class NavigationController:
         q = odom.pose.pose.orientation
         yaw = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
         return yaw
+    
+    def numpy_to_transform(self, grid, x, y):
+        size_x = grid.shape[1]
+        size_y = grid.shape[0]
+
+        return x, size_y - y - 1
+
 
     def run_once(self):
         rospy.loginfo("Waiting for /local_costmap and /odom...")
@@ -79,6 +86,10 @@ class NavigationController:
         print("End Position:", end_position)
         print("Goal Forward Vector:", goal_forward_vector)
 
+        data = np.array(msg.data, dtype=np.int8)
+        map = data.reshape((self.map_height, self.map_width))
+
+        self.numpy_to_transform(map, origin.x, origin.y)
         res = self.local_occupancy_movement.resolution
 
         # Compute relative position in meters
@@ -127,7 +138,9 @@ class NavigationController:
         # # ----------------------
         # # Rotate to match goal orientation
         # # ----------------------
-        goal_angle = math.atan2(-goal_forward_vector.x, -goal_forward_vector.y)
+
+        goal_angle = math.atan2(goal_forward_vector.x, goal_forward_vector.y)
+        goal_angle = math.atan2(-goal_forward_vector.y, -goal_forward_vector.x)
         print("goal angle!", goal_angle)
         current_yaw = self.get_yaw_from_odom(self.odom)
         angle_error = angle_normalize(goal_angle - current_yaw)
@@ -140,10 +153,10 @@ class NavigationController:
             current_yaw = self.get_yaw_from_odom(self.odom)
             angle_error = angle_normalize(goal_angle - current_yaw)
 
-        # Stop robot at end
-        twist.linear.x = 0.0
-        twist.angular.z = 0.0
-        self.cmd_pub.publish(twist)
+        # # Stop robot at end
+        # twist.linear.x = 0.0
+        # twist.angular.z = 0.0
+        # self.cmd_pub.publish(twist)
 
 
 
