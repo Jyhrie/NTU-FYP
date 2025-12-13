@@ -150,25 +150,41 @@ class NavigationController:
 
         current_yaw = self.get_yaw_from_odom(self.odom)
 
-        # angle_deg = math.degrees()
-        # print("goal angle!", goal_angle)
-        # current_yaw = self.get_yaw_from_odom(self.odom)
-        #angle_error = angle_normalize(math.atan2(cross, dot))
-        angle_error = math.atan2(cross, dot) - current_yaw
-        print(math.degrees(angle_error))
+        rotation_angle = math.atan2(cross, dot)
 
-        while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
-            twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
-            twist.linear.x = 0.0
-            self.cmd_pub.publish(twist)
-            rospy.sleep(0.05)
+        target_yaw = current_yaw + rotation_angle
+        target_yaw = self.normalize_angle(target_yaw)
+
+        # --- control params ---
+        Kp = 1.5
+        max_ang = 1.0
+        tol = math.radians(2)
+
+        cmd = Twist()
+        rate = rospy.Rate(30)
+
+        # --- rotate in place ---
+        while not rospy.is_shutdown():
             current_yaw = self.get_yaw_from_odom(self.odom)
-            angle_error = angle_normalize(goal_angle - current_yaw)
 
-        # # Stop robot at end
-        # twist.linear.x = 0.0
-        # twist.angular.z = 0.0
-        # self.cmd_pub.publish(twist)
+            error = target_yaw - current_yaw
+            error = math.atan2(math.sin(error), math.cos(error))  # normalize
+
+            if abs(error) < tol:
+                break
+
+            ang = Kp * error
+            ang = max(-max_ang, min(max_ang, ang))
+
+            cmd.linear.x = 0.0
+            cmd.angular.z = ang
+            self.cmd_vel_pub.publish(cmd)
+
+            rate.sleep()
+
+        cmd.angular.z = 0.0
+        self.cmd_vel_pub.publish(cmd)
+
 
 
 
