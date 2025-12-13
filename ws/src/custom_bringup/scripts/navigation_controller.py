@@ -140,7 +140,6 @@ class NavigationController:
         # # ----------------------
 
         goal_angle = math.atan2(goal_forward_vector.x, goal_forward_vector.y)
-        goal_angle = math.atan2(-goal_forward_vector.y, -goal_forward_vector.x)
         print("goal angle!", goal_angle)
         current_yaw = self.get_yaw_from_odom(self.odom)
         angle_error = angle_normalize(goal_angle - current_yaw)
