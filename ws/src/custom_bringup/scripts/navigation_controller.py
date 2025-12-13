@@ -151,7 +151,8 @@ class NavigationController:
         # angle_deg = math.degrees()
         # print("goal angle!", goal_angle)
         # current_yaw = self.get_yaw_from_odom(self.odom)
-        angle_error = angle_normalize(math.atan2(cross, dot))
+        #angle_error = angle_normalize(math.atan2(cross, dot))
+        angle_error = math.atan2(cross, dot)
 
         while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
             twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
