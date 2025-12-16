@@ -166,7 +166,7 @@ class LocalOccupancyNavigator:
             # Compute dot with previous average to detect sharp change
             if i > 0:
                 dot_val = norm_x * average_vector.x + norm_y * average_vector.y
-                if dot_val < 0.7:  # cos ~45 degrees
+                if dot_val < 0.866:  # cos ~30 degrees
                     stop_point = i
                     break
 
