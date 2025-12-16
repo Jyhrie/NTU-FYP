@@ -148,7 +148,7 @@ class LocalOccupancyNavigator:
             return [], hitpoints, Vector2(0, 0)
 
         average_vector = Vector2(0, 0)
-        stop_point = len(hitpoints)
+        stop_point = 0
         num_vectors = 0
 
         for i in range(len(hitpoints) - span):
