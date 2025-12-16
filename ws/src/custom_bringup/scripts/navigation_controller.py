@@ -27,7 +27,6 @@ class NavigationController:
 
         self.have_map = False
         self.have_odom = False
-
         pass
 
 
@@ -61,7 +60,7 @@ class NavigationController:
         rate = rospy.Rate(5)  # 5 Hz
         while not rospy.is_shutdown():
             if self.have_map and self.have_odom:
-                self.local_occupancy_movement.update_odometry(self.odom)
+                #self.local_occupancy_movement.update_odometry(self.odom)
                 self.display_debug_map()
             rate.sleep()
 
