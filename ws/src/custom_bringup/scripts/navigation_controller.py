@@ -101,8 +101,10 @@ class NavigationController:
             normal_vec_sum.add(vec)
             average_normal_vec_median = normal_vec_sum.normalize()
 
+
+
         normal_vec_median = average_normal_vec_median.normal()
-        print()
+        print("average_inliner_vec", average_inlier_vec)
 
         res = self.local_map_msg.info.resolution
         print("Median inlier", median_inlier)
