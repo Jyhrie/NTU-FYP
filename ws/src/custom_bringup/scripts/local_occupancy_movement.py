@@ -97,7 +97,7 @@ class LocalOccupancyNavigator:
             return None, None, None, None
         hitpoints, vert_endpoint = self.vert_boxcasts(grid)
 
-        outliers, inliers, average_vector = self.extract_outliers(hitpoints)
+        inliers, outliers, average_vector = self.extract_outliers(hitpoints)
 
         hitpoints, vert_endpoint = self.vert_boxcasts(grid)
 
