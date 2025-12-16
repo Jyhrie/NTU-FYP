@@ -83,7 +83,7 @@ class NavigationController:
         first_points_x = []
         first_points_y = []
 
-        for sample in samples[:5]:  # take last 5 samples
+        for sample in inlier_list[:5]:  # take last 5 samples
             if sample:  # make sure sample is not empty
                 first_point = sample[0]
                 first_points_x.append(first_point.x)
