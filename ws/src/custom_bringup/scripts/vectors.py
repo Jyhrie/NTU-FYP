@@ -22,7 +22,7 @@ class Vector2:
         return Vector2(self.x - other.x, self.y - other.y)
     
     def __repr__(self):
-        return f"Vector2(x={self.x:.3f}, y={self.y:.3f})"
+        return "Vector2(x={:.3f}, y={:.3f})".format(self.x, self.y)
 
     def add(self, other):
         self.x = self.x + other.x
