@@ -137,7 +137,7 @@ class NavigationController:
         while not rospy.is_shutdown():
             if self.have_map and self.have_odom:
                 try:
-                    user_input = input("Press A to run local route: ").strip().lower()
+                    user_input = raw_input("Press A to run local route: ").strip().lower()
                     if user_input == 'a':
                         rospy.loginfo("Running local route")
                         self.get_local_route(samples=5)
