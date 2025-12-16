@@ -112,16 +112,16 @@ class LocalOccupancyNavigator:
         for inlier in inliers:
             self.grid[inlier.y, inlier.x] = 6
 
-        if not inliers:
-            avg_inlier = Vector2(0, 0)
+        # if not inliers:
+        #     avg_inlier = Vector2(0, 0)
 
-        else:
-            # Compute sum of coordinates
-            sum_x = sum(p.x for p in inliers)
-            sum_y = sum(p.y for p in inliers)
-            count = len(inliers)
+        # else:
+        #     # Compute sum of coordinates
+        #     sum_x = sum(p.x for p in inliers)
+        #     sum_y = sum(p.y for p in inliers)
+        #     count = len(inliers)
 
-            avg_inlier = Vector2(sum_x / count, sum_y / count)
+        #     avg_inlier = Vector2(sum_x / count, sum_y / count)
         
         
         #normal_vec = average_vector.normal()
