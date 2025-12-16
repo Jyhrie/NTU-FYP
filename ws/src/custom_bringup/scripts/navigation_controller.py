@@ -15,7 +15,7 @@ import local_occupancy_movement as lom
 MAX_MOVEMENT_SPEED = 0.25
 MAX_ANGULAR_SPEED = 0.35
 
-HUG_DISTANCE = 0.7  # meters
+HUG_DISTANCE = 0.2  # meters
 
 class NavigationController:
     def __init__(self):
@@ -79,16 +79,22 @@ class NavigationController:
             normal_vec_sum.add(vec)
             average_normal_vec_median = normal_vec_sum.normalize()
 
-        #compute median inlier point
-        inlier_x = []
-        inlier_y = []
-        for point in inlier_list:
-            inlier_x.append(point.x)
-            inlier_y.append(point.y)
-        inlier_x.sort()
-        inlier_y.sort()
+        # samples: list of 5 inlier lists, each containing Vector2 points
+        first_points_x = []
+        first_points_y = []
 
-        median_inlier = Vector2(inlier_x[len(inlier_x)//2], inlier_y[len(inlier_y)//2])
+        for sample in samples[:5]:  # take last 5 samples
+            if sample:  # make sure sample is not empty
+                first_point = sample[0]
+                first_points_x.append(first_point.x)
+                first_points_y.append(first_point.y)
+
+        # sort and take median
+        first_points_x.sort()
+        first_points_y.sort()
+
+        median_inlier = Vector2(first_points_x[len(first_points_x)//2],
+                                first_points_y[len(first_points_y)//2])
         normal_vec_median = average_normal_vec_median
 
         res = self.local_map_msg.info.resolution
