@@ -37,11 +37,11 @@ class NavigationController:
         self.row, self.pitch, self.yaw = 0,0,0
         pass
 
-    def local_costmap_cb(self, msg: OccupancyGrid):
+    def local_costmap_cb(self, msg):
         self.local_map_msg = msg
         self.have_map = True
 
-    def odom_cb(self, msg: Odometry):
+    def odom_cb(self, msg):
         self.odom = msg
 
         if msg is not None:
