@@ -186,51 +186,47 @@ class LocalOccupancyNavigator:
         return origin, end_position, goal_forward_vector
 
         
-    def extract_outliers(self, hitpoints):
-            if not hitpoints: return [], []
-            prev_x, prev_y = None, None
-            prev_vec_x, prev_vec_y = None, None
-            stop_point = len(hitpoints)
-            average_vector = Vector2(0,0)
+    def extract_outliers(self, hitpoints, span=2):
+        """
+        Splits hitpoints into inliers and outliers using a spanning window method.
+        Computes the average wall vector from valid points.
+        """
+        if not hitpoints or len(hitpoints) <= span:
+            return [], hitpoints, Vector2(0, 0)
 
-            for i in range(0, len(hitpoints)):
-                hp = hitpoints[i]
-                x, y = hp.x, hp.y
-                if prev_x is None and prev_y is None:
-                    prev_x, prev_y = x, y
-                    continue
-        
-                vec_x = x - prev_x
-                vec_y = y - prev_y
+        average_vector = Vector2(0, 0)
+        stop_point = len(hitpoints)
 
-                length = math.sqrt(vec_x**2 + vec_y**2)
+        for i in range(len(hitpoints) - span):
+            p1 = hitpoints[i]
+            p2 = hitpoints[i + span]
 
-                if length > 0:
-                    norm_x = vec_x / length
-                    norm_y = vec_y / length
-                else:
-                    # Points are identical; direction is undefined (zero vector)
-                    norm_x, norm_y = 0.0, 0.0
+            dx = p2.x - p1.x
+            dy = p2.y - p1.y
+            length = math.hypot(dx, dy)
 
-                if prev_vec_x is not None and prev_vec_y is not None:
-                    #print(prev_x, prev_y, "->", x, y)
-                    #dot product to get angle difference
-                    dot_val = (norm_x * prev_vec_x) + (norm_y * prev_vec_y)
-                    # print(dot_val)
+            if length == 0:
+                continue  # identical points
 
-                    if abs(dot_val) <= 0.706: #cos 45 degrees + leeway
-                        stop_point = i
-                        break
-                    average_vector.add(Vector2(norm_x, norm_y))
+            norm_x = dx / length
+            norm_y = dy / length
 
-                prev_x, prev_y = x, y
-                prev_vec_x, prev_vec_y = norm_x, norm_y
+            # Compute dot with previous average to detect sharp change
+            if i > 0:
+                dot_val = norm_x * average_vector.x + norm_y * average_vector.y
+                if dot_val < 0.7:  # cos ~45 degrees
+                    stop_point = i
+                    break
 
+            average_vector.add(Vector2(norm_x, norm_y))
 
-            outliers = hitpoints[:stop_point]
-            inliers = hitpoints[stop_point:]
+        # Finalize average vector
+        avg_vec = average_vector.normalize() if len(average_vector) > 0 else Vector2(0, 0)
 
-            return inliers, outliers, average_vector.normalize()
+        outliers = hitpoints[:stop_point]
+        inliers = hitpoints[stop_point:]
+
+        return inliers, outliers, avg_vec
     
 
     def vert_boxcasts(self, grid, scan_dist = 50):
@@ -256,12 +252,12 @@ class LocalOccupancyNavigator:
         step_offset = Vector2(1, 0)
         for i in range(scan_dist):
             root.add(step_offset)
-            hit = self.boxcast_area(root, 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid)
+            hit = self.boxcast_area(root, 7, 5, Vector2(-self.sensor_offset.y, self.sensor_offset.x), grid)
             #self.draw_boxcast_hit(root.add(Vector2(i,0)), 7, 5, Vector2(self.sensor_offset.y, self.sensor_offset.x), grid, 2)
             if hit:
-                self.draw_boxcast_hit(root, 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid, 99)
+                self.draw_boxcast_hit(root, 7, 5, Vector2(-self.sensor_offset.y, self.sensor_offset.x), grid, 99)
                 return i
-        self.draw_boxcast_hit(root, 7, 5, Vector2(-self.sensor_offset.y//2, self.sensor_offset.x), grid, 3)
+        self.draw_boxcast_hit(root, 7, 5, Vector2(-self.sensor_offset.y, self.sensor_offset.x), grid, 3)
         return -1
         
     def draw_boxcast_hit(self, center_pos, half_w, half_h, offset, grid, print_number):
