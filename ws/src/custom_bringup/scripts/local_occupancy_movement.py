@@ -166,7 +166,7 @@ class LocalOccupancyNavigator:
 
             if prev_vec is not None:
                 dot_val = norm_x * prev_vec.x + norm_y * prev_vec.y
-                if dot_val < 0.906:
+                if dot_val < 0.866:
                     stop_point = i
                     break
 
