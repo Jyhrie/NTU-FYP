@@ -77,6 +77,8 @@ class NavigationController:
 
         inlier_point_list_x = []
         inlier_point_list_y = []
+
+        print(inlier_list)
         for sample in inlier_list:
             #get first n
             inlier_len = len(sample)
