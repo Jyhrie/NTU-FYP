@@ -161,7 +161,7 @@ class NavigationController:
 
         # Compute smallest angular difference
         angle_diff = utils.normalize_angle(target_yaw - self.yaw)
-        #print(self.yaw, target_yaw)
+        print(self.yaw, target_yaw)
 
         cmd = Twist()
 
@@ -175,7 +175,7 @@ class NavigationController:
 
         # Optional: scale speed proportionally to angle_diff (smooth approach)
         # cmd.angular.z = max(-MAX_ANGULAR_SPEED, min(MAX_ANGULAR_SPEED, angle_diff))
-
+        print(cmd)
         self.cmd_pub.publish(cmd)
         return True
 
