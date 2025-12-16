@@ -6,7 +6,6 @@ from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from vectors import Vector2
-import keyboard
 
 import local_occupancy_movement as lom
 
