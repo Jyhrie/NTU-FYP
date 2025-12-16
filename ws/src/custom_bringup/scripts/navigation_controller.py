@@ -119,14 +119,14 @@ class NavigationController:
 
         target_angle = math.atan2(dy, dx)
 
-        print("Robot Position (grid coords):", cx, cy)
-        print("Median Inlier: ", median_inlier)
-        print("Target Point:", target_point)
-        print("Target Angle (rad):", target_angle)
-        print("Current Yaw (rad):", self.yaw)
-        print("Normal Vector:", normal_vec_median)
-        angle_diff = utils.normalize_angle(target_angle - self.yaw)
-        print("Angle Diff (rad):", angle_diff)
+        # print("Robot Position (grid coords):", cx, cy)
+        # print("Median Inlier: ", median_inlier)
+        # print("Target Point:", target_point)
+        # print("Target Angle (rad):", target_angle)
+        # print("Current Yaw (rad):", self.yaw)
+        # print("Normal Vector:", normal_vec_median)
+        # angle_diff = utils.normalize_angle(target_angle - self.yaw)
+        # print("Angle Diff (rad):", angle_diff)
 
         mx = int(round(target_point.x))
         my = int(round(target_point.y))
@@ -140,10 +140,67 @@ class NavigationController:
         # flatten back to msg.data
         msg.data = grid.flatten().tolist()
 
-        
         self.display_debug_map(msg)
 
+        govec = Vector2(dx, -dy)
+        while not self.turn_to_face_vec(govec):
+            rospy.sleep(0.02)
+
+        while not self.nav_to_vec(govec):
+            rospy.sleep(0.02)
+
         pass
+
+    def turn_to_face_vec(self, vec):
+        """
+        Rotate robot to face a relative vector (robot frame)
+        """
+        target_angle = math.atan2(vec.y, vec.x)  # relative angle
+        angle_error = utils.normalize_angle(target_angle)
+
+        cmd = Twist()
+
+        ANGLE_THRESH = 0.08   # rad (~4.5 deg)
+        MAX_ANG = 0.6
+
+        if abs(angle_error) > ANGLE_THRESH:
+            cmd.angular.z = max(-MAX_ANG, min(MAX_ANG, angle_error))
+            cmd.linear.x = 0.0
+            self.cmd_pub.publish(cmd)
+            return False
+        else:
+            self.cmd_pub.publish(Twist())
+            return True
+
+    def nav_to_vec(self, vec):
+        """
+        Move forward until target relative vector distance is reached
+        """
+        target_dist = math.hypot(vec.x, vec.y)
+
+        if not hasattr(self, "_nav_start"):
+            p = self.odom.pose.pose.position
+            self._nav_start = (p.x, p.y)
+
+        p = self.odom.pose.pose.position
+        dx = p.x - self._nav_start[0]
+        dy = p.y - self._nav_start[1]
+        traveled = math.hypot(dx, dy)
+
+        cmd = Twist()
+
+        DIST_THRESH = 0.05
+        MAX_LIN = 0.25
+
+        if traveled < target_dist - DIST_THRESH:
+            cmd.linear.x = MAX_LIN
+            cmd.angular.z = 0.0
+            self.cmd_pub.publish(cmd)
+            return False
+        else:
+            self.cmd_pub.publish(Twist())
+            del self._nav_start
+            return True
 
 
     def update_global_costmap(self):
