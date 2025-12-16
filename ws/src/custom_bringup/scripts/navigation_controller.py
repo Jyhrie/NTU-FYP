@@ -161,6 +161,7 @@ class NavigationController:
 
         # Compute smallest angular difference
         angle_diff = utils.normalize_angle(target_yaw - self.yaw)
+        print(self.yaw, target_yaw)
 
         cmd = Twist()
 
