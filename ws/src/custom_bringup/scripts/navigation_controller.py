@@ -94,8 +94,8 @@ class NavigationController:
         res = self.local_map_msg.info.resolution
 
         #compute target point to hug wall
-        target_point = Vector2(median_inlier.x + (normal_vec_median.x * HUG_DISTANCE / res),
-                                median_inlier.y + (normal_vec_median.y * HUG_DISTANCE / res))
+        target_point = Vector2(median_inlier.x + (normal_vec_median.x * (-HUG_DISTANCE) / res), #negative as we want the < direction
+                                median_inlier.y + (normal_vec_median.y * HUG_DISTANCE / res)) #postitive as we want ^ direction
         
         #move to target point
         cx = self.local_occupancy_movement.map_width // 2
@@ -107,6 +107,7 @@ class NavigationController:
         target_angle = math.atan2(dy, dx)
 
         print("Robot Position (grid coords):", cx, cy)
+        print("Median Inlier: ", median_inlier)
         print("Target Point:", target_point)
         print("Target Angle (rad):", target_angle)
         print("Current Yaw (rad):", self.yaw)
