@@ -10,8 +10,20 @@ import keyboard
 
 import local_occupancy_movement as lom
 
+import sys, select, termios, tty
+
 MAX_MOVEMENT_SPEED = 0.25
 MAX_ANGULAR_SPEED = 0.35
+
+def getKey(key_timeout):
+    tty.setraw(sys.stdin.fileno())
+    rlist, _, _ = select.select([sys.stdin], [], [], key_timeout)
+    if rlist:
+        key = sys.stdin.read(1)
+    else:
+        key = ''
+    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+    return key
 
 class NavigationController:
     def __init__(self):
@@ -81,12 +93,20 @@ class NavigationController:
         rate = rospy.Rate(30)  # 5 Hz
         while not rospy.is_shutdown():
             if self.have_map and self.have_odom:
-                if keyboard.is_pressed('a'):
+                key = getKey()
+                if key == 'a' or key == 'A':
                 #rospy.loginfo("Key A pressed, running local route")
                     self.get_local_route(samples=5)
             rate.sleep()
 
 
 if __name__ == "__main__":
+    settings = termios.tcgetattr(sys.stdin)
+
+    speed = rospy.get_param("~speed", 0.5)
+    turn = rospy.get_param("~turn", 1.0)
+    repeat = rospy.get_param("~repeat_rate", 0.0)
+    key_timeout = rospy.get_param("~key_timeout", 0.0)
+
     nav = NavigationController()
     nav.run()
