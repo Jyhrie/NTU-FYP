@@ -98,7 +98,7 @@ class NavigationController:
         #compute average normal vector
         normal_vec_sum = Vector2(0,0)
         for vec in average_inlier_vec:
-            normal_vec_sum.add()
+            normal_vec_sum.add(vec)
             average_normal_vec_median = normal_vec_sum.normalize()
 
         normal_vec_median = average_normal_vec_median.normal()
