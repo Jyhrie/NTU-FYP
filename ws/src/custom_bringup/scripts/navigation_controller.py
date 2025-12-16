@@ -78,7 +78,6 @@ class NavigationController:
         inlier_point_list_x = []
         inlier_point_list_y = []
 
-        print(inlier_list)
         for sample in inlier_list:
             #get first n
             inlier_len = len(sample)
@@ -149,8 +148,8 @@ class NavigationController:
         while not self.turn_to_face_vec(angle_error):
             rospy.sleep(0.02)
 
-        while not self.nav_to_vec(govec):
-            rospy.sleep(0.02)
+        # while not self.nav_to_vec(govec):
+        #     rospy.sleep(0.02)
 
     def turn_to_face_vec(self, target_yaw):
         """
@@ -197,7 +196,7 @@ class NavigationController:
         cmd = Twist()
 
         DIST_THRESH = 0.05
-        MAX_LIN = 0.25
+        MAX_LIN = 0.02
 
         if traveled < target_dist - DIST_THRESH:
             cmd.linear.x = MAX_LIN
