@@ -24,6 +24,10 @@ class NavigationController:
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
 
         self.local_occupancy_movement = lom.LocalOccupancyNavigator()
+
+        self.have_map = False
+        self.have_odom = False
+
         pass
 
 
