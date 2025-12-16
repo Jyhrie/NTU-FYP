@@ -124,6 +124,7 @@ class LocalOccupancyNavigator:
             avg_inlier = Vector2(sum_x / count, sum_y / count)
 
         normal_vec = average_vector.normal()
+        print("Average Vector:", average_vector.normalize)
 
         # for i in range (0,5):
         #     self.grid[int(avg_inlier.y + (normal_vec.y * i)), int(avg_inlier.x - (normal_vec.x * i))] = 2

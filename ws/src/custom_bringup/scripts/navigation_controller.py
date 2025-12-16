@@ -104,7 +104,7 @@ class NavigationController:
         res = self.local_map_msg.info.resolution
 
         #compute target point to hug wall
-        target_point = Vector2(median_inlier.x + (normal_vec_median.x * (-HUG_DISTANCE) / res), #negative as we want the < direction
+        target_point = Vector2(median_inlier.x + (normal_vec_median.x * (HUG_DISTANCE) / res), #negative as we want the < direction
                                 median_inlier.y + (normal_vec_median.y * HUG_DISTANCE / res)) #postitive as we want ^ direction
         
         #move to target point
