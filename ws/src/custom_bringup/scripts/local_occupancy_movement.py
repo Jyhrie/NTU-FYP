@@ -135,6 +135,7 @@ class LocalOccupancyNavigator:
         # end_position =  avg_inlier # + Vector2(normal_vec.x * 3, normal_vec.y *3)
         # goal_forward_vector = average_vector
         # return origin, end_position, goal_forward_vector
+        print("returning: ", inliers)
         return avg_inlier, inliers
 
         
@@ -279,7 +280,7 @@ class LocalOccupancyNavigator:
         self.grid = self.map
 
         self.draw_robot_footprint(self.grid)
-        avg_inlier, inlier =  self.raycast(self.grid)
+        avg_inlier, inliers =  self.raycast(self.grid)
 
         if self.grid is not None:
 
@@ -294,5 +295,5 @@ class LocalOccupancyNavigator:
 
             msg.data = msg.data = self.grid.astype(np.int8).ravel()
 
-        return msg, avg_inlier, inlier
+        return msg, avg_inlier, inliers
 
