@@ -144,7 +144,8 @@ class NavigationController:
 
         govec = Vector2(dx, dy)
         target_angle = math.atan2(govec.x, -govec.y)  # relative angle
-        angle_error = utils.normalize_angle(target_angle - self.yaw)
+        print(target_angle)
+        angle_error = utils.normalize_angle(target_angle + self.yaw)
         while self.turn_to_face_vec(target_yaw = angle_error):
             rospy.sleep(0.02)
 
