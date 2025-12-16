@@ -23,6 +23,12 @@ class NavigationController:
         self.map_origin_y = 0.0
 
         # -----------------------
+        # State
+        # -----------------------
+        self.state = "SEARCH_WALL"
+        self.prev_state = None
+
+        # -----------------------
         # TF
         # -----------------------
         self.tf_buffer = tf2_ros.Buffer()
@@ -51,9 +57,6 @@ class NavigationController:
     # TF Pose
     # =======================
     def get_robot_pose_map(self):
-        """
-        Returns robot pose (x, y, yaw) in MAP frame
-        """
         try:
             trans = self.tf_buffer.lookup_transform(
                 "map",
@@ -91,9 +94,6 @@ class NavigationController:
     # Collision checking
     # =======================
     def is_blocked(self, robot_x, robot_y, robot_yaw, angle_offset, dist=0.4):
-        """
-        Checks if a direction relative to robot is occupied in the map
-        """
         angle = robot_yaw + angle_offset
         tx = robot_x + math.cos(angle) * dist
         ty = robot_y + math.sin(angle) * dist
@@ -106,7 +106,7 @@ class NavigationController:
         idx = my * self.map_width + mx
 
         occ = self.map_data[idx]
-        return occ > 50  # occupied
+        return occ > 50
 
     # =======================
     # Wall following logic
@@ -126,13 +126,30 @@ class NavigationController:
 
         cmd = Twist()
 
-        # Right-hand wall following
-        if not right_blocked:
-            cmd.angular.z = -0.6      # turn right
-        elif front_blocked:
-            cmd.angular.z = 0.6       # turn left
-        else:
-            cmd.linear.x = 0.2        # move forward
+        # -----------------------
+        # STATE: SEARCH WALL
+        # -----------------------
+        if self.state == "SEARCH_WALL":
+            if right_blocked:
+                self.state = "FOLLOW_WALL"
+            else:
+                cmd.linear.x = 0.2
+
+        # -----------------------
+        # STATE: FOLLOW WALL
+        # -----------------------
+        elif self.state == "FOLLOW_WALL":
+            if not right_blocked:
+                cmd.angular.z = -0.6
+            elif front_blocked:
+                cmd.angular.z = 0.6
+            else:
+                cmd.linear.x = 0.2
+
+        # Print state only when it changes
+        if self.state != self.prev_state:
+            rospy.loginfo("Navigation state: %s", self.state)
+            self.prev_state = self.state
 
         self.cmd_pub.publish(cmd)
 
