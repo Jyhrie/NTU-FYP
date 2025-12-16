@@ -64,12 +64,12 @@ class NavigationController:
 
         rate = rospy.Rate(3)  # 5 Hz
 
-        average_normal_vec = []
+        average_inlier_vec = []
         inlier_list = []
 
         for i in range(0,samples):
-            msg, normal_vec, inlier = self.local_occupancy_movement.trigger(self.local_map_msg)
-            average_normal_vec.append(normal_vec)
+            msg, avg_inlier, inlier = self.local_occupancy_movement.trigger(self.local_map_msg)
+            average_inlier_vec.append(avg_inlier)
             inlier_list.append(inlier)
             rate.sleep()
 
@@ -88,10 +88,11 @@ class NavigationController:
         inlier_point_list_x.sort()        
         inlier_point_list_y.sort()
 
-        median_inlier = Vector2(
-            inlier_point_list_x[len(inlier_point_list_x)//2],
-            inlier_point_list_x[len(inlier_point_list_x)//2]
-        )
+        if inlier_point_list_x is not None:
+            median_inlier = Vector2(
+                inlier_point_list_x[len(inlier_point_list_x)//2],
+                inlier_point_list_x[len(inlier_point_list_x)//2]
+            )
 
         #compute average normal vector
         normal_vec_sum = Vector2(0,0)

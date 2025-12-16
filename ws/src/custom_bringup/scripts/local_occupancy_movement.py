@@ -122,8 +122,9 @@ class LocalOccupancyNavigator:
             count = len(inliers)
 
             avg_inlier = Vector2(sum_x / count, sum_y / count)
-
-        normal_vec = average_vector.normal()
+        
+        
+        #normal_vec = average_vector.normal()
         print("Average Vector:", average_vector.normalize)
 
         # for i in range (0,5):
@@ -134,7 +135,7 @@ class LocalOccupancyNavigator:
         # end_position =  avg_inlier # + Vector2(normal_vec.x * 3, normal_vec.y *3)
         # goal_forward_vector = average_vector
         # return origin, end_position, goal_forward_vector
-        return normal_vec, inliers
+        return avg_inlier, inliers
 
         
     def extract_outliers(self, hitpoints, span=2):
@@ -278,7 +279,7 @@ class LocalOccupancyNavigator:
         self.grid = self.map
 
         self.draw_robot_footprint(self.grid)
-        normal_vec, inlier =  self.raycast(self.grid)
+        avg_inlier, inlier =  self.raycast(self.grid)
 
         if self.grid is not None:
 
@@ -293,5 +294,5 @@ class LocalOccupancyNavigator:
 
             msg.data = msg.data = self.grid.astype(np.int8).ravel()
 
-        return msg, normal_vec, inlier
+        return msg, avg_inlier, inlier
 
