@@ -92,7 +92,7 @@ class NavigationController:
         rate = rospy.Rate(30)  # 5 Hz
         while not rospy.is_shutdown():
             if self.have_map and self.have_odom:
-                key = getKey()
+                key = getKey(key_timeout)
                 if key == 'a' or key == 'A':
                 #rospy.loginfo("Key A pressed, running local route")
                     self.get_local_route(samples=5)
