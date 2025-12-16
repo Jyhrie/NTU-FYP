@@ -106,6 +106,7 @@ class NavigationController:
 
         target_angle = math.atan2(dy, dx)
 
+        print("Robot Position (grid coords):", cx, cy)
         print("Target Point:", target_point)
         print("Target Angle (rad):", target_angle)
         print("Current Yaw (rad):", self.yaw)
@@ -113,6 +114,19 @@ class NavigationController:
         print("Angle Diff (rad):", angle_diff)
         #if turned hug dist is > thresh, get to hug dist first.
         #to get to hug dist, get first point of detected spot, and move to projected distance perp to wall
+
+        # Round target_point to nearest grid cell
+        mx = int(round(target_point.x))
+        my = int(round(target_point.y))
+
+        # Make sure within bounds
+        width = msg.info.width
+        height = msg.info.height
+        if 0 <= mx < width and 0 <= my < height:
+            idx = my * width + mx  # row-major index
+            msg.data[idx] = 4  # set the cell value inline
+
+        
         self.display_debug_map(msg)
 
         pass
