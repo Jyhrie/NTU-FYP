@@ -95,5 +95,5 @@ class LocalCostmapPublisher:
 
 if __name__ == "__main__":
     rospy.init_node("local_costmap_publisher")
-    node = LocalCostmapPublisher(size_m=3.0, resolution=0.03)
+    node = LocalCostmapPublisher(size_m=5.0, resolution=0.005)
     node.run()
