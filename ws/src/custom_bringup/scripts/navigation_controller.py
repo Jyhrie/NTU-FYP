@@ -1,196 +1,151 @@
 #!/usr/bin/env python3
 import rospy
-import numpy as np
 import math
+import tf2_ros
+import tf.transformations
+
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import Twist
-from nav_msgs.msg import Odometry
-
-import local_occupancy_movement as lom
-
-
-def angle_normalize(a):
-    """Normalize angle to [-pi, pi]."""
-    return math.atan2(math.sin(a), math.cos(a))
 
 
 class NavigationController:
     def __init__(self):
-        rospy.init_node("navigation_controller")
+        rospy.init_node("tf_wall_follow_controller")
 
-        # subscribers
-        rospy.Subscriber("/local_costmap", OccupancyGrid, self.local_costmap_cb)
-        rospy.Subscriber("/odom", Odometry, self.odom_cb)
+        # -----------------------
+        # Map data
+        # -----------------------
+        self.map_data = None
+        self.map_width = 0
+        self.map_height = 0
+        self.map_res = 0.0
+        self.map_origin_x = 0.0
+        self.map_origin_y = 0.0
 
-        # publishers
-        self.debug_pub = rospy.Publisher("/debug_map", OccupancyGrid, queue_size=1)
+        # -----------------------
+        # TF
+        # -----------------------
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+
+        # -----------------------
+        # ROS interfaces
+        # -----------------------
+        rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
 
-        # occupancy movement module (your object)
-        self.local_occupancy_movement = lom.LocalOccupancyNavigator()
+        rospy.loginfo("TF wall-follow controller initialized")
 
-        # storage
-        self.local_map_msg = None         # raw OccupancyGrid msg used by trigger()
-        self.have_map = False
+    # =======================
+    # Callbacks
+    # =======================
+    def map_cb(self, msg):
+        self.map_data = msg.data
+        self.map_width = msg.info.width
+        self.map_height = msg.info.height
+        self.map_res = msg.info.resolution
+        self.map_origin_x = msg.info.origin.position.x
+        self.map_origin_y = msg.info.origin.position.y
 
-        self.odom = None                  # latest Odometry msg
-        self.have_odom = False
+    # =======================
+    # TF Pose
+    # =======================
+    def get_robot_pose_map(self):
+        """
+        Returns robot pose (x, y, yaw) in MAP frame
+        """
+        try:
+            trans = self.tf_buffer.lookup_transform(
+                "map",
+                "base_link",
+                rospy.Time(0),
+                rospy.Duration(0.1)
+            )
+        except (tf2_ros.LookupException,
+                tf2_ros.ConnectivityException,
+                tf2_ros.ExtrapolationException):
+            return None
 
-        # control parameters (tweak to taste)
-        self.rot_k = 1.2          # angular P gain
-        self.rot_max = 0.8        # max angular speed (rad/s)
-        self.lin_k = 0.8          # linear P gain (used to scale speed by distance)
-        self.lin_max = 0.35       # max linear speed (m/s)
+        x = trans.transform.translation.x
+        y = trans.transform.translation.y
 
-        # thresholds
-        self.angle_tol = 0.04     # rad ~ 2.3 deg
-        self.dist_tol = 0.03      # meters
+        q = trans.transform.rotation
+        yaw = tf.transformations.euler_from_quaternion(
+            [q.x, q.y, q.z, q.w]
+        )[2]
 
-    # -------------------------
-    # ROS callbacks
-    # -------------------------
-    def local_costmap_cb(self, msg: OccupancyGrid):
-        self.local_map_msg = msg
-        self.have_map = True
+        return x, y, yaw
 
-    def odom_cb(self, msg: Odometry):
-        self.odom = msg
-        self.have_odom = True
+    # =======================
+    # Coordinate transforms
+    # =======================
+    def world_to_map(self, x, y):
+        mx = int((x - self.map_origin_x) / self.map_res)
+        my = int((y - self.map_origin_y) / self.map_res)
 
-    def get_yaw_from_odom(self, odom):
-        q = odom.pose.pose.orientation
-        yaw = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
-        return yaw
-    
-    def numpy_to_transform(self, grid, x, y):
-        size_x = grid.shape[1]
-        size_y = grid.shape[0]
+        if mx < 0 or my < 0 or mx >= self.map_width or my >= self.map_height:
+            return None
+        return mx, my
 
-        return x, size_y - y - 1
-    
-    def normalize_angle(self, a):
-        return math.atan2(math.sin(a), math.cos(a))
+    # =======================
+    # Collision checking
+    # =======================
+    def is_blocked(self, robot_x, robot_y, robot_yaw, angle_offset, dist=0.4):
+        """
+        Checks if a direction relative to robot is occupied in the map
+        """
+        angle = robot_yaw + angle_offset
+        tx = robot_x + math.cos(angle) * dist
+        ty = robot_y + math.sin(angle) * dist
 
+        cell = self.world_to_map(tx, ty)
+        if cell is None:
+            return True
 
-    def run_once(self):
-        rospy.loginfo("Waiting for /local_costmap and /odom...")
-        rate = rospy.Rate(10)  # 10 Hz
-        while not rospy.is_shutdown():
-            if self.have_map and self.have_odom:
-                break
-            rate.sleep()
+        mx, my = cell
+        idx = my * self.map_width + mx
 
-        # get local map info
-        msg, origin, end_position, goal_forward_vector = self.local_occupancy_movement.trigger(self.local_map_msg)
-        if msg is not None:
-            self.debug_pub.publish(msg)
+        occ = self.map_data[idx]
+        return occ > 50  # occupied
 
-        print("Origin:", origin)
-        print("End Position:", end_position)
-        print("Goal Forward Vector:", goal_forward_vector)
+    # =======================
+    # Wall following logic
+    # =======================
+    def wall_follow_step(self):
+        if self.map_data is None:
+            return
 
-        # data = np.array(msg.data, dtype=np.int8)
-        # map = data.reshape((self.map_height, self.map_width))
+        pose = self.get_robot_pose_map()
+        if pose is None:
+            return
 
-        # self.numpy_to_transform(map, origin.x, origin.y)
-        res = self.local_occupancy_movement.resolution
+        x, y, yaw = pose
 
-        # Compute relative position in meters
-        dx_rel = end_position.x - origin.x
-        dy_rel = origin.y - end_position.y  # NEGATE dy because -Y is forward
-        dx = dx_rel * res
-        dy = dy_rel * res  # NEGATE dy because -Y is forward
-
-        print(dx_rel, dy_rel)
-
-        twist = Twist()
-
-        # ----------------------
-        # Rotate to face the goal
-        # ----------------------
-        # target_angle = math.atan2(dy, dx)
-        # print(target_angle)
-        # current_yaw = self.get_yaw_from_odom(self.odom)
-        # angle_error = angle_normalize(target_angle - current_yaw)
-        # angle_error = (target_angle - current_yaw + math.pi) % (2*math.pi) - math.pi
-
-        
-        # while abs(angle_error) > self.angle_tol and not rospy.is_shutdown():
-        #     twist.angular.z = max(-self.rot_max, min(self.rot_max, self.rot_k * angle_error))
-        #     twist.linear.x = 0.0
-        #     self.cmd_pub.publish(twist)
-        #     rospy.sleep(0.05)
-        #     current_yaw = self.get_yaw_from_odom(self.odom)
-        #     angle_error = angle_normalize(target_angle - current_yaw)
-
-        # # ----------------------
-        # # Move straight to goal
-        # # ----------------------
-        distance = math.hypot(dx, dy)
-        print(distance)
-        # while distance > self.dist_tol and not rospy.is_shutdown():
-        #     twist.linear.x = max(-self.lin_max, min(self.lin_max, self.lin_k * distance))
-        #     twist.angular.z = 0.0
-        #     self.cmd_pub.publish(twist)
-        #     rospy.sleep(0.05)
-
-        #     dx = (end_position.x - origin.x) * res
-        #     dy = (origin.y - end_position.y) * res  # still negate dy
-        #     distance = math.hypot(dx, dy)
-
-        # # ----------------------
-        # # Rotate to match goal orientation
-        # # ----------------------
-
-
-        goal_angle = math.atan2(goal_forward_vector.x, goal_forward_vector.y)
-
-        forward = (0, -1)
-        goal = (goal_forward_vector.x, goal_forward_vector.y)
-
-        dot = forward[0]*goal[0] + forward[1]*goal[1]
-        cross = forward[0]*goal[1] - forward[1]*goal[0]
-
-        current_yaw = self.get_yaw_from_odom(self.odom)
-
-        rotation_angle = math.atan2(cross, dot)
-
-        target_yaw = current_yaw - rotation_angle
-        target_yaw = self.normalize_angle(target_yaw)
-
-        # --- control params ---
-        Kp = 1.5
-        max_ang = 1.0
-        tol = math.radians(2)
+        front_blocked = self.is_blocked(x, y, yaw, 0.0)
+        right_blocked = self.is_blocked(x, y, yaw, -math.pi / 2)
 
         cmd = Twist()
-        rate = rospy.Rate(30)
 
-        # --- rotate in place ---
-        while not rospy.is_shutdown():
-            current_yaw = self.get_yaw_from_odom(self.odom)
+        # Right-hand wall following
+        if not right_blocked:
+            cmd.angular.z = -0.6      # turn right
+        elif front_blocked:
+            cmd.angular.z = 0.6       # turn left
+        else:
+            cmd.linear.x = 0.2        # move forward
 
-            error = target_yaw - current_yaw
-            error = math.atan2(math.sin(error), math.cos(error))  # normalize
-
-            if abs(error) < tol:
-                break
-
-            ang = Kp * error
-            ang = max(-max_ang, min(max_ang, ang))
-
-            cmd.linear.x = 0.0
-            cmd.angular.z = ang
-            self.cmd_pub.publish(cmd)
-
-            rate.sleep()
-
-        cmd.angular.z = 0.0
         self.cmd_pub.publish(cmd)
 
-
+    # =======================
+    # Main loop
+    # =======================
+    def run(self):
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            self.wall_follow_step()
+            rate.sleep()
 
 
 if __name__ == "__main__":
     nav = NavigationController()
-    nav.run_once()
+    nav.run()
