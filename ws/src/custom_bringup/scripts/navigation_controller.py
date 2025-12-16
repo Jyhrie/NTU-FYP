@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import rospy
 import numpy as np
 import math
@@ -11,8 +11,6 @@ from vectors import Vector2
 import utils
 
 import local_occupancy_movement as lom
-
-import sys, select, termios, tty
 
 MAX_MOVEMENT_SPEED = 0.25
 MAX_ANGULAR_SPEED = 0.35
@@ -73,7 +71,6 @@ class NavigationController:
             msg, normal_vec, inlier = self.local_occupancy_movement.trigger(self.local_map_msg)
             average_normal_vec.append(normal_vec)
             inlier_list.append(inlier)
-            self.display_debug_map(msg)
             rate.sleep()
 
         #compute average normal vector
@@ -116,6 +113,10 @@ class NavigationController:
         print("Angle Diff (rad):", angle_diff)
         #if turned hug dist is > thresh, get to hug dist first.
         #to get to hug dist, get first point of detected spot, and move to projected distance perp to wall
+
+
+        self.display_debug_map(msg)
+
         pass
 
 
