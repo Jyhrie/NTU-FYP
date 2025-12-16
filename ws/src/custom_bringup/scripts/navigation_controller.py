@@ -143,34 +143,41 @@ class NavigationController:
         self.display_debug_map(msg)
 
         govec = Vector2(dx, -dy)
-        while not self.turn_to_face_vec(govec):
+
+        target_angle = math.atan2(govec.y, govec.x)  # relative angle
+        angle_error = utils.normalize_angle(self.yaw + target_angle)
+        while not self.turn_to_face_vec(angle_error):
             rospy.sleep(0.02)
 
         while not self.nav_to_vec(govec):
             rospy.sleep(0.02)
 
-        pass
+    def turn_to_face_vec(self, target_yaw):
+        """
+        Rotate the robot to face the target yaw (radians).
+        Returns True if still turning, False if finished.
+        """
+        ANGLE_THRESH = math.radians(2.5)  # ~2.5 degrees tolerance
+        MAX_ANGULAR_SPEED = 0.6           # rad/s
 
-    def turn_to_face_vec(self, vec):
-        """
-        Rotate robot to face a relative vector (robot frame)
-        """
-        target_angle = math.atan2(vec.y, vec.x)  # relative angle
-        angle_error = utils.normalize_angle(target_angle)
+        # Compute smallest angular difference
+        angle_diff = utils.normalize_angle(target_yaw - self.yaw)
 
         cmd = Twist()
 
-        ANGLE_THRESH = 0.08   # rad (~4.5 deg)
-        MAX_ANG = 0.6
-
-        if abs(angle_error) > ANGLE_THRESH:
-            cmd.angular.z = max(-MAX_ANG, min(MAX_ANG, angle_error))
-            cmd.linear.x = 0.0
-            self.cmd_pub.publish(cmd)
+        if abs(angle_diff) < ANGLE_THRESH:
+            # Finished turning
+            self.cmd_pub.publish(Twist())  # stop rotation
             return False
-        else:
-            self.cmd_pub.publish(Twist())
-            return True
+
+        # Determine direction and speed
+        cmd.angular.z = MAX_ANGULAR_SPEED if angle_diff > 0 else -MAX_ANGULAR_SPEED
+
+        # Optional: scale speed proportionally to angle_diff (smooth approach)
+        # cmd.angular.z = max(-MAX_ANGULAR_SPEED, min(MAX_ANGULAR_SPEED, angle_diff))
+
+        self.cmd_pub.publish(cmd)
+        return True
 
     def nav_to_vec(self, vec):
         """
