@@ -113,19 +113,18 @@ class NavigationController:
         print("Normal Vector:", normal_vec_median)
         angle_diff = utils.normalize_angle(target_angle - self.yaw)
         print("Angle Diff (rad):", angle_diff)
-        #if turned hug dist is > thresh, get to hug dist first.
-        #to get to hug dist, get first point of detected spot, and move to projected distance perp to wall
 
-        # Round target_point to nearest grid cell
         mx = int(round(target_point.x))
         my = int(round(target_point.y))
 
-        # Make sure within bounds
         width = msg.info.width
         height = msg.info.height
-        if 0 <= mx < width and 0 <= my < height:
-            idx = my * width + mx  # row-major index
-            msg.data[idx] = 4  # set the cell value inline
+
+        grid = np.array(msg.data, dtype=np.int8).reshape((height, width))
+        grid[my, mx] = 2  # set cell
+
+        # flatten back to msg.data
+        msg.data = grid.flatten().tolist()
 
         
         self.display_debug_map(msg)
