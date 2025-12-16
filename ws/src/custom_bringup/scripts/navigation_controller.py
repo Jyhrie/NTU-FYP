@@ -22,8 +22,6 @@ class NavigationController:
         rospy.Subscriber("/local_costmap", OccupancyGrid, self.local_costmap_cb)
         rospy.Subscriber("/odom", Odometry, self.odom_cb)
 
-        self.settings = termios.tcgetattr(sys.stdin)
-
         # publishers
         self.debug_pub = rospy.Publisher("/debug_map", OccupancyGrid, queue_size=1)
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
@@ -33,17 +31,6 @@ class NavigationController:
         self.have_map = False
         self.have_odom = False
         pass
-
-    def check_key(self):
-        """Non-blocking check if a key is pressed"""
-        tty.setcbreak(sys.stdin.fileno())
-        dr, _, _ = select.select([sys.stdin], [], [], 0)
-        key = None
-        if dr:
-            key = sys.stdin.read(1)
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.settings)
-        return key
-
 
     def local_costmap_cb(self, msg: OccupancyGrid):
         self.local_map_msg = msg
@@ -94,9 +81,9 @@ class NavigationController:
         rate = rospy.Rate(30)  # 5 Hz
         while not rospy.is_shutdown():
             if self.have_map and self.have_odom:
-                key = self.check_key()
-                if key == 'a' or key == 'A':
-                #rospy.loginfo("Key A pressed, running local route")
+                user_input = input("Press A to run local route: ").strip().lower()
+                if user_input == 'a':
+                    rospy.loginfo("Running local route")
                     self.get_local_route(samples=5)
             rate.sleep()
 
