@@ -113,8 +113,6 @@ class NavigationController:
         print("Angle Diff (rad):", angle_diff)
         #if turned hug dist is > thresh, get to hug dist first.
         #to get to hug dist, get first point of detected spot, and move to projected distance perp to wall
-
-
         self.display_debug_map(msg)
 
         pass

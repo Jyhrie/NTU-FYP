@@ -42,6 +42,8 @@ def map_callback(msg):
     # 3 = red
     img[data == 3] = (0, 0, 255)
 
+    img[data == 4] = (250, 92, 171)
+
     # 3 = red
     img[data == 5] = (255, 218, 117)
 
