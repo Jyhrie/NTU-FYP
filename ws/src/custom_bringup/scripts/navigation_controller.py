@@ -144,8 +144,8 @@ class NavigationController:
         govec = Vector2(dx, -dy)
 
         target_angle = math.atan2(govec.y, govec.x)  # relative angle
-        angle_error = utils.normalize_angle(self.yaw - target_angle)
-        while self.turn_to_face_vec(angle_error):
+        #angle_error = utils.normalize_angle(self.yaw - target_angle)
+        while self.turn_to_face_vec(target_yaw = target_angle):
             rospy.sleep(0.02)
 
         # while not self.nav_to_vec(govec):
@@ -161,7 +161,7 @@ class NavigationController:
 
         # Compute smallest angular difference
         angle_diff = utils.normalize_angle(target_yaw - self.yaw)
-        print(self.yaw, target_yaw)
+        #print(self.yaw, target_yaw)
 
         cmd = Twist()
 
