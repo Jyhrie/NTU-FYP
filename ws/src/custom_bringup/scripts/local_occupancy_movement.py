@@ -181,6 +181,8 @@ class LocalOccupancyNavigator:
         outliers = hitpoints[:stop_point]
         inliers = hitpoints[stop_point:]
 
+        print(hitpoints)
+
         return inliers, outliers, avg_vec
     
 
