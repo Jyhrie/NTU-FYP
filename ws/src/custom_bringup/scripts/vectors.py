@@ -45,7 +45,7 @@ class Vector2:
         return self
 
     def normal(self):
-        return Vector2(self.y, self.x)
+        return Vector2(-self.y, self.x)
     
     def zero(self):
         if self.x == 0 and self.y == 0:

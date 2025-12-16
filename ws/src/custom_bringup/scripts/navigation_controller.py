@@ -96,14 +96,14 @@ class NavigationController:
             )
 
         #compute average normal vector
-        normal_vec_sum = Vector2(0,0)
+        wall_vec_sum = Vector2(0,0)
         for vec in average_inlier_vec:
-            normal_vec_sum.add(vec)
-            average_normal_vec_median = normal_vec_sum.normalize()
+            wall_vec_sum.add(vec)
+            average_wall_vec_median = wall_vec_sum.normalize()
 
 
 
-        normal_vec_median = average_normal_vec_median.normal()
+        normal_vec_median = average_wall_vec_median.normal()
         print("average_inliner_vec", average_inlier_vec)
 
         res = self.local_map_msg.info.resolution
