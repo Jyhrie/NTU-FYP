@@ -177,11 +177,10 @@ class LocalOccupancyNavigator:
 
         # Finalize average vector
         avg_vec = average_vector.normalize() if num_vectors > 0 else Vector2(0, 0)
+        print("stop: ", stop_point)
 
         outliers = hitpoints[:stop_point]
         inliers = hitpoints[stop_point:]
-
-        print(hitpoints)
 
         return inliers, outliers, avg_vec
     
