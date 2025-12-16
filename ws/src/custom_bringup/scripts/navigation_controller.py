@@ -5,6 +5,8 @@ import math
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
+from vectors import Vector2
+import keyboard
 
 import local_occupancy_movement as lom
 
@@ -38,11 +40,30 @@ class NavigationController:
         self.odom = msg
         self.have_odom = True
 
-    def display_debug_map(self):
-        msg, origin, end_position, goal_forward_vector = self.local_occupancy_movement.trigger(self.local_map_msg)
+    def display_debug_map(self, msg):
+        #msg, normal_vec, inlier = self.local_occupancy_movement.trigger(self.local_map_msg)
         if msg is not None:
             self.debug_pub.publish(msg)
         return
+    
+    def get_local_route(self, samples=5):
+        """
+        gets the local route from the local occupancy movement module
+        """
+
+        rate = rospy.Rate(3)  # 5 Hz
+
+        average_normal_vec = Vector2(0,0)
+        for i in range(0,samples):
+            msg, normal_vec, inlier = self.local_occupancy_movement.trigger(self.local_map_msg)
+            self.display_debug_map(msg)
+            rate.sleep()
+
+        #if turned hug dist is > thresh, get to hug dist first.
+        #to get to hug dist, get first point of detected spot, and move to projected distance perp to wall
+        pass
+
+
 
     def update_global_costmap(self):
         """
@@ -57,11 +78,12 @@ class NavigationController:
         pass
 
     def run(self):
-        rate = rospy.Rate(5)  # 5 Hz
+        rate = rospy.Rate(30)  # 5 Hz
         while not rospy.is_shutdown():
             if self.have_map and self.have_odom:
-                #self.local_occupancy_movement.update_odometry(self.odom)
-                self.display_debug_map()
+                if keyboard.is_pressed('a'):
+                #rospy.loginfo("Key A pressed, running local route")
+                    self.get_local_route(samples=5)
             rate.sleep()
 
 

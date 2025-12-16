@@ -3,59 +3,8 @@ import rospy
 import numpy as np
 import math
 from nav_msgs.msg import OccupancyGrid
+from vectors import Vector2
 
-
-class Vector2:
-    __slots__ = ('x', 'y')   # reduces memory + access cost
-
-    def __init__(self, x=0.0, y=0.0):
-        self.x = x
-        self.y = y
-
-    def __iter__(self):
-        yield self.x
-        yield self.y
-
-    def __add__(self, other):
-        if not isinstance(other, Vector2):
-            return NotImplemented
-        return Vector2(self.x + other.x, self.y + other.y)
-
-    def __sub__(self, other):
-        if not isinstance(other, Vector2):
-            return NotImplemented
-        return Vector2(self.x - other.x, self.y - other.y)
-    
-    def __repr__(self):
-        return f"Vector2(x={self.x:.3f}, y={self.y:.3f})"
-
-    def add(self, other):
-        self.x = self.x + other.x
-        self.y = self.y + other.y
-        return self
-    
-    def subtract(self, other):
-        self.x = self.x - other.x
-        self.y = self.y - other.y
-        return self
-
-    def copy(self):
-        return Vector2(self.x, self.y)
-    
-    def normalize(self):
-        mag = math.hypot(self.x, self.y)   # fast sqrt(x*x + y*y)
-        if not mag == 0:
-            self.x = self.x / mag
-            self.y = self.y / mag
-        return self
-
-    def normal(self):
-        return Vector2(-self.y, -self.x)
-    
-    def zero(self):
-        if self.x == 0 and self.y == 0:
-            return True
-        return False
     
 class Quaternion:
     def __init__(self, x, y, z, w):
@@ -176,14 +125,16 @@ class LocalOccupancyNavigator:
 
         normal_vec = average_vector.normal()
 
-        for i in range (0,5):
-            self.grid[int(avg_inlier.y + (normal_vec.y * i)), int(avg_inlier.x - (normal_vec.x * i))] = 2
+        # for i in range (0,5):
+        #     self.grid[int(avg_inlier.y + (normal_vec.y * i)), int(avg_inlier.x - (normal_vec.x * i))] = 2
 
-        self.grid[int(avg_inlier.y), int(avg_inlier.x)] = 1
-        origin = Vector2(self.map_width // 2, self.map_height // 2)
-        end_position =  avg_inlier # + Vector2(normal_vec.x * 3, normal_vec.y *3)
-        goal_forward_vector = average_vector
-        return origin, end_position, goal_forward_vector
+        # self.grid[int(avg_inlier.y), int(avg_inlier.x)] = 1
+        # origin = Vector2(self.map_width // 2, self.map_height // 2)
+        # end_position =  avg_inlier # + Vector2(normal_vec.x * 3, normal_vec.y *3)
+        # goal_forward_vector = average_vector
+        # return origin, end_position, goal_forward_vector
+
+        return normal_vec, inlier
 
         
     def extract_outliers(self, hitpoints, span=2):
@@ -327,7 +278,7 @@ class LocalOccupancyNavigator:
         self.grid = self.map
 
         self.draw_robot_footprint(self.grid)
-        origin, end_position, goal_forward_vector =  self.raycast(self.grid)
+        normal_vec, inlier =  self.raycast(self.grid)
 
         if self.grid is not None:
 
@@ -342,5 +293,5 @@ class LocalOccupancyNavigator:
 
             msg.data = msg.data = self.grid.astype(np.int8).ravel()
 
-        return msg, origin, end_position, goal_forward_vector
+        return msg, normal_vec, inlier
 
