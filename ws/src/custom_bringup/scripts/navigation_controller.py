@@ -69,6 +69,7 @@ class NavigationController:
 
         for i in range(0,samples):
             msg, avg_inlier, inlier = self.local_occupancy_movement.trigger(self.local_map_msg)
+            print(msg, avg_inlier, inlier)
             average_inlier_vec.append(avg_inlier)
             inlier_list.append(inlier)
             rate.sleep()
