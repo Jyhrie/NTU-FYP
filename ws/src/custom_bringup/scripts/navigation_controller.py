@@ -85,6 +85,8 @@ class NavigationController:
                 inlier_point_list_x.append(sample[i].x)
                 inlier_point_list_y.append(sample[i].y)
                 
+        inlier_point_list_x.sort()        
+        inlier_point_list_y.sort()
 
         median_inlier = Vector2(
             inlier_point_list_x[len(inlier_point_list_x)//2],

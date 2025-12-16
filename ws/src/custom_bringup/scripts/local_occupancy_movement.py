@@ -133,8 +133,7 @@ class LocalOccupancyNavigator:
         # end_position =  avg_inlier # + Vector2(normal_vec.x * 3, normal_vec.y *3)
         # goal_forward_vector = average_vector
         # return origin, end_position, goal_forward_vector
-
-        return normal_vec, inlier
+        return normal_vec, inliers
 
         
     def extract_outliers(self, hitpoints, span=2):
