@@ -14,6 +14,9 @@ app = Flask(__name__)
 bridge = CvBridge()
 map_img = None
 
+def rgb(r, g, b):
+    return (b, g, r)
+
 def map_callback(msg):
     global map_img
 
@@ -28,32 +31,32 @@ def map_callback(msg):
 
     # ---- Color Mapping ----
     # 0 = free = white
-    img[data == 0] = (255, 255, 255)
+    img[data == 0] = rgb(255, 255, 255)
 
     # 100 = occupied = black
-    img[data == 100] = (0, 0, 0)
+    img[data == 100] = rgb(0, 0, 0)
 
     # 1 = blue
-    img[data == 1] = (255, 0, 0)
+    img[data == 1] = rgb(255, 0, 0)
 
     # 2 = green
-    img[data == 2] = (0, 255, 0)
+    img[data == 2] = rgb(0, 255, 0)
 
     # 3 = red
-    img[data == 3] = (0, 0, 255)
+    img[data == 3] = rgb(0, 0, 255)
 
-    img[data == 4] = (250, 92, 171)
-
-    # 3 = red
-    img[data == 5] = (255, 218, 117)
+    img[data == 4] = rgb(250, 92, 171)
 
     # 3 = red
-    img[data == 6] = (255, 117, 188)
+    img[data == 5] = rgb(255, 218, 117)
 
-    img[data == 99] = (0, 150, 255)
+    # 3 = red
+    img[data == 6] = rgb(255, 117, 188)
+
+    img[data == 99] = rgb(0, 150, 255)
 
     # Unknown values (<0) = dark gray
-    img[data < 0] = (60, 60, 60)
+    img[data < 0] = rgb(60, 60, 60)
 
     map_img = img
 
