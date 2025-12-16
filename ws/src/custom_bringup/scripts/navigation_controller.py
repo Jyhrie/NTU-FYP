@@ -81,10 +81,14 @@ class NavigationController:
         rate = rospy.Rate(30)  # 5 Hz
         while not rospy.is_shutdown():
             if self.have_map and self.have_odom:
-                user_input = input("Press A to run local route: ").strip().lower()
-                if user_input == 'a':
-                    rospy.loginfo("Running local route")
-                    self.get_local_route(samples=5)
+                try:
+                    user_input = input("Press A to run local route: ").strip().lower()
+                    if user_input == 'a':
+                        rospy.loginfo("Running local route")
+                        self.get_local_route(samples=5)
+                except KeyboardInterrupt:
+                    rospy.loginfo("Exiting...")
+                    break
             rate.sleep()
 
 
