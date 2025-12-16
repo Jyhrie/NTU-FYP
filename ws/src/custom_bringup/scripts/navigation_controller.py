@@ -73,28 +73,30 @@ class NavigationController:
             inlier_list.append(inlier)
             rate.sleep()
 
+        # Take up to 5 samples (or fewer if not enough)
+
+        inlier_point_list_x = []
+        inlier_point_list_y = []
+        for sample in inlier_list:
+            #get first n
+            inlier_len = len(sample)
+            get_count = min(3, inlier_len)
+            for i in range(0,get_count):
+                inlier_point_list_x.append(sample[i].x)
+                inlier_point_list_y.append(sample[i].y)
+                
+
+        median_inlier = Vector2(
+            inlier_point_list_x[len(inlier_point_list_x)//2],
+            inlier_point_list_x[len(inlier_point_list_x)//2]
+        )
+
         #compute average normal vector
         normal_vec_sum = Vector2(0,0)
         for vec in average_normal_vec:
             normal_vec_sum.add(vec)
             average_normal_vec_median = normal_vec_sum.normalize()
 
-        # samples: list of 5 inlier lists, each containing Vector2 points
-        first_points_x = []
-        first_points_y = []
-
-        for sample in inlier_list[:5]:  # take last 5 samples
-            if sample:  # make sure sample is not empty
-                first_point = sample[0]
-                first_points_x.append(first_point.x)
-                first_points_y.append(first_point.y)
-
-        # sort and take median
-        first_points_x.sort()
-        first_points_y.sort()
-
-        median_inlier = Vector2(first_points_x[len(first_points_x)//2],
-                                first_points_y[len(first_points_y)//2])
         normal_vec_median = average_normal_vec_median
 
         res = self.local_map_msg.info.resolution
