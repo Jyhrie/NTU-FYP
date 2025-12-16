@@ -13,9 +13,33 @@ MAX_ANGULAR_SPEED = 0.35
 
 class NavigationController:
     def __init__(self):
+        rospy.init_node("navigation_controller")
+
+        # subscribers
+        rospy.Subscriber("/local_costmap", OccupancyGrid, self.local_costmap_cb)
+        rospy.Subscriber("/odom", Odometry, self.odom_cb)
+
+        # publishers
+        self.debug_pub = rospy.Publisher("/debug_map", OccupancyGrid, queue_size=1)
+        self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
+
+        self.local_occupancy_movement = lom.LocalOccupancyNavigator()
         pass
 
-    
+
+    def local_costmap_cb(self, msg: OccupancyGrid):
+        self.local_map_msg = msg
+        self.have_map = True
+
+    def odom_cb(self, msg: Odometry):
+        self.odom = msg
+        self.have_odom = True
+
+    def display_debug_map(self):
+        msg, origin, end_position, goal_forward_vector = self.local_occupancy_movement.trigger(self.local_map_msg)
+        if msg is not None:
+            self.debug_pub.publish(msg)
+        return
 
     def update_global_costmap(self):
         """
@@ -29,7 +53,15 @@ class NavigationController:
         """
         pass
 
+    def run(self):
+        rate = rospy.Rate(5)  # 5 Hz
+        while not rospy.is_shutdown():
+            if self.have_map and self.have_odom:
+                self.local_occupancy_movement.update_odometry(self.odom)
+                self.display_debug_map()
+            rate.sleep()
+
 
 if __name__ == "__main__":
     nav = NavigationController()
-    nav.run_once()
+    nav.run()
