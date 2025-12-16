@@ -196,6 +196,7 @@ class LocalOccupancyNavigator:
 
         average_vector = Vector2(0, 0)
         stop_point = len(hitpoints)
+        num_vectors = 0
 
         for i in range(len(hitpoints) - span):
             p1 = hitpoints[i]
@@ -219,9 +220,10 @@ class LocalOccupancyNavigator:
                     break
 
             average_vector.add(Vector2(norm_x, norm_y))
+            num_vectors += 1
 
         # Finalize average vector
-        avg_vec = average_vector.normalize() if len(average_vector) > 0 else Vector2(0, 0)
+        avg_vec = average_vector.normalize() if num_vectors > 0 else Vector2(0, 0)
 
         outliers = hitpoints[:stop_point]
         inliers = hitpoints[stop_point:]
