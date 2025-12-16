@@ -148,8 +148,8 @@ class LocalOccupancyNavigator:
             return [], hitpoints, Vector2(0, 0)
 
         average_vector = Vector2(0, 0)
-        stop_point = 0
-        num_vectors = 0
+        stop_point = len(hitpoints)  # default: everything is inlier
+        prev_vec = None
 
         for i in range(len(hitpoints) - span):
             p1 = hitpoints[i]
@@ -158,25 +158,23 @@ class LocalOccupancyNavigator:
             dx = p2.x - p1.x
             dy = p2.y - p1.y
             length = math.hypot(dx, dy)
-
             if length == 0:
-                continue  # identical points
+                continue
 
             norm_x = dx / length
             norm_y = dy / length
 
-            # Compute dot with previous average to detect sharp change
-            if i > 0:
-                dot_val = norm_x * average_vector.x + norm_y * average_vector.y
-                if dot_val < 0.906:  # cos ~25 degrees
+            if prev_vec is not None:
+                dot_val = norm_x * prev_vec.x + norm_y * prev_vec.y
+                if dot_val < 0.906:
                     stop_point = i
                     break
 
             average_vector.add(Vector2(norm_x, norm_y))
-            num_vectors += 1
+            prev_vec = Vector2(norm_x, norm_y)
 
         # Finalize average vector
-        avg_vec = average_vector.normalize() if num_vectors > 0 else Vector2(0, 0)
+        avg_vec = average_vector.normalize() if not average_vector.zero() else Vector2(0, 0)
         print("Stop Point: ", stop_point)
 
         inliers = hitpoints[:stop_point]
