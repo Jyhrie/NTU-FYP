@@ -90,7 +90,7 @@ signal.signal(signal.SIGINT, signal_handler)
 if __name__ == '__main__':
     # Initialize ROS node
     rospy.init_node('map_flask_stream', anonymous=True)
-    rospy.Subscriber('/local_costmap', OccupancyGrid, map_callback)
+    rospy.Subscriber('/debug_map', OccupancyGrid, map_callback)
 
     # Start ROS spinning in background thread
     spin_thread = threading.Thread(target=rospy.spin)
