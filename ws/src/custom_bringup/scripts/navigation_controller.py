@@ -91,12 +91,12 @@ class NavigationController:
         if inlier_point_list_x is not None:
             median_inlier = Vector2(
                 inlier_point_list_x[len(inlier_point_list_x)//2],
-                inlier_point_list_x[len(inlier_point_list_x)//2]
+                inlier_point_list_y[len(inlier_point_list_y)//2]
             )
 
         #compute average normal vector
         normal_vec_sum = Vector2(0,0)
-        for vec in average_normal_vec:
+        for vec in average_inlier_vec:
             normal_vec_sum.add(vec)
             average_normal_vec_median = normal_vec_sum.normalize()
 
