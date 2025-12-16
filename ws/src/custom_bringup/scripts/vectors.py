@@ -1,3 +1,5 @@
+import math
+
 class Vector2:
     __slots__ = ('x', 'y')   # reduces memory + access cost
 
