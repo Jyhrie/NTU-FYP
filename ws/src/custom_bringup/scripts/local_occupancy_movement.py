@@ -101,9 +101,9 @@ class LocalOccupancyNavigator:
 
         hitpoints, vert_endpoint = self.vert_boxcasts(grid)
 
-        for hitpoint in hitpoints:
-            if hitpoint.x != -1 and hitpoint.y != -1:
-                self.grid[hitpoint.y, hitpoint.x] = 2
+        # for hitpoint in hitpoints:
+        #     if hitpoint.x != -1 and hitpoint.y != -1:
+        #         self.grid[hitpoint.y, hitpoint.x] = 2
 
         for outlier in outliers:
             self.grid[outlier.y, outlier.x] = 5

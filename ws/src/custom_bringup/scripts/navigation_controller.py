@@ -110,6 +110,7 @@ class NavigationController:
         print("Target Point:", target_point)
         print("Target Angle (rad):", target_angle)
         print("Current Yaw (rad):", self.yaw)
+        print("Normal Vector:", normal_vec_median)
         angle_diff = utils.normalize_angle(target_angle - self.yaw)
         print("Angle Diff (rad):", angle_diff)
         #if turned hug dist is > thresh, get to hug dist first.
