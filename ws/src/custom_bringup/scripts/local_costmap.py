@@ -10,8 +10,8 @@ from geometry_msgs.msg import Pose
 
 class LocalCostmapPublisher:
     def __init__(self,
-                 size_m=3.0,       # total local window size (3m x 3m)
-                 resolution=0.1): # 3cm resolution
+                 size_m=3.0,     
+                 resolution=0.03):
                  
         self.size_m = size_m
         self.resolution = resolution
