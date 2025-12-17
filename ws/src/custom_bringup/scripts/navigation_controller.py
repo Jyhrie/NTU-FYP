@@ -204,6 +204,8 @@ class NavigationController:
         target_yaw = utils.normalize_angle(self.yaw - relative_angle)
         dist = target_vec.mag()
 
+        print("Distance: ", dist, "Vector: ", target_vec, "Resolution: ", res)
+
         self.cutqueue(Command(CommandType.MOVE, magnitude=dist*res))
         self.cutqueue(Command(CommandType.TURN, target_yaw=target_yaw))
         pass
