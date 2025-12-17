@@ -452,12 +452,15 @@ class NavigationController:
         cmd = self.dequeue()
         cmd_type = cmd.cmd_type
         if cmd_type == CommandType.TURN:
+            print("STATE TURN")
             self.turn_to_face_vec(cmd.target_yaw)
             pass
         elif cmd_type == CommandType.MOVE:
+            print("STATE MOVE")
             self.move_forward_by_magnitude(cmd.magnitude)
             pass
         elif cmd_type == CommandType.MOVE_BY_VECTOR:
+            print("STATE UNPACK")
             self.state_move_by_vector(cmd.target_vec, cmd.res)
 
 if __name__ == "__main__":
