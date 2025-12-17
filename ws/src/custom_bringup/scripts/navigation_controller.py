@@ -13,7 +13,7 @@ import utils
 import local_occupancy_movement as lom
 
 MAX_MOVEMENT_SPEED = 0.25
-MAX_ANGULAR_SPEED = 0.35
+MAX_ANGULAR_SPEED = 0.15
 
 HUG_DISTANCE = 0.2  # meters
 
@@ -121,15 +121,6 @@ class NavigationController:
         dx = target_point.x - cx
         dy = target_point.y - cy
 
-        # print("Robot Position (grid coords):", cx, cy)
-        # print("Median Inlier: ", median_inlier)
-        # print("Target Point:", target_point)
-        # print("Target Angle (rad):", target_angle)
-        # print("Current Yaw (rad):", self.yaw)
-        # print("Normal Vector:", normal_vec_median)
-        # angle_diff = utils.normalize_angle(target_angle - self.yaw)
-        # print("Angle Diff (rad):", angle_diff)
-
         mx = int(round(target_point.x))
         my = int(round(target_point.y))
 
@@ -145,16 +136,20 @@ class NavigationController:
         self.display_debug_map(msg)
         print(dx, dy)
 
-        govec = Vector2(dx, dy).normalize()
+        # govec = Vector2(dx, dy).normalize()
 
-        print("North Vector: ", Vector2(0,-1), "Target Vector: ", govec)
+        # print("North Vector: ", Vector2(0,-1), "Target Vector: ", govec)
 
-        relative_angle = utils.angle_between(Vector2(0,-1), govec) #relative to north
-        target_yaw = utils.normalize_angle(self.yaw + relative_angle)
+        # relative_angle = utils.angle_between(Vector2(0,-1), govec) #relative to north
+        # target_yaw = utils.normalize_angle(self.yaw + relative_angle)
         
-        print("Current Yaw: ", self.yaw, "Target Yaw: ", target_yaw)
-        print("Target Angle (deg):", math.degrees(relative_angle), "Target Angle (rad):", relative_angle)
-        while self.turn_to_face_vec(target_yaw = target_yaw):
+        # print("Current Yaw: ", self.yaw, "Target Yaw: ", target_yaw)
+        # print("Target Angle (deg):", math.degrees(relative_angle), "Target Angle (rad):", relative_angle)
+
+        target_yaw = self.yaw - math.pi/2
+        target_yaw = (target_yaw + math.pi) % (2*math.pi) - math.pi
+
+        while self.turn_to_face_vec(target_yaw):
             rospy.sleep(0.02)
 
         print("Turn Ended at Yaw: ", self.yaw)
