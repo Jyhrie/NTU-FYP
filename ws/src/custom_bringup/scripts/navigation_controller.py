@@ -10,13 +10,35 @@ import tf.transformations
 from vectors import Vector2
 import utils
 
+from collections import deque
+
+
 import local_occupancy_movement as lom
 
 MAX_MOVEMENT_SPEED = 0.25
 MAX_ANGULAR_SPEED = 0.15
+ROBOT_SAFE_SQUARE_FOOTPRINT = 0.4
 
 HUG_DISTANCE = 0.2  # meters
 
+class CommandType:
+    TURN = 0
+    MOVE = 1
+    MOVE_BY_VECTOR = 2
+    RESCAN = 3
+    UPDATE_MAP = 4
+
+class Command(object):
+    def __init__(self, cmd_type, target_vec=None, target_yaw=None, magnitude=None):
+        self.cmd_type = cmd_type
+        self.target_vec = target_vec
+        self.target_yaw = target_yaw
+        self.magnitude = magnitude
+
+    def __repr__(self):
+        # Useful for debugging the queue
+        return "Command(Type=%s, Target=%s)" % (self.cmd_type, self.target_vec)
+    
 class NavigationController:
     def __init__(self):
         rospy.init_node("navigation_controller")
@@ -35,7 +57,24 @@ class NavigationController:
         self.have_odom = False
 
         self.row, self.pitch, self.yaw = 0,0,0
+
+        self._queue = deque()
+
         pass
+
+    def enqueue(self, command):
+        """Add a command to the end of the line."""
+        self._queue.append(command)
+
+    def dequeue(self):
+        """Remove and return the next command to execute."""
+        if self.is_empty():
+            return None
+        return self._queue.popleft()
+
+    def cutqueue(self, command):
+        """Priority: Add to the very front (next to be executed)."""
+        self._queue.appendleft(command)
 
     def local_costmap_cb(self, msg):
         self.local_map_msg = msg
@@ -50,18 +89,123 @@ class NavigationController:
             quaternion = [q.x, q.y, q.z, q.w]
             self.roll, self.pitch, self.yaw = tf.transformations.euler_from_quaternion(quaternion) #in rads.
 
-
     def display_debug_map(self, msg):
         #msg, normal_vec, inlier = self.local_occupancy_movement.trigger(self.local_map_msg)
         if msg is not None:
             self.debug_pub.publish(msg)
         return
     
+    def local_mapping_decision_maker(self, samples=5):
+        #init
+        rate_local_poll = rospy.Rate(3)  # 3 Hz
+        res = self.local_map_msg.info.resolution
+
+        #declare initial list for polling
+        average_inlier_vec = []
+        inlier_list = []
+
+        for i in range(0,samples): #get samples
+            msg, avg_inlier, inlier = self.local_occupancy_movement.trigger(self.local_map_msg)
+            average_inlier_vec.append(avg_inlier)
+            inlier_list.append(inlier)
+            rate_local_poll.sleep()
+
+        inlier_point_list_x = []
+        inlier_point_list_y = []
+
+        for sample in inlier_list:
+            inlier_len = len(sample)
+            get_count = min(3, inlier_len) #get minimum samples of inliers.
+            for i in range(0,get_count):
+                inlier_point_list_x.append(sample[i].x)
+                inlier_point_list_y.append(sample[i].y)
+                
+        inlier_point_list_x.sort()   
+        inlier_point_list_y.sort()
+
+        if inlier_point_list_x is not None:
+            median_inlier = Vector2(
+                inlier_point_list_x[len(inlier_point_list_x)//2],
+                inlier_point_list_y[len(inlier_point_list_y)//2]
+            )
+
+        #compute average normal vector
+        wall_vec_sum = Vector2(0,0)
+        for vec in average_inlier_vec:
+            wall_vec_sum.add(vec)
+            average_wall_vec_median = wall_vec_sum.normalize()
+
+        normal_vec_median = average_wall_vec_median.normal()
+        
+        #project normal vector onto 1st point of detected wall to obtain hug point
+        target_point = Vector2(median_inlier.x + (normal_vec_median.x * (HUG_DISTANCE) / res), #negative as we want the < direction
+                                median_inlier.y + (normal_vec_median.y * (HUG_DISTANCE) / res)) #postitive as we want ^ direction
+                                
+        #move to target point
+        cx = self.local_occupancy_movement.map_width // 2
+        cy = self.local_occupancy_movement.map_height // 2
+
+        dx = target_point.x - cx
+        dy = target_point.y - cy
+
+        govec = Vector2(dx, dy)
+
+        # print("North Vector: ", Vector2(0,-1), "Target Vector: ", govec)
+
+
+        #does robot need to move move closer/away from the wall?
+        if math.hypot(dy, dx) < ROBOT_SAFE_SQUARE_FOOTPRINT / res:
+            #enqueue turn to wall tangent
+            #enqueue update local map
+            #enqueue rescan
+            pass
+
+        # relative_angle = utils.angle_between(Vector2(0,-1), govec) #relative to north
+        # target_yaw = utils.normalize_angle(self.yaw - relative_angle)
+
+        #robot needs to move out/in
+        #enqueue turn to projected wall normal
+        self.enqueue(Command(CommandType.MOVE_BY_VECTOR, target_vec=govec))
+
+        #self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
+        #enqueue move to location
+        #enqueue turn to wall tangent
+        #enqueue update local
+        #enqueue rescan
+
+        mx = int(round(target_point.x))
+        my = int(round(target_point.y))
+
+        width = msg.info.width
+        height = msg.info.height
+
+        grid = np.array(msg.data, dtype=np.int8).reshape((height, width))
+        grid[my, mx] = 2  # set cell
+
+        # flatten back to msg.data
+        msg.data = grid.flatten().tolist()
+
+        self.display_debug_map(msg)
+
+
+        pass
+
+    def state_move_by_vector(self, target_vec):
+        """
+        this is always with respect to North -Y.
+        """
+        relative_angle = utils.angle_between(Vector2(0,-1), target_vec.normalize()) #relative to north
+        target_yaw = utils.normalize_angle(self.yaw - relative_angle)
+        dist = target_vec.mag()
+
+        self.cutqueue(Command(CommandType.MOVE, magnitude=dist))
+        self.cutqueue(Command(CommandType.TURN, target_yaw=target_yaw))
+        pass
+
     def get_local_route(self, samples=5):
         """
         gets the local route from the local occupancy movement module
         """
-
         rate = rospy.Rate(3)  # 5 Hz
 
         average_inlier_vec = []
@@ -101,14 +245,12 @@ class NavigationController:
             wall_vec_sum.add(vec)
             average_wall_vec_median = wall_vec_sum.normalize()
 
-
-
         normal_vec_median = average_wall_vec_median.normal()
-        print("average_inliner_vec", average_inlier_vec)
+        # print("average_inliner_vec", average_inlier_vec)
 
         res = self.local_map_msg.info.resolution
-        print("Median inlier", median_inlier)
-        print("Normal Vector", normal_vec_median)
+        # print("Median inlier", median_inlier)
+        # print("Normal Vector", normal_vec_median)
 
         #compute target point to hug wall
         target_point = Vector2(median_inlier.x + (normal_vec_median.x * (HUG_DISTANCE) / res), #negative as we want the < direction
@@ -138,19 +280,18 @@ class NavigationController:
 
         govec = Vector2(dx, dy).normalize()
 
-        print("North Vector: ", Vector2(0,-1), "Target Vector: ", govec)
+        # print("North Vector: ", Vector2(0,-1), "Target Vector: ", govec)
 
         relative_angle = utils.angle_between(Vector2(0,-1), govec) #relative to north
         target_yaw = utils.normalize_angle(self.yaw - relative_angle)
         
-        print("Current Yaw: ", self.yaw, "Target Yaw: ", target_yaw)
-        print("Target Angle (deg):", math.degrees(relative_angle), "Target Angle (rad):", relative_angle)
+        # print("Current Yaw: ", self.yaw, "Target Yaw: ", target_yaw)
+        # print("Target Angle (deg):", math.degrees(relative_angle), "Target Angle (rad):", relative_angle)
 
-
-        while self.turn_to_face_vec(target_yaw):
+        while self.turn_to_target_yaw(target_yaw):
             rospy.sleep(0.02)
 
-        print("Turn Ended at Yaw: ", self.yaw)
+        # print("Turn Ended at Yaw: ", self.yaw)
 
         # while not self.nav_to_vec(govec):
         #     rospy.sleep(0.02)
@@ -182,36 +323,42 @@ class NavigationController:
         self.cmd_pub.publish(cmd)
         return True
 
-    def nav_to_vec(self, vec):
-        """
-        Move forward until target relative vector distance is reached
-        """
-        target_dist = math.hypot(vec.x, vec.y)
+    def move_forward_by_magnitude(self, magnitude):
+            """
+            Moves the robot forward by a specific distance (magnitude) 
+            relative to its current orientation.
+            """
+            # 1. Wait for odom to be available
+            while self.current_pose is None and not rospy.is_shutdown():
+                rospy.sleep(0.1)
 
-        if not hasattr(self, "_nav_start"):
-            p = self.odom.pose.pose.position
-            self._nav_start = (p.x, p.y)
+            # 2. Record starting position
+            start_x = self.current_pose.position.x
+            start_y = self.current_pose.position.y
+            
+            rate = rospy.Rate(10) # 10Hz control loop
+            move_cmd = Twist()
+            move_cmd.linear.x = 0.2 # Constant forward speed
 
-        p = self.odom.pose.pose.position
-        dx = p.x - self._nav_start[0]
-        dy = p.y - self._nav_start[1]
-        traveled = math.hypot(dx, dy)
+            dist_moved = 0.0
 
-        cmd = Twist()
+            while dist_moved < magnitude and not rospy.is_shutdown():
+                # 3. Publish velocity
+                self.cmd_pub.publish(move_cmd)
+                
+                # 4. Calculate Euclidean distance from start
+                curr_x = self.current_pose.position.x
+                curr_y = self.current_pose.position.y
+                
+                # Distance Formula: sqrt((x2-x1)^2 + (y2-y1)^2)
+                dist_moved = math.hypot(curr_x - start_x, curr_y - start_y)
+                
+                rate.sleep()
 
-        DIST_THRESH = 0.05
-        MAX_LIN = 0.02
-
-        if traveled < target_dist - DIST_THRESH:
-            cmd.linear.x = MAX_LIN
-            cmd.angular.z = 0.0
-            self.cmd_pub.publish(cmd)
-            return False
-        else:
-            self.cmd_pub.publish(Twist())
-            del self._nav_start
-            return True
-
+            # 5. Stop the robot
+            self.cmd_pub.publish(Twist()) 
+            rospy.loginfo("Reached target magnitude: %f" % dist_moved)
+    
     def update_global_costmap(self):
         """
         updates the global costmap from the /map topic
@@ -286,13 +433,28 @@ class NavigationController:
                     user_input = raw_input("Press A to run local route: ").strip().lower()
                     if user_input == 'a':
                         rospy.loginfo("Running local route")
-                        self.get_local_route(samples=5)
+                        # self.get_local_route(samples=5)
+                        self.local_mapping_decision_maker(samples=5)
+                        while len(self._queue) > 0:
+                            self.fsm()
                 except KeyboardInterrupt:
                     rospy.loginfo("Exiting...")
                     break
             rate.sleep()
 
+    def fsm(self):
+        cmd = self.dequeue()
+        cmd_type = cmd.cmd_type
+        if cmd_type == CommandType.TURN:
+            self.turn_to_face_vec(cmd.target_yaw)
+            pass
+        elif cmd_type == CommandType.MOVE:
+            self.move_forward_by_magnitude(cmd.magnitude)
+            pass
+        elif cmd_type == CommandType.MOVE_BY_VECTOR:
+            self.state_move_by_vector(cmd.target_vec)
 
 if __name__ == "__main__":
+
     nav = NavigationController()
     nav.run()

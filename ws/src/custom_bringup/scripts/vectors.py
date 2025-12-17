@@ -47,6 +47,9 @@ class Vector2:
     def normal(self):
         return Vector2(self.y, -self.x)
     
+    def mag(self):
+        return math.hypot(self.y,self.x)
+    
     def zero(self):
         if self.x == 0 and self.y == 0:
             return True
