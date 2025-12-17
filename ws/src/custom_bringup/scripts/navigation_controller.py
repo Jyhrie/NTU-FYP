@@ -48,7 +48,7 @@ class NavigationController:
             self.have_odom = True
             q = msg.pose.pose.orientation
             quaternion = [q.x, q.y, q.z, q.w]
-            self.roll, self.pitch, self.yaw = tf.transformations.euler_from_quaternion(quaternion)
+            self.roll, self.pitch, self.yaw = tf.transformations.euler_from_quaternion(quaternion) #in rads.
 
 
     def display_debug_map(self, msg):
@@ -214,7 +214,6 @@ class NavigationController:
             del self._nav_start
             return True
 
-
     def update_global_costmap(self):
         """
         updates the global costmap from the /map topic
@@ -227,21 +226,70 @@ class NavigationController:
         """
         pass
 
+    def run_once(self):
+        """
+        Rotates the robot 90 degrees (PI/2) clockwise using odometry feedback.
+        """
+        if not self.have_odom:
+            rospy.logwarn("Cannot rotate: No Odom data received yet.")
+            return
+
+        rospy.loginfo("Starting 90 degree clockwise turn...")
+
+        # 1. Define targets
+        target_rad = 90 * (math.pi / 180)  # Convert 90deg to radians (~1.57)
+        angular_speed = -0.5               # Negative for clockwise rotation (adjust speed as needed)
+        
+        # 2. Track relative angle
+        current_angle_turned = 0.0
+        last_yaw = self.yaw
+
+        twist = Twist()
+        twist.angular.z = angular_speed
+
+        # 3. Loop until we have turned enough
+        while current_angle_turned < target_rad and not rospy.is_shutdown():
+            self.cmd_pub.publish(twist)
+            self.rate.sleep()
+
+            # Calculate the change in angle since the last loop
+            current_yaw = self.yaw
+            delta_yaw = current_yaw - last_yaw
+
+            # --- HANDLE WRAP AROUND ---
+            # If we cross from -PI to +PI or vice versa, delta will be huge (~6.28).
+            # We normalize it to be within -PI and +PI.
+            if delta_yaw < -math.pi:
+                delta_yaw += 2 * math.pi
+            elif delta_yaw > math.pi:
+                delta_yaw -= 2 * math.pi
+            
+            # Add the magnitude of the change to our total
+            current_angle_turned += abs(delta_yaw)
+            
+            last_yaw = current_yaw
+
+        # 4. Stop the robot
+        twist.angular.z = 0.0
+        self.cmd_pub.publish(twist)
+        rospy.loginfo("Rotation complete.")
+        pass
+
     def run(self):
         rate = rospy.Rate(30)  # 5 Hz
         while not rospy.is_shutdown():
-            if self.have_map and self.have_odom:
-                try:
-                    user_input = raw_input("Press A to run local route: ").strip().lower()
-                    if user_input == 'a':
-                        rospy.loginfo("Running local route")
-                        self.get_local_route(samples=5)
-                except KeyboardInterrupt:
-                    rospy.loginfo("Exiting...")
-                    break
+            # if self.have_map and self.have_odom:
+                # try:
+                #     user_input = raw_input("Press A to run local route: ").strip().lower()
+                #     if user_input == 'a':
+                #         rospy.loginfo("Running local route")
+                #         self.get_local_route(samples=5)
+                # except KeyboardInterrupt:
+                #     rospy.loginfo("Exiting...")
+                #     break
             rate.sleep()
 
 
 if __name__ == "__main__":
     nav = NavigationController()
-    nav.run()
+    nav.run_once()
