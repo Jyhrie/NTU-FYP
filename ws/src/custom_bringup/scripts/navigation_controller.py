@@ -68,7 +68,7 @@ class NavigationController:
 
     def dequeue(self):
         """Remove and return the next command to execute."""
-        if self.is_empty():
+        if self._queue.is_empty():
             return None
         return self._queue.popleft()
 
