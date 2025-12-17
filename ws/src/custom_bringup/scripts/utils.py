@@ -13,10 +13,6 @@ def normalize_angle(angle):
     return angle
 
 def angle_between(v1, v2):
-    dot = v1.x * v2.x + v1.y * v2.y
-    mag1 = math.hypot(v1.x, v1.y)
-    mag2 = math.hypot(v2.x, v2.y)
-
-    dot = v1.x * v2.x + v1.y * v2.y
-    cross = v1.x * v2.y - v1.y * v2.x
-    return normalize_angle(math.atan2(cross, dot)) # signed, [-pi, pi]
+    dot = v1.x*v2.x + v1.y*v2.y
+    cross = v1.x*v2.y - v1.y*v2.x
+    return normalize_angle(math.atan2(cross, dot))  # [-pi, pi], signed

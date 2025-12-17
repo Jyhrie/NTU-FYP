@@ -159,6 +159,8 @@ class NavigationController:
         while self.turn_to_face_vec(target_yaw = target_yaw):
             rospy.sleep(0.02)
 
+        print("Turn Ended at Yaw: ", self.yaw)
+
         # while not self.nav_to_vec(govec):
         #     rospy.sleep(0.02)
 
