@@ -141,7 +141,7 @@ class NavigationController:
         print("North Vector: ", Vector2(0,-1), "Target Vector: ", govec)
 
         relative_angle = utils.angle_between(Vector2(0,-1), govec) #relative to north
-        target_yaw = utils.normalize_angle(self.yaw + relative_angle)
+        target_yaw = utils.normalize_angle(self.yaw - relative_angle)
         
         print("Current Yaw: ", self.yaw, "Target Yaw: ", target_yaw)
         print("Target Angle (deg):", math.degrees(relative_angle), "Target Angle (rad):", relative_angle)
