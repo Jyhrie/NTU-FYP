@@ -148,11 +148,12 @@ class NavigationController:
         print(dx, dy)
 
         govec = Vector2(dx, dy)
-        target_angle = utils.angle_between(Vector2(0,-1), govec)
+        relative_angle = utils.angle_between(Vector2(0,-1), govec) #relative to north
+        target_yaw = utils.normalize_angle(self.yaw + relative_angle)
+        
+        print("Current Yaw: ", self.yaw, "Target Yaw: ", target_yaw)
         print("Target Angle (deg):", math.degrees(target_angle), "Target Angle (rad):", target_angle)
-        angle_error = utils.normalize_angle(target_angle - self.yaw)
-        print("Current Yaw: ", self.yaw, "Target Yaw: ", angle_error)
-        while self.turn_to_face_vec(target_yaw = angle_error):
+        while self.turn_to_face_vec(target_yaw = target_yaw):
             rospy.sleep(0.02)
 
         # while not self.nav_to_vec(govec):
