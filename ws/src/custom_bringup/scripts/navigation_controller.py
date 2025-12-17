@@ -452,7 +452,7 @@ class NavigationController:
         cmd = self.dequeue()
         cmd_type = cmd.cmd_type
         if cmd_type == CommandType.TURN:
-            print("STATE TURN")
+            print("STATE TURN: Turning To", cmd.target_yaw)
             self.turn_to_face_vec(cmd.target_yaw)
             pass
         elif cmd_type == CommandType.MOVE:
