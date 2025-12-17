@@ -121,8 +121,6 @@ class NavigationController:
         dx = target_point.x - cx
         dy = target_point.y - cy
 
-        target_angle = math.atan2(dy, dx)
-
         # print("Robot Position (grid coords):", cx, cy)
         # print("Median Inlier: ", median_inlier)
         # print("Target Point:", target_point)
@@ -155,7 +153,7 @@ class NavigationController:
         target_yaw = utils.normalize_angle(self.yaw + relative_angle)
         
         print("Current Yaw: ", self.yaw, "Target Yaw: ", target_yaw)
-        print("Target Angle (deg):", math.degrees(target_angle), "Target Angle (rad):", target_angle)
+        print("Target Angle (deg):", math.degrees(relative_angle), "Target Angle (rad):", relative_angle)
         while self.turn_to_face_vec(target_yaw = target_yaw):
             rospy.sleep(0.02)
 
