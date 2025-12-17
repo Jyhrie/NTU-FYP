@@ -20,4 +20,4 @@ def angle_between(v1, v2):
     cos_theta = dot / (mag1 * mag2)
     cos_theta = max(-1.0, min(1.0, cos_theta))  # clamp for safety
 
-    return math.acos(cos_theta)  # radians
+    return normalize_angle(math.acos(cos_theta))  # radians
