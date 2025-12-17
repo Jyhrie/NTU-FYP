@@ -29,11 +29,12 @@ class CommandType:
     UPDATE_MAP = 4
 
 class Command(object):
-    def __init__(self, cmd_type, target_vec=None, target_yaw=None, magnitude=None):
+    def __init__(self, cmd_type, target_vec=None, target_yaw=None, magnitude=None, res=None):
         self.cmd_type = cmd_type
         self.target_vec = target_vec
         self.target_yaw = target_yaw
         self.magnitude = magnitude
+        self.res = res
 
     def __repr__(self):
         # Useful for debugging the queue
@@ -56,7 +57,8 @@ class NavigationController:
         self.have_map = False
         self.have_odom = False
 
-        self.row, self.pitch, self.yaw = 0,0,0
+        self.x, self.y = 0, 0
+        self.roll, self.pitch, self.yaw = 0,0,0
 
         self._queue = deque()
 
@@ -85,6 +87,10 @@ class NavigationController:
 
         if msg is not None:
             self.have_odom = True
+
+            self.x = msg.pose.pose.position.x
+            self.y = msg.pose.pose.position.y
+
             q = msg.pose.pose.orientation
             quaternion = [q.x, q.y, q.z, q.w]
             self.roll, self.pitch, self.yaw = tf.transformations.euler_from_quaternion(quaternion) #in rads.
@@ -165,7 +171,7 @@ class NavigationController:
 
         #robot needs to move out/in
         #enqueue turn to projected wall normal
-        self.enqueue(Command(CommandType.MOVE_BY_VECTOR, target_vec=govec))
+        self.enqueue(Command(CommandType.MOVE_BY_VECTOR, target_vec=govec, res=res))
 
         #self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
         #enqueue move to location
@@ -190,7 +196,7 @@ class NavigationController:
 
         pass
 
-    def state_move_by_vector(self, target_vec):
+    def state_move_by_vector(self, target_vec, res):
         """
         this is always with respect to North -Y.
         """
@@ -198,7 +204,7 @@ class NavigationController:
         target_yaw = utils.normalize_angle(self.yaw - relative_angle)
         dist = target_vec.mag()
 
-        self.cutqueue(Command(CommandType.MOVE, magnitude=dist))
+        self.cutqueue(Command(CommandType.MOVE, magnitude=dist*res))
         self.cutqueue(Command(CommandType.TURN, target_yaw=target_yaw))
         pass
 
@@ -333,12 +339,12 @@ class NavigationController:
                 rospy.sleep(0.1)
 
             # 2. Record starting position
-            start_x = self.current_pose.position.x
-            start_y = self.current_pose.position.y
+            start_x = self.x
+            start_y = self.y
             
-            rate = rospy.Rate(10) # 10Hz control loop
+            rate = rospy.Rate(30) # 10Hz control loop
             move_cmd = Twist()
-            move_cmd.linear.x = 0.2 # Constant forward speed
+            move_cmd.linear.x = MAX_MOVEMENT_SPEED
 
             dist_moved = 0.0
 
@@ -347,8 +353,8 @@ class NavigationController:
                 self.cmd_pub.publish(move_cmd)
                 
                 # 4. Calculate Euclidean distance from start
-                curr_x = self.current_pose.position.x
-                curr_y = self.current_pose.position.y
+                curr_x = self.x
+                curr_y = self.y
                 
                 # Distance Formula: sqrt((x2-x1)^2 + (y2-y1)^2)
                 dist_moved = math.hypot(curr_x - start_x, curr_y - start_y)
