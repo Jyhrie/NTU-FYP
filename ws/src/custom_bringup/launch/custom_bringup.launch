@@ -15,12 +15,7 @@
     </group>
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
 
-    <!-- Some errors during calibration of imu installation -->
-    <node pkg="imu_calib" type="apply_calib" name="apply_calib" output="screen" respawn="false">
-        <param name="calib_file" value="$(find transbot_bringup)/param/imu/imu_calib.yaml"/>
-        <param name="calibrate_gyros" value="true"/>
-                <param name="is_multi" value="false"/>
-    </node>
+
 
     <!-- custom bringup -->
     <node pkg="custom_bringup" type="custom_driver.py" name="transbot_node" required="true" output="screen">
@@ -28,10 +23,30 @@
         <param name="vel" value="/transbot/get_vel"/>
     </node>
 
+    <!--##### FOR ODOMETRY #####-->
+
+    <!-- Some errors during calibration of imu installation -->
+    <node pkg="imu_calib" type="apply_calib" name="apply_calib" output="screen" respawn="false">
+        <param name="calib_file" value="$(find transbot_bringup)/param/imu/imu_calib.yaml"/>
+        <param name="calibrate_gyros" value="true"/>
+                <param name="is_multi" value="false"/>
+    </node>
+
     <!-- enable ekf -->
     <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization">
         <remap from="odometry/filtered" to="odom"/>
         <rosparam command="load" file="$(find transbot_bringup)/param/ekf/robot_localization.yaml"/>
+    </node>
+
+    <!-- Filter and fuse imu data -->
+    <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" respawn="false">
+        <param name="fixed_frame" value="base_link"/>
+        <param name="use_mag" value="fasle"/>
+        <param name="publish_tf" value="false"/>
+        <param name="use_magnetic_field_msg" value="fasle"/>
+        <param name="world_frame" value="enu"/>
+        <param name="orientation_stddev" value="0.05"/>
+        <param name="angular_scale" value="1.08"/>
     </node>
 
     <!-- launch base node-->

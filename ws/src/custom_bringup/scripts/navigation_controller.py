@@ -239,7 +239,9 @@ class NavigationController:
 
         # 1. Define targets
         target_rad = 90 * (math.pi / 180)  # Convert 90deg to radians (~1.57)
-        angular_speed = -0.5               # Negative for clockwise rotation (adjust speed as needed)
+        angular_speed = -0.2              # Negative for clockwise rotation (adjust speed as needed)
+
+        
         
         # 2. Track relative angle
         current_angle_turned = 0.0
