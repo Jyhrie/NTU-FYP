@@ -15,10 +15,13 @@
     </group>
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
 
-
-
     <!-- custom bringup -->
-    <node pkg="custom_bringup" type="custom_driver.py" name="transbot_node" required="true" output="screen">
+    <!-- <node pkg="custom_bringup" type="custom_driver.py" name="transbot_node" required="true" output="screen">
+        <param name="imu" value="/transbot/imu"/>
+        <param name="vel" value="/transbot/get_vel"/>
+    </node> -->
+
+    <node pkg="transbot_bringup" type="transbot_driver.py" name="transbot_node" required="true" output="screen">
         <param name="imu" value="/transbot/imu"/>
         <param name="vel" value="/transbot/get_vel"/>
     </node>
@@ -49,6 +52,9 @@
         <param name="angular_scale" value="1.08"/>
     </node>
 
+    <node pkg="tf" type="static_transform_publisher" name="base_link_to_imu_link"
+      args="0.0 0 0.02 0 0 0  /base_link /imu_link  100"/>
+
     <!-- launch base node-->
     <node pkg="transbot_bringup" name="base_node" type="base_node">
         <param name="linear_scale" type="double" value="1.2"/>
@@ -58,8 +64,8 @@
     <!-- launch astrapro from their launchfile, too much stuff to copy into here, -->
     <include file="$(find astra_camera)/launch/astrapro.launch"/>
 
-    <node pkg="tf" type="static_transform_publisher" name="base_footprint_to_base_link"
-      args="0 0 0 0 0 0 /base_footprint /base_link 100"/>
+    <!-- <node pkg="tf" type="static_transform_publisher" name="base_footprint_to_base_link"
+      args="0 0 0 0 0 0 /base_footprint /base_link 100"/> -->
 
     <!-- add physical offset to camera-->
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_camera"
