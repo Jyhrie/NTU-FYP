@@ -458,7 +458,7 @@ class NavigationController:
             self.move_forward_by_magnitude(cmd.magnitude)
             pass
         elif cmd_type == CommandType.MOVE_BY_VECTOR:
-            self.state_move_by_vector(cmd.target_vec)
+            self.state_move_by_vector(cmd.target_vec, cmd.res)
 
 if __name__ == "__main__":
 
