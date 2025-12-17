@@ -247,6 +247,8 @@ class NavigationController:
         twist = Twist()
         twist.angular.z = angular_speed
 
+        self.rate = 60
+
         # 3. Loop until we have turned enough
         while current_angle_turned < target_rad and not rospy.is_shutdown():
             self.cmd_pub.publish(twist)
