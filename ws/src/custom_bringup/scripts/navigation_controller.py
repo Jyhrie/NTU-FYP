@@ -230,7 +230,7 @@ class NavigationController:
         """
         Rotates the robot 90 degrees (PI/2) clockwise using odometry feedback.
         """
-        self.rate = 5
+        self.rate = rospy.Rate(5)
         while not self.have_odom:
             rospy.logwarn("Cannot rotate: No Odom data received yet.")
             self.rate.sleep()
@@ -248,7 +248,7 @@ class NavigationController:
         twist = Twist()
         twist.angular.z = angular_speed
 
-        self.rate = 60
+        self.rate = rospy.Rate(60)
 
         # 3. Loop until we have turned enough
         while current_angle_turned < target_rad and not rospy.is_shutdown():
