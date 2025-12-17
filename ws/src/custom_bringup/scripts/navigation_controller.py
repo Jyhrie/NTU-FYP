@@ -230,9 +230,10 @@ class NavigationController:
         """
         Rotates the robot 90 degrees (PI/2) clockwise using odometry feedback.
         """
-        if not self.have_odom:
+        self.rate = 5
+        while not self.have_odom:
             rospy.logwarn("Cannot rotate: No Odom data received yet.")
-            return
+            self.rate.sleep()
 
         rospy.loginfo("Starting 90 degree clockwise turn...")
 
