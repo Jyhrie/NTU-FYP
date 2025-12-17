@@ -335,7 +335,7 @@ class NavigationController:
             relative to its current orientation.
             """
             # 1. Wait for odom to be available
-            while self.current_pose is None and not rospy.is_shutdown():
+            while not self.have_odom and not rospy.is_shutdown():
                 rospy.sleep(0.1)
 
             # 2. Record starting position
