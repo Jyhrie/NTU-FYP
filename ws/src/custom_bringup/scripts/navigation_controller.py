@@ -169,11 +169,16 @@ class NavigationController:
         # relative_angle = utils.angle_between(Vector2(0,-1), govec) #relative to north
         # target_yaw = utils.normalize_angle(self.yaw - relative_angle)
 
+
         #robot needs to move out/in
         #enqueue turn to projected wall normal
         self.enqueue(Command(CommandType.MOVE_BY_VECTOR, target_vec=govec, res=res))
 
-        #self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
+        #get yaw of wall tangent (average_wall_vec_median)
+        relative_angle = utils.angle_between(Vector2(0, -1), average_wall_vec_median)
+        target_yaw = utils.normalize_angle(self.yaw - relative_angle)
+
+        self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
         #enqueue move to location
         #enqueue turn to wall tangent
         #enqueue update local
@@ -192,8 +197,6 @@ class NavigationController:
         msg.data = grid.flatten().tolist()
 
         self.display_debug_map(msg)
-
-
         pass
 
     def state_move_by_vector(self, target_vec, res):
