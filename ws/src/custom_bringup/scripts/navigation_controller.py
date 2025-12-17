@@ -136,18 +136,16 @@ class NavigationController:
         self.display_debug_map(msg)
         print(dx, dy)
 
-        # govec = Vector2(dx, dy).normalize()
+        govec = Vector2(dx, dy).normalize()
 
-        # print("North Vector: ", Vector2(0,-1), "Target Vector: ", govec)
+        print("North Vector: ", Vector2(0,-1), "Target Vector: ", govec)
 
-        # relative_angle = utils.angle_between(Vector2(0,-1), govec) #relative to north
-        # target_yaw = utils.normalize_angle(self.yaw + relative_angle)
+        relative_angle = utils.angle_between(Vector2(0,-1), govec) #relative to north
+        target_yaw = utils.normalize_angle(self.yaw + relative_angle)
         
-        # print("Current Yaw: ", self.yaw, "Target Yaw: ", target_yaw)
-        # print("Target Angle (deg):", math.degrees(relative_angle), "Target Angle (rad):", relative_angle)
+        print("Current Yaw: ", self.yaw, "Target Yaw: ", target_yaw)
+        print("Target Angle (deg):", math.degrees(relative_angle), "Target Angle (rad):", relative_angle)
 
-        target_yaw = self.yaw - math.pi/2
-        target_yaw = (target_yaw + math.pi) % (2*math.pi) - math.pi
 
         while self.turn_to_face_vec(target_yaw):
             rospy.sleep(0.02)
@@ -283,18 +281,18 @@ class NavigationController:
     def run(self):
         rate = rospy.Rate(30)  # 5 Hz
         while not rospy.is_shutdown():
-            # if self.have_map and self.have_odom:
-                # try:
-                #     user_input = raw_input("Press A to run local route: ").strip().lower()
-                #     if user_input == 'a':
-                #         rospy.loginfo("Running local route")
-                #         self.get_local_route(samples=5)
-                # except KeyboardInterrupt:
-                #     rospy.loginfo("Exiting...")
-                #     break
+            if self.have_map and self.have_odom:
+                try:
+                    user_input = raw_input("Press A to run local route: ").strip().lower()
+                    if user_input == 'a':
+                        rospy.loginfo("Running local route")
+                        self.get_local_route(samples=5)
+                except KeyboardInterrupt:
+                    rospy.loginfo("Exiting...")
+                    break
             rate.sleep()
 
 
 if __name__ == "__main__":
     nav = NavigationController()
-    nav.run_once()
+    nav.run()
