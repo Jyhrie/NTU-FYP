@@ -148,7 +148,7 @@ class NavigationController:
         print(dx, dy)
 
         govec = Vector2(dx, dy)
-        target_angle = math.atan2(govec.x, -govec.y)  # relative angle
+        target_angle = utils.angle_between(Vector2(0,-1), govec)
         print(target_angle)
         angle_error = utils.normalize_angle(target_angle + self.yaw)
         while self.turn_to_face_vec(target_yaw = angle_error):
