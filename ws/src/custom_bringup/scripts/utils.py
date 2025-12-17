@@ -17,7 +17,6 @@ def angle_between(v1, v2):
     mag1 = math.hypot(v1.x, v1.y)
     mag2 = math.hypot(v2.x, v2.y)
 
-    cos_theta = dot / (mag1 * mag2)
-    cos_theta = max(-1.0, min(1.0, cos_theta))  # clamp for safety
-
-    return normalize_angle(math.acos(cos_theta))  # radians
+    dot = v1.x * v2.x + v1.y * v2.y
+    cross = v1.x * v2.y - v1.y * v2.x
+    return normalize_angle(math.atan2(cross, dot)) # signed, [-pi, pi]
