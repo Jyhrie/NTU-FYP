@@ -359,7 +359,7 @@ class NavigationController:
                 # Distance Formula: sqrt((x2-x1)^2 + (y2-y1)^2)
                 dist_moved = math.hypot(curr_x - start_x, curr_y - start_y)
                 
-                rate.sleep()
+                
 
             # 5. Stop the robot
             self.cmd_pub.publish(Twist()) 
@@ -449,16 +449,17 @@ class NavigationController:
             rate.sleep()
 
     def fsm(self):
+        fsm_rate = rospy.Rate(60)
         cmd = self.dequeue()
         cmd_type = cmd.cmd_type
         if cmd_type == CommandType.TURN:
             print("STATE TURN: Turning To", cmd.target_yaw)
-            self.turn_to_face_vec(cmd.target_yaw)
-            pass
+            while self.turn_to_face_vec(cmd.target_yaw):
+                fsm_rate.sleep()
         elif cmd_type == CommandType.MOVE:
             print("STATE MOVE")
             self.move_forward_by_magnitude(cmd.magnitude)
-            pass
+            fsm_rate.sleep()
         elif cmd_type == CommandType.MOVE_BY_VECTOR:
             print("STATE UNPACK")
             self.state_move_by_vector(cmd.target_vec, cmd.res)
