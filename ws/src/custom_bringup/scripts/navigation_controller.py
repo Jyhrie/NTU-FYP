@@ -200,9 +200,10 @@ class NavigationController:
         """
         this is always with respect to North -Y.
         """
+        dist = target_vec.mag()
         relative_angle = utils.angle_between(Vector2(0,-1), target_vec.normalize()) #relative to north
         target_yaw = utils.normalize_angle(self.yaw - relative_angle)
-        dist = target_vec.mag()
+        
 
         print("Distance: ", dist, "Vector: ", target_vec, "Resolution: ", res)
 
