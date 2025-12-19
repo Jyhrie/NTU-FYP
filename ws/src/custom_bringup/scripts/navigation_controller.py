@@ -228,7 +228,7 @@ class NavigationController:
                                     cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((-average_wall_vec_median.y * (TURN_SAFE_DISTANCE + ROBOT_SAFE_SQUARE_FOOTPRINT)) / res)) #need to flip the sign of average_wall_vec median for it to not overshoot since -Y is forward
                 
                 print("Stop Vec: ", stop_vec)
-                if(stop_vec.y > 0):
+                if(stop_vec.y < 0):
                     mag_dist_to_stop_point = stop_vec.mag() * res
                     self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
@@ -238,7 +238,7 @@ class NavigationController:
                 mag_dist_to_stop_point = stop_vec.mag() * res
 
                 print("Stop Vec: ", stop_vec)
-                if(stop_vec.y > 0):
+                if(stop_vec.y < 0):
                     mag_dist_to_stop_point = stop_vec.mag() * res
                     self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
