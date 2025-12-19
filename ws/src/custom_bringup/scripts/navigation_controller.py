@@ -235,6 +235,7 @@ class NavigationController:
                     self.enqueue(Command(CommandType.SCAN))
 
             elif last_inlier is not None:
+                print("Last Inlier: ", last_inlier)
                 stop_vec = Vector2(cx - last_inlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE + ROBOT_SAFE_SQUARE_FOOTPRINT)) / res),
                                     cy - last_inlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((-average_wall_vec_median.y * (TURN_SAFE_DISTANCE + ROBOT_SAFE_SQUARE_FOOTPRINT)) / res))
                 mag_dist_to_stop_point = stop_vec.mag() * res
