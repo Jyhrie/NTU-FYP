@@ -208,14 +208,14 @@ class NavigationController:
 
         print("Average Wall Median: ", average_wall_vec_median)
 
-        # if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res) and vert_hit_distance < TURN_THRESH_STEPS: #robot has no space to move forward anymore, cant turn right
-        #     left_vec = Vector2(-1,0)
-        #     relative_angle = utils.angle_between(Vector2(0,-1), left_vec) 
-        #     target_yaw = utils.normalize_angle(self.yaw - relative_angle)
-        #     self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
-        #     pass
+        if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res) and vert_hit_distance < TURN_THRESH_STEPS: #robot has no space to move forward anymore, cant turn right
+            left_vec = Vector2(-1,0)
+            relative_angle = utils.angle_between(Vector2(0,-1), left_vec) 
+            target_yaw = utils.normalize_angle(self.yaw - relative_angle)
+            self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
+            pass
 
-        if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res): #does robot need to move move closer/away from the wall?
+        elif math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res): #does robot need to move move closer/away from the wall?
             print(dy, dx, ROBOT_SAFE_SQUARE_FOOTPRINT / res)
             print("Point Within Region")
             relative_angle = utils.angle_between(Vector2(0, -1), average_wall_vec_median)
