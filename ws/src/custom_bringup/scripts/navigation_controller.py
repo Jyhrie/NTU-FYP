@@ -21,6 +21,7 @@ ROBOT_SAFE_SQUARE_FOOTPRINT = 0.4
 
 HUG_DISTANCE = 0.2  # meters
 TURN_SAFE_DISTANCE = 0.2
+TURN_THRESH_STEPS = 6
 
 class CommandType:
     TURN = 0
@@ -119,7 +120,7 @@ class NavigationController:
 
         #get 5 samples of the walls at time steps of 1/rate
         for i in range(0,samples): #get samples
-            msg, avg_inlier, inlier, outlier = self.local_occupancy_movement.trigger(self.local_map_msg)
+            msg, avg_inlier, inlier, outlier, vert_hit_distance = self.local_occupancy_movement.trigger(self.local_map_msg)
             average_inlier_vec.append(avg_inlier)
             inlier_list.append(inlier)
             outlier_list.append(outlier)
@@ -207,8 +208,14 @@ class NavigationController:
 
         print("Average Wall Median: ", average_wall_vec_median)
 
-        
-        if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res): #does robot need to move move closer/away from the wall?
+        if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res) and vert_hit_distance < TURN_THRESH_STEPS: #robot has no space to move forward anymore, cant turn right
+            left_vec = Vector2(-1,0)
+            relative_angle = utils.angle_between(Vector2(0,-1), left_vec) 
+            target_yaw = utils.normalize_angle(self.yaw - relative_angle)
+            self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
+            pass
+
+        elif math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res): #does robot need to move move closer/away from the wall?
             print(dy, dx, ROBOT_SAFE_SQUARE_FOOTPRINT / res)
             print("Point Within Region")
             relative_angle = utils.angle_between(Vector2(0, -1), average_wall_vec_median)
@@ -230,11 +237,7 @@ class NavigationController:
 
             #enqueue update local map
         
-        #robot can 
-
-        #if the distance to move forward is 
-
-        else:
+        else: #robot robot is to get to hug distance from the wall
             #robot needs to move out/in
             #enqueue turn to projected wall normal
             self.enqueue(Command(CommandType.MOVE_BY_VECTOR, target_vec=govec, res=res))

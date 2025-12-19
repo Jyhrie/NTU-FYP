@@ -96,7 +96,7 @@ class LocalOccupancyNavigator:
         if grid is None:
             return None, None, None, None
         
-        hitpoints, vert_endpoint = self.vert_boxcasts(grid)
+        hitpoints, vert_endpoint_steps = self.vert_boxcasts(grid)
 
         inliers, outliers, average_vector = self.extract_outliers(hitpoints)
 
@@ -126,7 +126,7 @@ class LocalOccupancyNavigator:
         
         
         #normal_vec = average_vector.normal()
-        print("Average Vector:", average_vector.normalize)
+        #print("Average Vector:", average_vector.normalize)
 
         # for i in range (0,5):
         #     self.grid[int(avg_inlier.y + (normal_vec.y * i)), int(avg_inlier.x - (normal_vec.x * i))] = 2
@@ -136,8 +136,8 @@ class LocalOccupancyNavigator:
         # end_position =  avg_inlier # + Vector2(normal_vec.x * 3, normal_vec.y *3)
         # goal_forward_vector = average_vector
         # return origin, end_position, goal_forward_vector
-        print("returning: ", inliers)
-        return average_vector, inliers, outliers
+        #print("returning: ", inliers)
+        return average_vector, inliers, outliers, vert_endpoint_steps
 
         
     def extract_outliers(self, hitpoints, span=2):
@@ -280,7 +280,7 @@ class LocalOccupancyNavigator:
         self.grid = self.map
 
         self.draw_robot_footprint(self.grid)
-        avg_inlier, inliers, outliers =  self.raycast(self.grid)
+        avg_inlier, inliers, outliers, vert_endpoint_steps =  self.raycast(self.grid)
 
         if self.grid is not None:
 
@@ -295,5 +295,5 @@ class LocalOccupancyNavigator:
 
             msg.data = msg.data = self.grid.astype(np.int8).ravel()
 
-        return msg, avg_inlier, inliers, outliers
+        return msg, avg_inlier, inliers, outliers, vert_endpoint_steps
 
