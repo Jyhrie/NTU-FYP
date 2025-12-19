@@ -205,7 +205,6 @@ class NavigationController:
 
         govec = Vector2(dx, dy)
 
-
         #does robot need to move move closer/away from the wall?
         if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res):
             print(dy, dx, ROBOT_SAFE_SQUARE_FOOTPRINT / res)
@@ -218,13 +217,13 @@ class NavigationController:
             if median_outlier is not None:
                 stop_point = Vector2(median_outlier.x - ((normal_vec_median.x * TURN_SAFE_DISTANCE) / res),
                                     median_outlier.y - ((normal_vec_median.y * TURN_SAFE_DISTANCE) / res))
-                mag_dist_to_stop_point = stop_point.mag()
+                mag_dist_to_stop_point = stop_point.mag() * res
                 self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
             elif last_inlier is not None:
                 stop_point = Vector2(last_inlier.x + ((normal_vec_median.x * TURN_SAFE_DISTANCE) / res),
                                     last_inlier.y - ((normal_vec_median.y * TURN_SAFE_DISTANCE) / res))
-                mag_dist_to_stop_point = stop_point.mag()
+                mag_dist_to_stop_point = stop_point.mag() * res
                 self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
             #enqueue update local map
@@ -243,7 +242,6 @@ class NavigationController:
             #enqueue rescan
             self.enqueue(Command(CommandType.SCAN))
         
-
         mx = int(round(target_point.x))
         my = int(round(target_point.y))
 
@@ -272,7 +270,6 @@ class NavigationController:
 
         self.cutqueue(Command(CommandType.MOVE, magnitude=dist*res))
         self.cutqueue(Command(CommandType.TURN, target_yaw=target_yaw))
-        pass
 
     def get_local_route(self, samples=5):
         """
@@ -531,7 +528,7 @@ class NavigationController:
             while self.turn_to_face_vec(cmd.target_yaw):
                 fsm_rate.sleep()
         elif cmd_type == CommandType.MOVE:
-            print("STATE MOVE")
+            print("STATE MOVE, DIST: ")
             self.move_forward_by_magnitude(cmd.magnitude)
             fsm_rate.sleep()
         elif cmd_type == CommandType.MOVE_BY_VECTOR:
