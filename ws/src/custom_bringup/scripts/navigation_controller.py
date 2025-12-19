@@ -113,6 +113,10 @@ class NavigationController:
         inlier_list = []
         outlier_list = []
 
+        median_inlier = None
+        median_outlier = None
+        last_inlier = None
+
         #get 5 samples of the walls at time steps of 1/rate
         for i in range(0,samples): #get samples
             msg, avg_inlier, inlier, outlier = self.local_occupancy_movement.trigger(self.local_map_msg)
