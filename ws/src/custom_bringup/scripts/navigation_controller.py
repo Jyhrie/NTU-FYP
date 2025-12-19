@@ -528,7 +528,7 @@ class NavigationController:
             while self.turn_to_face_vec(cmd.target_yaw):
                 fsm_rate.sleep()
         elif cmd_type == CommandType.MOVE:
-            print("STATE MOVE, DIST: ")
+            print("STATE MOVE, DIST: ", cmd.magnitude)
             self.move_forward_by_magnitude(cmd.magnitude)
             fsm_rate.sleep()
         elif cmd_type == CommandType.MOVE_BY_VECTOR:
