@@ -20,7 +20,7 @@ MAX_ANGULAR_SPEED = 0.15
 ROBOT_SAFE_SQUARE_FOOTPRINT = 0.4
 
 HUG_DISTANCE = 0.2  # meters
-TURN_SAFE_DISTANCE = 0.1
+TURN_SAFE_DISTANCE = 0.0
 TURN_THRESH_STEPS = 15
 
 class CommandType:
@@ -226,8 +226,8 @@ class NavigationController:
             if median_outlier is not None:
                 print("Median Outlier: ", median_outlier)
                 print("average_wall_vec_median: ", average_wall_vec_median)
-                stop_vec = Vector2(cx - median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE)) / res),
-                                    cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE)) / res)) #need to flip the sign of average_wall_vec median for it to not overshoot since -Y is forward
+                stop_vec = Vector2(cx - median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) + ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE)) / res),
+                                    cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) + ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE)) / res)) #need to flip the sign of average_wall_vec median for it to not overshoot since -Y is forward
                 
                 print("Stop Vec: ", stop_vec)
                 if(stop_vec.y < 0):
