@@ -20,6 +20,7 @@ MAX_ANGULAR_SPEED = 0.15
 ROBOT_SAFE_SQUARE_FOOTPRINT = 0.4
 
 HUG_DISTANCE = 0.2  # meters
+TURN_SAFE_DISTANCE = 0.2
 
 class CommandType:
     TURN = 0
@@ -110,30 +111,53 @@ class NavigationController:
         #declare initial list for polling
         average_inlier_vec = []
         inlier_list = []
+        outlier_list = []
 
+        #get 5 samples of the walls at time steps of 1/rate
         for i in range(0,samples): #get samples
-            msg, avg_inlier, inlier = self.local_occupancy_movement.trigger(self.local_map_msg)
+            msg, avg_inlier, inlier, outlier = self.local_occupancy_movement.trigger(self.local_map_msg)
             average_inlier_vec.append(avg_inlier)
             inlier_list.append(inlier)
+            outlier_list.append(outlier)
             rate_local_poll.sleep()
 
+        #process inliers
         inlier_point_list_x = []
         inlier_point_list_y = []
 
         for sample in inlier_list:
             inlier_len = len(sample)
-            get_count = min(3, inlier_len) #get minimum samples of inliers.
-            for i in range(0,get_count):
+            count_inlier = min(3, inlier_len) #get minimum samples of inliers.
+            for i in range(0,count_inlier):
                 inlier_point_list_x.append(sample[i].x)
                 inlier_point_list_y.append(sample[i].y)
-                
+
         inlier_point_list_x.sort()   
         inlier_point_list_y.sort()
-
+        
         if inlier_point_list_x is not None:
             median_inlier = Vector2(
                 inlier_point_list_x[len(inlier_point_list_x)//2],
                 inlier_point_list_y[len(inlier_point_list_y)//2]
+            )
+
+        outlier_point_list_x = []
+        outlier_point_list_y = []
+
+        for sample in outlier_list:
+            outlier_len = len(sample)
+            count_outlier = min(1, outlier_len) #get 1 samples of inliers.
+            for i in range(0,count_outlier):
+                outlier_point_list_x.append(sample[i].x)
+                outlier_point_list_y.append(sample[i].y)
+
+        outlier_point_list_x.sort()   
+        outlier_point_list_y.sort()
+        
+        if outlier_point_list_x is not None:
+            median_outlier = Vector2(
+                outlier_point_list_x[len(outlier_point_list_x)//2], #perfect world, this will all return same value
+                outlier_point_list_y[len(outlier_point_list_y)//2]
             )
 
         #compute average normal vector
@@ -157,8 +181,6 @@ class NavigationController:
 
         govec = Vector2(dx, dy)
 
-        # print("North Vector: ", Vector2(0,-1), "Target Vector: ", govec)
-
 
         #does robot need to move move closer/away from the wall?
         if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res):
@@ -166,31 +188,31 @@ class NavigationController:
             print("Point Within Region")
             relative_angle = utils.angle_between(Vector2(0, -1), average_wall_vec_median)
             target_yaw = utils.normalize_angle(self.yaw - relative_angle)
-            self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
 
             #enqueue turn to wall tangent
-
-            self.enqueue(Command(CommandType.MOVE, magnitude=1))
+            self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
+            if median_outlier is not None:
+                stop_point = Vector2(median_outlier.x + ((normal_vec_median.x * TURN_SAFE_DISTANCE) / res),
+                                    median_outlier.y + ((normal_vec_median.y * TURN_SAFE_DISTANCE) / res))
+                
+                mag_dist_to_stop_point = stop_point.mag()
+                self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
             #enqueue update local map
-            #enqueue rescan
             pass
+        else:
+            #robot needs to move out/in
+            #enqueue turn to projected wall normal
+            self.enqueue(Command(CommandType.MOVE_BY_VECTOR, target_vec=govec, res=res))
 
-        # relative_angle = utils.angle_between(Vector2(0,-1), govec) #relative to north
-        # target_yaw = utils.normalize_angle(self.yaw - relative_angle)
+            #get yaw of wall tangent (average_wall_vec_median)
+            relative_angle = utils.angle_between(Vector2(0, -1), average_wall_vec_median)
+            target_yaw = utils.normalize_angle(self.yaw - relative_angle)
 
-        #robot needs to move out/in
-        #enqueue turn to projected wall normal
-        self.enqueue(Command(CommandType.MOVE_BY_VECTOR, target_vec=govec, res=res))
+            self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
+            #enqueue update local
 
-        #get yaw of wall tangent (average_wall_vec_median)
-        relative_angle = utils.angle_between(Vector2(0, -1), average_wall_vec_median)
-        target_yaw = utils.normalize_angle(self.yaw - relative_angle)
-
-        self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
-        #enqueue update local
-
-        #enqueue rescan
-        self.enqueue(Command(CommandType.SCAN))
+            #enqueue rescan
+            self.enqueue(Command(CommandType.SCAN))
         
 
         mx = int(round(target_point.x))
