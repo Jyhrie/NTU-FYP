@@ -224,6 +224,8 @@ class NavigationController:
             #enqueue turn to wall tangent
             self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
             if median_outlier is not None:
+                print("Median Inlier: ", median_outlier)
+                print("average_wall_vec_median: ", average_wall_vec_median)
                 stop_vec = Vector2(cx - median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE + ROBOT_SAFE_SQUARE_FOOTPRINT)) / res),
                                     cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE + ROBOT_SAFE_SQUARE_FOOTPRINT)) / res)) #need to flip the sign of average_wall_vec median for it to not overshoot since -Y is forward
                 
