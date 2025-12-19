@@ -25,8 +25,9 @@ class CommandType:
     TURN = 0
     MOVE = 1
     MOVE_BY_VECTOR = 2
-    RESCAN = 3
-    UPDATE_MAP = 4
+    SCAN = 3
+    LOCAL_SCAN = 4
+    UPDATE_MAP = 5
 
 class Command(object):
     def __init__(self, cmd_type, target_vec=None, target_yaw=None, magnitude=None, res=None):
@@ -100,7 +101,7 @@ class NavigationController:
         if msg is not None:
             self.debug_pub.publish(msg)
         return
-    
+        
     def local_mapping_decision_maker(self, samples=5):
         #init
         rate_local_poll = rospy.Rate(3)  # 3 Hz
@@ -161,14 +162,19 @@ class NavigationController:
 
         #does robot need to move move closer/away from the wall?
         if math.hypot(dy, dx) < ROBOT_SAFE_SQUARE_FOOTPRINT / res:
+            relative_angle = utils.angle_between(Vector2(0, -1), average_wall_vec_median)
+            target_yaw = utils.normalize_angle(self.yaw - relative_angle)
+            self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
+
             #enqueue turn to wall tangent
+
+            self.enqueue(Command(CommandType.MOVE, magnitude=5))
             #enqueue update local map
             #enqueue rescan
             pass
 
         # relative_angle = utils.angle_between(Vector2(0,-1), govec) #relative to north
         # target_yaw = utils.normalize_angle(self.yaw - relative_angle)
-
 
         #robot needs to move out/in
         #enqueue turn to projected wall normal
@@ -179,10 +185,11 @@ class NavigationController:
         target_yaw = utils.normalize_angle(self.yaw - relative_angle)
 
         self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
-        #enqueue move to location
-        #enqueue turn to wall tangent
         #enqueue update local
+
         #enqueue rescan
+        self.enqueue(Command(CommandType.SCAN))
+        
 
         mx = int(round(target_point.x))
         my = int(round(target_point.y))
@@ -383,6 +390,13 @@ class NavigationController:
         """
         pass
 
+    def state_scan(self):
+        pass
+    
+    def state_localscan(self):
+        self.local_mapping_decision_maker(samples=5)
+        pass
+    
     def run_once(self):
         """
         Rotates the robot 90 degrees (PI/2) clockwise using odometry feedback.
@@ -469,6 +483,14 @@ class NavigationController:
         elif cmd_type == CommandType.MOVE_BY_VECTOR:
             print("STATE UNPACK")
             self.state_move_by_vector(cmd.target_vec, cmd.res)
+        elif cmd_type == CommandType.SCAN:
+            print("SCAN")
+            self.state_scan()
+        elif cmd_type == CommandType.LOCAL_SCAN:
+            print("LOCAL SCAN")
+            self.state_localscan()
+            pass
+
 
 if __name__ == "__main__":
 
