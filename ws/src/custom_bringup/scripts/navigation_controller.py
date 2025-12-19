@@ -393,6 +393,7 @@ class NavigationController:
         pass
 
     def state_scan(self):
+        self.enqueue(Command(CommandType.LOCAL_SCAN))
         pass
     
     def state_localscan(self):
