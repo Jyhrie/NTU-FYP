@@ -241,7 +241,7 @@ class NavigationController:
 
                 #delta vector between robot origin and double projected point
                 stop_vec_x = cx - projected_median_outlier_x
-                stop_vec_y = cy - projected_median_outlier_y
+                stop_vec_y = -(cy - projected_median_outlier_y)
 
                 # stop_vec = Vector2(cx - median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) + ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE)) / res),
                 #                     -(cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) + ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE)) / res))) #need to flip the sign of average_wall_vec median for it to not overshoot since -Y is forward
@@ -273,7 +273,7 @@ class NavigationController:
 
                 #delta vector between robot origin and double projected point
                 stop_vec_x = cx - projected_median_outlier_x
-                stop_vec_y = cy - projected_median_outlier_y
+                stop_vec_y = -(cy - projected_median_outlier_y)
 
                 # stop_vec = Vector2(cx - median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) + ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE)) / res),
                 #                     -(cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) + ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE)) / res))) #need to flip the sign of average_wall_vec median for it to not overshoot since -Y is forward
