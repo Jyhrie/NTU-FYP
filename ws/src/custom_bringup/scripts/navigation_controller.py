@@ -161,7 +161,8 @@ class NavigationController:
 
 
         #does robot need to move move closer/away from the wall?
-        if math.hypot(dy, dx) < ROBOT_SAFE_SQUARE_FOOTPRINT / res:
+        if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res):
+            print(dy, dx, ROBOT_SAFE_SQUARE_FOOTPRINT / res)
             print("Point Within Region")
             relative_angle = utils.angle_between(Vector2(0, -1), average_wall_vec_median)
             target_yaw = utils.normalize_angle(self.yaw - relative_angle)
