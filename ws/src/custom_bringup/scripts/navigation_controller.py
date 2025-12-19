@@ -224,6 +224,7 @@ class NavigationController:
             elif last_inlier is not None:
                 stop_point = Vector2(last_inlier.x + ((normal_vec_median.x * TURN_SAFE_DISTANCE) / res),
                                     last_inlier.y - ((normal_vec_median.y * TURN_SAFE_DISTANCE) / res))
+                mag_dist_to_stop_point = stop_point.mag()
                 self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
             #enqueue update local map
