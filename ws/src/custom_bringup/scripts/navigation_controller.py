@@ -247,7 +247,6 @@ class NavigationController:
                     self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
                     self.enqueue(Command(CommandType.SCAN))
-
             #enqueue update local map
 
             
