@@ -17,7 +17,7 @@ import local_occupancy_movement as lom
 
 MAX_MOVEMENT_SPEED = 0.25
 MAX_ANGULAR_SPEED = 0.15
-ROBOT_SAFE_SQUARE_FOOTPRINT = 0.4
+ROBOT_SAFE_SQUARE_FOOTPRINT = 0.2
 
 HUG_DISTANCE = 0.2  # meters
 TURN_SAFE_DISTANCE = 0.6
@@ -215,7 +215,7 @@ class NavigationController:
         #     self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
         #     pass
 
-        if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res): #does robot need to move move closer/away from the wall?
+        if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res): #robot doesnt need to mvoe closer to the wall
             print(dy, dx, ROBOT_SAFE_SQUARE_FOOTPRINT / res)
             print("Point Within Region")
             relative_angle = utils.angle_between(Vector2(0, -1), average_wall_vec_median)
