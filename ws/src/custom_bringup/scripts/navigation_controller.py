@@ -215,14 +215,14 @@ class NavigationController:
             #enqueue turn to wall tangent
             self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
             if median_outlier is not None:
-                stop_point = Vector2(median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * TURN_SAFE_DISTANCE) / res),
-                                    median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * TURN_SAFE_DISTANCE) / res))
+                stop_point = Vector2(cx - median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * TURN_SAFE_DISTANCE) / res),
+                                    cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * TURN_SAFE_DISTANCE) / res))
                 mag_dist_to_stop_point = stop_point.mag() * res
                 self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
             elif last_inlier is not None:
-                stop_point = Vector2(last_inlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * TURN_SAFE_DISTANCE) / res),
-                                    last_inlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * TURN_SAFE_DISTANCE) / res))
+                stop_point = Vector2(cx - last_inlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * TURN_SAFE_DISTANCE) / res),
+                                    cy - last_inlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * TURN_SAFE_DISTANCE) / res))
                 mag_dist_to_stop_point = stop_point.mag() * res
                 self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
