@@ -231,9 +231,13 @@ class NavigationController:
                 projected_median_outlier_x = median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res)
                 projected_median_outlier_y = median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res)
 
+                print("Projected Normal: ", projected_median_outlier_x, projected_median_outlier_y)
+
                 #project tangent from previous point back towards robot
                 projected_median_outlier_x -= ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE)) / res)
                 projected_median_outlier_y -= ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE)) / res)
+
+                print("Projected Tangent: ", projected_median_outlier_x, projected_median_outlier_y)
 
                 #delta vector between robot origin and double projected point
                 stop_vec_x = cx - projected_median_outlier_x
@@ -259,9 +263,13 @@ class NavigationController:
                 projected_median_outlier_x = last_inlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res)
                 projected_median_outlier_y = last_inlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res)
 
+                print("Projected Normal: ", projected_median_outlier_x, projected_median_outlier_y)
+
                 #project tangent from previous point back towards robot
                 projected_median_outlier_x -= ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE)) / res)
                 projected_median_outlier_y -= ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE)) / res)
+
+                print("Projected Tangent: ", projected_median_outlier_x, projected_median_outlier_y)
 
                 #delta vector between robot origin and double projected point
                 stop_vec_x = cx - projected_median_outlier_x
@@ -603,6 +611,8 @@ class NavigationController:
 
 
 if __name__ == "__main__":
+
+
 
     nav = NavigationController()
     nav.run()
