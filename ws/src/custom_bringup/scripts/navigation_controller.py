@@ -20,7 +20,7 @@ MAX_ANGULAR_SPEED = 0.15
 ROBOT_SAFE_SQUARE_FOOTPRINT = 0.4
 
 HUG_DISTANCE = 0.2  # meters
-TURN_SAFE_DISTANCE = 0.0
+TURN_SAFE_DISTANCE = 0.2
 TURN_THRESH_STEPS = 15
 
 class CommandType:
@@ -208,12 +208,12 @@ class NavigationController:
 
         print("Average Wall Median: ", average_wall_vec_median)
 
-        # if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res) and vert_hit_distance < TURN_THRESH_STEPS: #robot has no space to move forward anymore, cant turn right
-        #     left_vec = Vector2(-1,0)
-        #     relative_angle = utils.angle_between(Vector2(0,-1), left_vec) 
-        #     target_yaw = utils.normalize_angle(self.yaw - relative_angle)
-        #     self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
-        #     pass
+        if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res) and vert_hit_distance < TURN_THRESH_STEPS: #robot has no space to move forward anymore, cant turn right
+            left_vec = Vector2(-1,0)
+            relative_angle = utils.angle_between(Vector2(0,-1), left_vec) 
+            target_yaw = utils.normalize_angle(self.yaw - relative_angle)
+            self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
+            pass
 
         if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res): #robot doesnt need to mvoe closer to the wall
             print(dy, dx, ROBOT_SAFE_SQUARE_FOOTPRINT / res)
