@@ -226,8 +226,8 @@ class NavigationController:
             if median_outlier is not None:
                 print("Median Outlier: ", median_outlier)
                 print("average_wall_vec_median: ", average_wall_vec_median)
-                stop_vec = Vector2(cx - median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE + ROBOT_SAFE_SQUARE_FOOTPRINT)) / res),
-                                    cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE + ROBOT_SAFE_SQUARE_FOOTPRINT)) / res)) #need to flip the sign of average_wall_vec median for it to not overshoot since -Y is forward
+                stop_vec = Vector2(cx - median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE)) / res),
+                                    cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE)) / res)) #need to flip the sign of average_wall_vec median for it to not overshoot since -Y is forward
                 
                 print("Stop Vec: ", stop_vec)
                 if(stop_vec.y < 0):
@@ -239,8 +239,8 @@ class NavigationController:
             elif last_inlier is not None:
                 print("Last Inlier: ", last_inlier)
                 print("average_wall_vec_median: ", average_wall_vec_median)
-                stop_vec = Vector2(cx - last_inlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE + ROBOT_SAFE_SQUARE_FOOTPRINT)) / res),
-                                    cy - last_inlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE + ROBOT_SAFE_SQUARE_FOOTPRINT)) / res))
+                stop_vec = Vector2(cx - last_inlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE)) / res),
+                                    cy - last_inlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE)) / res))
                 mag_dist_to_stop_point = stop_vec.mag() * res
 
                 print("Stop Vec: ", stop_vec)
