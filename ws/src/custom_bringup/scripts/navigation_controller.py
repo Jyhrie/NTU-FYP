@@ -236,6 +236,8 @@ class NavigationController:
                 self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
             #enqueue update local map
+
+            self.enqueue(Command(CommandType.SCAN))
         
         else: #robot robot is to get to hug distance from the wall
             #robot needs to move out/in
