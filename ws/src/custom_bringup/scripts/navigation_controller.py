@@ -223,7 +223,7 @@ class NavigationController:
 
             #enqueue turn to wall tangent
             self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
-            if median_outlier is not None:
+            if median_outlier is not None: #has detected an outlier
                 print("Median Outlier: ", median_outlier)
                 print("average_wall_vec_median: ", average_wall_vec_median)
 
@@ -254,6 +254,10 @@ class NavigationController:
                     self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
                     self.enqueue(Command(CommandType.SCAN))
+                
+                else: #scoot close to wall such that next wall tangent is detected.
+                    self.enqueue(Command(CommandType.MOVE, magnitude=(ROBOT_SAFE_SQUARE_FOOTPRINT/2)*res))
+
 
             elif last_inlier is not None:
                 print("Last Inlier: ", last_inlier)
@@ -290,6 +294,8 @@ class NavigationController:
                     self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
                     self.enqueue(Command(CommandType.SCAN))
+                
+                
             #enqueue update local map
 
             
