@@ -251,7 +251,7 @@ class NavigationController:
                     self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
                 else: #scoot close to wall such that next wall tangent is detected.
-                    self.enqueue(Command(CommandType.MOVE, magnitude=(ROBOT_SAFE_SQUARE_FOOTPRINT/2)*res)) #should be move forward by 1 robot's distance or however much the tolerance is on the forward projection
+                    self.enqueue(Command(CommandType.MOVE, magnitude=(0.3)*res)) #should be move forward by 1 robot's distance or however much the tolerance is on the forward projection
 
 
 
