@@ -232,6 +232,8 @@ class NavigationController:
                     mag_dist_to_stop_point = stop_vec.mag() * res
                     self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
+                    self.enqueue(Command(CommandType.SCAN))
+
             elif last_inlier is not None:
                 stop_vec = Vector2(cx - last_inlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE + ROBOT_SAFE_SQUARE_FOOTPRINT)) / res),
                                     cy - last_inlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((-average_wall_vec_median.y * (TURN_SAFE_DISTANCE + ROBOT_SAFE_SQUARE_FOOTPRINT)) / res))
@@ -242,9 +244,11 @@ class NavigationController:
                     mag_dist_to_stop_point = stop_vec.mag() * res
                     self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
+                    self.enqueue(Command(CommandType.SCAN))
+
             #enqueue update local map
 
-            self.enqueue(Command(CommandType.SCAN))
+            
         
         else: #robot robot is to get to hug distance from the wall
             #robot needs to move out/in
