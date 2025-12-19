@@ -139,7 +139,6 @@ class LocalOccupancyNavigator:
         #print("returning: ", inliers)
         return average_vector, inliers, outliers, vert_endpoint_steps
 
-        
     def extract_outliers(self, hitpoints, span=2):
         """
         Splits hitpoints into inliers and outliers using a spanning window method.
@@ -176,7 +175,6 @@ class LocalOccupancyNavigator:
 
         # Finalize average vector
         avg_vec = average_vector.normalize() if not average_vector.zero() else Vector2(0, 0)
-        print("Stop Point: ", stop_point)
 
         inliers = hitpoints[:stop_point]
         outliers = hitpoints[stop_point:]
