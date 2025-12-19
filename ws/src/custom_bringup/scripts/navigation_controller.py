@@ -253,10 +253,9 @@ class NavigationController:
                     mag_dist_to_stop_point = stop_vec.mag() * res
                     self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
-                    self.enqueue(Command(CommandType.SCAN))
-                
                 else: #scoot close to wall such that next wall tangent is detected.
                     self.enqueue(Command(CommandType.MOVE, magnitude=(ROBOT_SAFE_SQUARE_FOOTPRINT/2)*res))
+
 
 
             elif last_inlier is not None:
@@ -293,7 +292,7 @@ class NavigationController:
                     mag_dist_to_stop_point = stop_vec.mag() * res
                     self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
-                    self.enqueue(Command(CommandType.SCAN))
+            self.enqueue(Command(CommandType.SCAN))
                 
                 
             #enqueue update local map
