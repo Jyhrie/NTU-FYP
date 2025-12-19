@@ -172,8 +172,8 @@ class NavigationController:
                 inlier_len = len(sample)
                 count_inlier = min(3, inlier_len) #get minimum samples of inliers.
                 for i in range(0,count_inlier):
-                    inlier_point_list_x.append(sample[inlier_len-i].x)
-                    inlier_point_list_y.append(sample[inlier_len-i].y)
+                    inlier_point_list_x.append(sample[inlier_len-i-1].x)
+                    inlier_point_list_y.append(sample[inlier_len-i-1].y)
 
             inlier_point_list_x.sort()   
             inlier_point_list_y.sort()
