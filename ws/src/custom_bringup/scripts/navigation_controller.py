@@ -205,6 +205,8 @@ class NavigationController:
 
         govec = Vector2(dx, dy)
 
+        print("Average Wall Median: ", average_wall_vec_median)
+
         
         if math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res): #does robot need to move move closer/away from the wall?
             print(dy, dx, ROBOT_SAFE_SQUARE_FOOTPRINT / res)
@@ -216,13 +218,13 @@ class NavigationController:
             self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
             if median_outlier is not None:
                 stop_point = Vector2(cx - median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * TURN_SAFE_DISTANCE) / res),
-                                    cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * TURN_SAFE_DISTANCE) / res))
+                                    cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((-average_wall_vec_median.y * TURN_SAFE_DISTANCE) / res))
                 mag_dist_to_stop_point = stop_point.mag() * res
                 self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
             elif last_inlier is not None:
                 stop_point = Vector2(cx - last_inlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * TURN_SAFE_DISTANCE) / res),
-                                    cy - last_inlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * TURN_SAFE_DISTANCE) / res))
+                                    cy - last_inlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((-average_wall_vec_median.y * TURN_SAFE_DISTANCE) / res))
                 mag_dist_to_stop_point = stop_point.mag() * res
                 self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
