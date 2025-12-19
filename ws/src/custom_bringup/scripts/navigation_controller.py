@@ -160,6 +160,26 @@ class NavigationController:
                 outlier_point_list_y[len(outlier_point_list_y)//2]
             )
 
+        if median_outlier is None: #there is no outliers, wall is perfect
+            inlier_point_list_x = []
+            inlier_point_list_y = []
+
+            for sample in inlier_list:
+                inlier_len = len(sample)
+                count_inlier = min(3, inlier_len) #get minimum samples of inliers.
+                for i in range(0,count_inlier):
+                    inlier_point_list_x.append(sample[inlier_len-i].x)
+                    inlier_point_list_y.append(sample[inlier_len-i].y)
+
+            inlier_point_list_x.sort()   
+            inlier_point_list_y.sort()
+            
+            if inlier_point_list_x is not None:
+                last_inlier = Vector2(
+                    inlier_point_list_x[len(inlier_point_list_x)//2],
+                    inlier_point_list_y[len(inlier_point_list_y)//2]
+                )
+
         #compute average normal vector
         wall_vec_sum = Vector2(0,0)
         for vec in average_inlier_vec:
@@ -192,13 +212,17 @@ class NavigationController:
             #enqueue turn to wall tangent
             self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
             if median_outlier is not None:
-                stop_point = Vector2(median_outlier.x + ((normal_vec_median.x * TURN_SAFE_DISTANCE) / res),
-                                    median_outlier.y + ((normal_vec_median.y * TURN_SAFE_DISTANCE) / res))
-                
+                stop_point = Vector2(median_outlier.x - ((normal_vec_median.x * TURN_SAFE_DISTANCE) / res),
+                                    median_outlier.y - ((normal_vec_median.y * TURN_SAFE_DISTANCE) / res))
                 mag_dist_to_stop_point = stop_point.mag()
                 self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
+                
+            elif last_inlier is not None:
+                stop_point = Vector2(last_inlier.x + ((normal_vec_median.x * TURN_SAFE_DISTANCE) / res),
+                                    last_inlier.y - ((normal_vec_median.y * TURN_SAFE_DISTANCE) / res))
+                self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
+
             #enqueue update local map
-            pass
         else:
             #robot needs to move out/in
             #enqueue turn to projected wall normal
