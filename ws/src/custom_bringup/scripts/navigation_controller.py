@@ -216,6 +216,9 @@ class NavigationController:
             self.enqueue(Command(CommandType.TURN, target_yaw=target_yaw))
 
         elif math.hypot(dy, dx) < (ROBOT_SAFE_SQUARE_FOOTPRINT / res): #robot doesnt need to mvoe closer to the wall
+
+            #TODO: shift all this shit out to another file.
+            
             print(dy, dx, ROBOT_SAFE_SQUARE_FOOTPRINT / res)
             print("Point Within Region")
             relative_angle = utils.angle_between(Vector2(0, -1), average_wall_vec_median)
@@ -248,6 +251,9 @@ class NavigationController:
                 print("Stop Vec: ", stop_vec)
                 if(stop_vec.y < 0): #due to safety, robot's expected position is BEHIND its current position
                     mag_dist_to_stop_point = stop_vec.mag() * res
+                    
+                    #TODO: if mag < thresh, give it a little boost, should equalize on next turn anyways
+
                     self.enqueue(Command(CommandType.MOVE, magnitude=mag_dist_to_stop_point))
 
                 else: #scoot close to wall such that next wall tangent is detected.
@@ -259,7 +265,7 @@ class NavigationController:
                 print("Last Inlier: ", last_inlier)
                 print("average_wall_vec_median: ", average_wall_vec_median)
 
-                                #project normal from first point of outlier
+                #project normal from first point of outlier
                 projected_median_outlier_x = last_inlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res)
                 projected_median_outlier_y = last_inlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res)
 
@@ -275,13 +281,8 @@ class NavigationController:
                 stop_vec_x = cx - projected_median_outlier_x
                 stop_vec_y = -(cy - projected_median_outlier_y)
 
-                # stop_vec = Vector2(cx - median_outlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) + ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE)) / res),
-                #                     -(cy - median_outlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) + ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE)) / res))) #need to flip the sign of average_wall_vec median for it to not overshoot since -Y is forward
-                
                 stop_vec = Vector2(stop_vec_x, stop_vec_y)
 
-                # stop_vec = Vector2(cx - last_inlier.x + ((normal_vec_median.x * HUG_DISTANCE) / res) - ((average_wall_vec_median.x * (TURN_SAFE_DISTANCE)) / res),
-                #                     -(cy - last_inlier.y + ((normal_vec_median.y * HUG_DISTANCE) / res) - ((average_wall_vec_median.y * (TURN_SAFE_DISTANCE)) / res)))
                 mag_dist_to_stop_point = stop_vec.mag() * res
 
                 print("Stop Vec: ", stop_vec)
@@ -610,6 +611,7 @@ class NavigationController:
             print("LOCAL SCAN")
             self.state_localscan()
             pass
+
 
 
 if __name__ == "__main__":
