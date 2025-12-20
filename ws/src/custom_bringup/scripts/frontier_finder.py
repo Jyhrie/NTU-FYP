@@ -29,7 +29,7 @@ class FrontierGenerator:
         frontier_mask = cv2.bitwise_and(dilated_free, unknown)
 
         # 4. Find clusters of frontier pixels
-        contours, _ = cv2.findContours(frontier_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        _, contours, _ = cv2.findContours(frontier_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # 5. Convert pixel centers to real-world Meters
         frontier_poses = PoseArray()
