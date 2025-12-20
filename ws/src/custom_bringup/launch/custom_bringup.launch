@@ -85,7 +85,7 @@
     <node pkg="costmap_2d" type="costmap_2d_node" name="local_costmap" output="screen">
         <rosparam command="load" file="$(find custom_bringup)/config/costmap_common_params.yaml"/>
         <rosparam command="load" file="$(find custom_bringup)/config/local_costmap_params.yaml"/>
-        <remap from="scan" to="/scan"/> <!-- make sure this matches your lidar topic -->
+        <remap from="scan" to="/scan"/>
     </node>
 
     <!-- <node pkg="custom_bringup" type="local_costmap_new.py" name="costmap" required="true" output="screen">
