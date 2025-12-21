@@ -51,6 +51,8 @@ def map_callback(msg):
     color[lethal_mask]    = (0, 0, 255)    # red
     color[unknown_mask]   = (60, 60, 60)   # gray
 
+    print("Unique costmap values:", np.unique(data))
+
     map_img = color
 
 
