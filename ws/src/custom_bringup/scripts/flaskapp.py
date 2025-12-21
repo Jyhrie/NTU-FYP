@@ -20,38 +20,23 @@ def rgb(r, g, b):
 def map_callback(msg):
     global map_img
 
-    h = msg.info.height
-    w = msg.info.width
-
+    h, w = msg.info.height, msg.info.width
     data = np.array(msg.data, dtype=np.int16).reshape((h, w))
 
-    # -----------------------------
-    # Mask unknown cells (-1)
-    # -----------------------------
+    # Masks
     unknown_mask = data < 0
+    lethal_mask = data == 100
 
-    # Clamp values to [0, 255]
-    clamped = np.clip(data, 0, 255).astype(np.uint8)
+    # Normalize inflation values 0-99 to 0-255
+    norm = np.clip(data, 0, 99) * 255 // 99
+    norm = norm.astype(np.uint8)
 
-    unknown_mask   = data == 255
-    lethal_mask    = data == 254
-    inscribed_mask = data == 253
+    # Apply colormap (TURBO gives nice spectrum)
+    color = cv2.applyColorMap(norm, cv2.COLORMAP_TURBO)
 
-    # -----------------------------
-    # Apply colormap (spectrum)
-    # -----------------------------
-    # Options: COLORMAP_JET, TURBO, HSV, VIRIDIS
-    color = cv2.applyColorMap(clamped, cv2.COLORMAP_TURBO)
-
-    # -----------------------------
-    # Force unknowns to gray
-    # -----------------------------
-
-    color[inscribed_mask] = (0, 255, 0)    # green
-    color[lethal_mask]    = (0, 0, 255)    # red
-    color[unknown_mask]   = (60, 60, 60)   # gray
-
-    print("Unique costmap values:", np.unique(data))
+    # Overwrite special cells
+    color[unknown_mask] = (60, 60, 60)  # gray for unknown
+    color[lethal_mask] = (0, 0, 255)    # red for lethal
 
     map_img = color
 
