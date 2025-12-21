@@ -55,7 +55,7 @@ class FrontierNode:
     def result_callback(self, msg):
         # If the goal was aborted (Status 4), tell the selector to blacklist it
         if msg.status.status == 4 and self.current_goal:
-            rospy.logwarn(f"Goal {self.current_goal} failed! Blacklisting area.")
+            rospy.logwarn("Goal {} failed! Blacklisting area.".format(self.current_goal))
             self.selector.add_to_blacklist(self.current_goal)
 
     def get_robot_pose(self):
@@ -101,7 +101,7 @@ class FrontierNode:
                     goal_id = best_f_dict['id']
                     
                     # --- PRINT THE ID HERE ---
-                    rospy.loginfo(f"TARGET SELECTED -> ID: {goal_id} | Coords: {goal_coords}")
+                    rospy.loginfo("TARGET SELECTED -> ID: {} | Coords: {}".format(goal_id, goal_coords))
 
                     # Update state for blacklisting/hysteresis
                     self.current_goal = goal_coords
