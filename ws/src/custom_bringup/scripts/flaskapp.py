@@ -55,6 +55,8 @@ def map_callback(msg):
 
     img[data == 99] = rgb(0, 150, 255)
 
+    img[data == 255] = rgb(0, 255, 255)
+
     # Unknown values (<0) = dark gray
     img[data < 0] = rgb(60, 60, 60)
 
