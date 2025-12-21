@@ -1,58 +1,87 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import rospy
 import numpy as np
-import cv2
-from nav_msgs.msg import OccupancyGrid
-from geometry_msgs.msg import PoseArray, Pose
+from collections import deque
 
-class FrontierGenerator:
-    def __init__(self):
-        rospy.init_node('frontier_generator')
-        # Subscribe to the raw map (better for frontiers than costmap)
-        self.map_sub = rospy.Subscriber('/map', OccupancyGrid, self.map_callback)
-        # Publish coordinates of found frontiers
-        self.frontier_pub = rospy.Publisher('/detected_frontiers', PoseArray, queue_size=10)
-
-    def map_callback(self, msg):
-        # 1. Convert map to 2D numpy array
-        grid = np.array(msg.data).reshape((msg.info.height, msg.info.width))
+class FrontierDetector:
+    def __init__(self, map_width, map_height, resolution, origin_x, origin_y):
+        self.width = map_width
+        self.height = map_height
+        self.res = resolution
+        self.origin_x = origin_x
+        self.origin_y = origin_y
         
-        # 2. Identify "Known Free" (0) and "Unknown" (-1)
-        unknown = np.uint8(grid == -1) * 255
-        free = np.uint8(grid == 0) * 255
+        self.FREE = 0
+        self.UNKNOWN = -1
+        self.OCCUPIED = 100
 
-        # 3. Find the edge where free meets unknown
-        # Dilate free space to overlap into unknown space
-        kernel = np.ones((3,3), np.uint8)
-        dilated_free = cv2.dilate(free, kernel, iterations=1)
-        frontier_mask = cv2.bitwise_and(dilated_free, unknown)
+    def get_neighbors(self, x, y):
+        neighbors = []
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0: continue
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    neighbors.append((nx, ny))
+        return neighbors
 
-        # 4. Find clusters of frontier pixels
-        _, contours, _ = cv2.findContours(frontier_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    def is_frontier_pixel(self, grid, x, y):
+        if grid[y, x] != self.FREE:
+            return False
+        for nx, ny in self.get_neighbors(x, y):
+            if grid[ny, nx] == self.UNKNOWN:
+                return True
+        return False
 
-        # 5. Convert pixel centers to real-world Meters
-        frontier_poses = PoseArray()
-        frontier_poses.header.frame_id = "map"
+    def detect_frontiers(self, raw_data):
+        """
+        Returns:
+            frontiers: List of centroids (meters)
+            frontier_map: 1D array (same size as raw_data) for ROS publishing
+        """
+        grid = np.array(raw_data).reshape((self.height, self.width))
+        visited = np.zeros_like(grid, dtype=bool)
         
-        for cnt in contours:
-            if cv2.contourArea(cnt) < 5: # Filter out tiny noise
-                continue
-                
-            M = cv2.moments(cnt)
-            if M["m00"] != 0:
-                # Pixel coordinates
-                px = int(M["m10"] / M["m00"])
-                py = int(M["m01"] / M["m00"])
-                
-                # Convert to meters
-                pose = Pose()
-                pose.position.x = px * msg.info.resolution + msg.info.origin.position.x
-                pose.position.y = py * msg.info.resolution + msg.info.origin.position.y
-                frontier_poses.poses.append(pose)
+        # Initialize a blank debug map (all zeros)
+        # We use uint8 or int8 depending on your ROS message type
+        frontier_debug_grid = np.zeros_like(grid, dtype=np.int8)
+        
+        frontiers = []
 
-        self.frontier_pub.publish(frontier_poses)
+        for y in range(self.height):
+            for x in range(self.width):
+                if not visited[y, x] and self.is_frontier_pixel(grid, x, y):
+                    new_cluster = self.bfs_cluster(grid, x, y, visited)
+                    
+                    if len(new_cluster) > 5:
+                        # 1. Mark these pixels in our debug map
+                        for px, py in new_cluster:
+                            frontier_debug_grid[py, px] = 255 # Set your requested value
+                        
+                        # 2. Add to centroids list
+                        frontiers.append(self.calculate_centroid(new_cluster))
+        
+        # Flatten the debug grid back to a 1D list for ROS
+        frontier_map_data = frontier_debug_grid.flatten().tolist()
+        
+        return frontiers, frontier_map_data
 
-if __name__ == '__main__':
-    fg = FrontierGenerator()
-    rospy.spin()
+    def bfs_cluster(self, grid, start_x, start_y, visited):
+        cluster = []
+        queue = deque([(start_x, start_y)])
+        visited[start_y, start_x] = True
+        while queue:
+            curr_x, curr_y = queue.popleft()
+            cluster.append((curr_x, curr_y))
+            for nx, ny in self.get_neighbors(curr_x, curr_y):
+                if not visited[ny, nx] and self.is_frontier_pixel(grid, nx, ny):
+                    visited[ny, nx] = True
+                    queue.append((nx, ny))
+        return cluster
+
+    def calculate_centroid(self, cluster):
+        avg_x = sum(p[0] for p in cluster) / len(cluster)
+        avg_y = sum(p[1] for p in cluster) / len(cluster)
+        world_x = avg_x * self.res + self.origin_x
+        world_y = avg_y * self.res + self.origin_y
+        return (world_x, world_y)
