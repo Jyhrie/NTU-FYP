@@ -23,44 +23,28 @@ def map_callback(msg):
     h = msg.info.height
     w = msg.info.width
 
-    # Convert occupancy values to numpy array
     data = np.array(msg.data, dtype=np.int16).reshape((h, w))
 
-    # Create color image
-    img = np.zeros((h, w, 3), dtype=np.uint8)
+    # -----------------------------
+    # Mask unknown cells (-1)
+    # -----------------------------
+    unknown_mask = data < 0
 
-    # ---- Color Mapping ----
-    # 0 = free = white
-    img[data == 0] = rgb(255, 255, 255)
+    # Clamp values to [0, 255]
+    clamped = np.clip(data, 0, 255).astype(np.uint8)
 
-    # 100 = occupied = black
-    img[data == 100] = rgb(0, 0, 0)
+    # -----------------------------
+    # Apply colormap (spectrum)
+    # -----------------------------
+    # Options: COLORMAP_JET, TURBO, HSV, VIRIDIS
+    color = cv2.applyColorMap(clamped, cv2.COLORMAP_TURBO)
 
-    # 1 = blue
-    img[data == 1] = rgb(255, 0, 0)
+    # -----------------------------
+    # Force unknowns to gray
+    # -----------------------------
+    color[unknown_mask] = (60, 60, 60)  # BGR gray
 
-    # 2 = green
-    img[data == 2] = rgb(0, 255, 0)
-
-    # 3 = red
-    img[data == 3] = rgb(0, 0, 255)
-
-    img[data == 4] = rgb(250, 92, 171)
-
-    # 3 = red
-    img[data == 5] = rgb(255, 218, 117)
-
-    # 3 = red
-    img[data == 6] = rgb(255, 117, 188)
-
-    img[data == 99] = rgb(0, 150, 255)
-
-    img[data == 255] = rgb(0, 255, 255)
-
-    # Unknown values (<0) = dark gray
-    img[data < 0] = rgb(60, 60, 60)
-
-    map_img = img
+    map_img = color
 
 
 # ---- MJPEG Stream Generator ----
@@ -97,7 +81,7 @@ signal.signal(signal.SIGINT, signal_handler)
 if __name__ == '__main__':
     # Initialize ROS node
     rospy.init_node('map_flask_stream', anonymous=True)
-    rospy.Subscriber('/debug_map', OccupancyGrid, map_callback)
+    rospy.Subscriber('/move_base/global_costmap/costmap', OccupancyGrid, map_callback)
 
     # Start ROS spinning in background thread
     spin_thread = threading.Thread(target=rospy.spin)
