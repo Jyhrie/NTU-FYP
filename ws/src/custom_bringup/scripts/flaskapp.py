@@ -33,6 +33,10 @@ def map_callback(msg):
     # Clamp values to [0, 255]
     clamped = np.clip(data, 0, 255).astype(np.uint8)
 
+    unknown_mask   = data == 255
+    lethal_mask    = data == 254
+    inscribed_mask = data == 253
+
     # -----------------------------
     # Apply colormap (spectrum)
     # -----------------------------
@@ -42,7 +46,10 @@ def map_callback(msg):
     # -----------------------------
     # Force unknowns to gray
     # -----------------------------
-    color[unknown_mask] = (60, 60, 60)  # BGR gray
+
+    color[inscribed_mask] = (0, 255, 0)    # green
+    color[lethal_mask]    = (0, 0, 255)    # red
+    color[unknown_mask]   = (60, 60, 60)   # gray
 
     map_img = color
 
