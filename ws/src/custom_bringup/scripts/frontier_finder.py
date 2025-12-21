@@ -3,7 +3,6 @@
 import numpy as np
 from collections import deque
 import os
-from dotenv import load_dotenv
 import scipy.ndimage as ndimage
 
 class FrontierDetector:
@@ -14,7 +13,7 @@ class FrontierDetector:
         self.origin_x = origin_x
         self.origin_y = origin_y
 
-        self.robot_radius = float(os.getenv("ROBOT_RADIUS", 0.3))
+        self.robot_radius = 0.3
         self.min_frontier_width = self.robot_radius * 2.2
         
         self.FREE = 0
