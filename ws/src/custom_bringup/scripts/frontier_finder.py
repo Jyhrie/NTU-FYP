@@ -44,7 +44,7 @@ class FrontierDetector:
         
         # This will show up in RViz as the /detected_frontiers topic
         frontier_debug_grid = np.zeros_like(grid, dtype=np.int8)
-        frontiers = []
+        frontiers_metadata = []
 
         for y in range(self.height):
             for x in range(self.width):
@@ -58,9 +58,13 @@ class FrontierDetector:
                             frontier_debug_grid[py, px] = 100 
                         
                         # Store world coordinates
-                        frontiers.append(self.calculate_centroid(new_cluster))
+                        frontiers_metadata.append({
+                            'id': len(frontiers_metadata),
+                            'centroid': self.calculate_centroid(new_cluster),
+                            'size': len(new_cluster) # Pixel count used for Gain
+                        })
         
-        return frontiers, frontier_debug_grid.flatten().tolist()
+        return frontiers_metadata, frontier_debug_grid.flatten().tolist()
     
     def is_valid_size(self, cluster):
         if len(cluster) < 3: 
