@@ -16,7 +16,7 @@ class FrontierDetector:
         # Parameters for filtering
         self.robot_radius = 0.3
         # Minimum physical width of a frontier to be considered traversable
-        self.min_frontier_width = self.robot_radius * 2
+        self.min_frontier_width = self.robot_radius * 1
         
         # ROS OccupancyGrid Constants
         self.FREE = 0
