@@ -37,7 +37,7 @@ class FrontierDetector:
                 return True
         return False
 
-    def detect_frontiers(self, raw_data):
+    def detect_frontiers(self, raw_data, costmap_data):
         # Reshape the flat data into a 2D grid
         grid = np.array(raw_data).reshape((self.height, self.width))
         visited = np.zeros_like(grid, dtype=bool)
