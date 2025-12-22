@@ -22,7 +22,7 @@ class FrontierNode:
         self.listener = tf.TransformListener()
         
         # Initialize Selector in desired mode
-        self.selector = FrontierSelector(mode="greedy") # Options: "greedy" or "fast"
+        self.selector = FrontierSelector() # Options: "greedy" or "fast"
 
         # 2. Subscribers
         self.map_sub = rospy.Subscriber('/map', OccupancyGrid, self.map_callback)

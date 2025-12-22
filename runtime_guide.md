@@ -17,3 +17,4 @@ python3 ~/fyp/ws/src/custom_bringup/scripts/flaskapp.py
 
 roslaunch custom_bringup custom_bringup.launch
 roslaunch custom_bringup gmapping.launch
+rosrun custom_bringup frontier_node.py
