@@ -2,57 +2,80 @@
 
 import math
 import time
+import rospy
+from geometry_msgs.msg import PoseStamped
+# Import your local A* function
+from astar_planner import a_star_exploration
 
 class FrontierSelector:
-    def __init__(self, mode="greedy"):
-        self.mode = mode # "greedy" or "fast"
-        self.last_selected_id = None
+    def __init__(self):
         self.blacklist = {} 
         self.blacklist_dist = 0.5 
+        # No longer need to wait for move_base/make_plan service
 
-    def select_best_frontier(self, robot_pose, frontiers):
-        if not frontiers: return None
+    def get_euclidean(self, p1, p2):
+        return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
-        # Clean blacklist (30s timeout)
-        now = time.time()
-        self.blacklist = {p: t for p, t in self.blacklist.items() if now - t < 30}
+    def sanitize_goal(self, goal_idx, static_map):
+        """
+        If the goal is in unknown (-1) or occupied (100) space,
+        find the nearest free (0) neighbor.
+        """
+        x, y = goal_idx
+        if static_map[y][x] == 0:
+            return goal_idx
 
-        # Set weights based on mode
-        if self.mode == "greedy":
-            # Greedy: Distance is the primary factor
-            gain_w = 0.5
-            dist_w = 5.0  # High penalty for distance
-        else: # "fast"
-            # Fast: Size (Information Gain) is the primary factor
-            gain_w = 5.0  # High reward for large openings
-            dist_w = 1.0
+        # Search 8-neighbors for a valid '0' cell
+        for dx, dy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < len(static_map[0]) and 0 <= ny < len(static_map):
+                if static_map[ny][nx] == 0:
+                    return (nx, ny)
+        return goal_idx
 
-        hysteresis_w = 0.2
-        best_score = -float('inf')
-        best_f = None
+    def select_frontier(self, start_idx, frontiers, global_costmap, static_map):
+        """
+        start_idx: (x, y) in grid coordinates
+        frontiers: list of dicts with 'centroid' in grid coordinates
+        global_costmap: 2D array (0-100)
+        static_map: 2D array (-1, 0, 100)
+        """
+        if not frontiers:
+            return None
 
+        # 1. Sort by Euclidean distance
+        frontiers.sort(key=lambda f: self.get_euclidean(start_idx, f['centroid']))
+
+        # 2. Validation Loop
         for f in frontiers:
-            # Skip blacklisted failed gaps
-            if any(math.dist(f['centroid'], b) < self.blacklist_dist for b in self.blacklist):
+            centroid = f['centroid']
+            
+            if centroid in self.blacklist:
                 continue
 
-            gain = f['size'] * gain_w
-            dist = math.dist(robot_pose, f['centroid'])
+            # Ensure the goal is actually reachable (not in -1 space)
+            safe_goal = self.sanitize_goal(centroid, static_map)
             
-            # Hysteresis prevents "flickering" between two close points
-            hysteresis = (hysteresis_w * gain) if f['id'] == self.last_selected_id else 0
+            # Call your local A* implementation
+            path = a_star_exploration(static_map, global_costmap, start_idx, safe_goal)
             
-            # Final Score
-            score = gain - (dist * dist_w) + hysteresis
+            # Check if path is valid and reaches the goal area
+            # (Note: a_star_exploration returns best_node if unreachable)
+            if path and path[-1] == safe_goal:
+                f['path'] = path
+                f['path_length'] = self.calculate_path_length_grid(path)
+                return f 
+            else:
+                # If path doesn't reach goal or is empty, blacklist it
+                self.blacklist[centroid] = time.time()
 
-            if score > best_score:
-                best_score = score
-                best_f = f
-
-        if best_f:
-            self.last_selected_id = best_f['id']
-            return best_f['centroid']
         return None
 
-    def add_to_blacklist(self, centroid):
-        self.blacklist[centroid] = time.time()
+    def calculate_path_length_grid(self, path):
+        """Calculates total distance for a list of (x, y) grid tuples."""
+        distance = 0.0
+        for i in range(1, len(path)):
+            p1 = path[i-1]
+            p2 = path[i]
+            distance += math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+        return distance
