@@ -21,19 +21,27 @@ class FrontierSelector:
         If the goal is in unknown (-1) or occupied (100) space,
         find the nearest free (0) neighbor.
         """
-        # Force coordinates to integers to avoid IndexError
-        x, y = int(goal_idx[0]), int(goal_idx[1]) 
+        # Get dimensions (NumPy: height is shape[0], width is shape[1])
+        h, w = static_map.shape
+
+        # 1. Force to int and CLIP to ensure they are inside the array bounds
+        x = max(0, min(int(goal_idx[0]), w - 1))
+        y = max(0, min(int(goal_idx[1]), h - 1))
         
+        # 2. Check current cell (Indexed as [row][col] -> [y][x])
         if static_map[y][x] == 0:
             return (x, y)
 
-        # Search 8-neighbors for a valid '0' cell
+        # 3. Search 8-neighbors for a valid '0' cell
         for dx, dy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]:
             nx, ny = x + dx, y + dy
+            
             # Ensure neighbors are within map bounds
-            if 0 <= nx < static_map.shape[1] and 0 <= ny < static_map.shape[0]:
+            if 0 <= nx < w and 0 <= ny < h:
                 if static_map[ny][nx] == 0:
                     return (nx, ny)
+        
+        # If no free neighbor is found, return the clipped original
         return (x, y)
     
     def select_frontier(self, start_idx, frontiers, global_costmap, static_map):
