@@ -2,6 +2,7 @@
 
 import rospy
 import tf
+import numpy as np
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import PoseStamped
 from move_base_msgs.msg import MoveBaseActionResult
@@ -18,24 +19,19 @@ class FrontierNode:
         self.detector = None
         self.current_goal = None
         
-        # Add TF Listener to get the robot's position
         self.listener = tf.TransformListener()
-        
-        # Initialize Selector in desired mode
-        self.selector = FrontierSelector() # Options: "greedy" or "fast"
+        self.selector = FrontierSelector()
 
         # 2. Subscribers
         self.map_sub = rospy.Subscriber('/map', OccupancyGrid, self.map_callback)
         self.costmap_sub = rospy.Subscriber("/move_base/global_costmap/costmap", OccupancyGrid, self.costmap_callback)
-        
-        # NEW: Listen to move_base results to blacklist failed gaps automatically
         self.result_sub = rospy.Subscriber("/move_base/result", MoveBaseActionResult, self.result_callback)
 
         # 3. Publishers
         self.frontier_map_pub = rospy.Publisher('/detected_frontiers', OccupancyGrid, queue_size=1)
         self.goal_pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
 
-        # 4. Timer - This IS your loop
+        # 4. Loop Timer
         self.timer = rospy.Timer(rospy.Duration(2.0), self.process_frontiers)
 
     def map_callback(self, msg):
@@ -53,71 +49,89 @@ class FrontierNode:
         self.latest_costmap = msg
 
     def result_callback(self, msg):
-        # If the goal was aborted (Status 4), tell the selector to blacklist it
         if msg.status.status == 4 and self.current_goal:
-            rospy.logwarn("Goal {} failed! Blacklisting area.".format(self.current_goal))
-            self.selector.add_to_blacklist(self.current_goal)
+            rospy.logwarn("Goal failed! Blacklisting area.")
+            # Ensure your FrontierSelector has an 'add_to_blacklist' or similar
+            self.selector.blacklist[self.current_goal] = rospy.get_time()
 
-    def get_robot_pose(self):
-        """Helper to get current robot (x, y) from TF"""
-        try:
-            (trans, rot) = self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
-            return (trans[0], trans[1])
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-            return None
+    def world_to_grid(self, world_point):
+        """Converts (x, y) meters to (x, y) grid indices"""
+        info = self.latest_map.info
+        gx = int((world_point[0] - info.origin.position.x) / info.resolution)
+        gy = int((world_point[1] - info.origin.position.y) / info.resolution)
+        return (gx, gy)
+
+    def grid_to_world(self, grid_point):
+        """Converts (x, y) grid indices to (x, y) meters"""
+        info = self.latest_map.info
+        wx = grid_point[0] * info.resolution + info.origin.position.x
+        wy = grid_point[1] * info.resolution + info.origin.position.y
+        return (wx, wy)
 
     def process_frontiers(self, event):
-        """This function acts as the main exploration loop."""
         if self.latest_map is None or self.latest_costmap is None or self.detector is None:
             return
 
-        if len(self.latest_map.data) != len(self.latest_costmap.data):
+        # 1. Get Robot Pose in World Coords then convert to Grid
+        robot_pose_world = self.get_robot_pose()
+        if robot_pose_world is None:
             return
+        robot_grid = self.world_to_grid(robot_pose_world)
 
-        # 1. Get Robot Pose
-        robot_pose = self.get_robot_pose()
-        if robot_pose is None:
-            rospy.logwarn_throttle(5, "Waiting for TF transform...")
-            return
+        # 2. Reshape 1D data to 2D numpy arrays for the A* Planner
+        width = self.latest_map.info.width
+        height = self.latest_map.info.height
+        
+        # Static map: -1, 0, 100
+        static_2d = np.array(self.latest_map.data).reshape((height, width))
+        # Costmap: 0-100
+        cost_2d = np.array(self.latest_costmap.data).reshape((height, width))
 
-        # 2. Detect Frontiers (returns metadata list of dicts)
+        # 3. Detect Frontiers
+        # Assuming detector returns centroids in GRID coordinates
         frontiers_metadata, frontier_map_data = self.detector.detect_frontiers(
             self.latest_map.data, 
             self.latest_costmap.data
         )
 
-        # 3. Select the best goal based on Mode (greedy/fast)
-        best_f_dict = self.selector.select_frontier(robot_pose, frontiers_metadata)
-        print("Best Frontier: ", best_f_dict)
+        # 4. Select Frontier using our cost-aware A* logic
+        # best_f_dict now contains 'path' and 'centroid' (in grid units)
+        best_f_dict = self.selector.select_frontier(
+            robot_grid, 
+            frontiers_metadata, 
+            cost_2d, 
+            static_2d
+        )
 
-        # 4. Publish Visualization (RViz)
+        # 5. Visualization
         self.publish_frontier_map(self.latest_map, frontier_map_data)
 
         if best_f_dict:
-                    # The selector returns the centroid (x,y) tuple based on your current code
-                    # To print the ID, we ensure we are looking at the best_f dictionary
-                    
-                    # Extract data
-                    goal_coords = best_f_dict['centroid']
-                    goal_id = best_f_dict['id']
-                    
-                    # --- PRINT THE ID HERE ---
-                    rospy.loginfo("TARGET SELECTED -> ID: {} | Coords: {}".format(goal_id, goal_coords))
+            grid_goal = best_f_dict['centroid']
+            
+            # Convert back to World Coordinates for move_base
+            world_goal = self.grid_to_world(grid_goal)
+            
+            rospy.loginfo("TARGET SELECTED -> ID: {} | World Coords: {}".format(
+                best_f_dict.get('id', 'N/A'), world_goal))
 
-                    # Update state for blacklisting/hysteresis
-                    self.current_goal = goal_coords
-                    
-                    # Send to MoveBase
-                    #self.publish_goal(goal_coords)
+            self.current_goal = grid_goal
+            self.publish_goal(world_goal)
+
+    def get_robot_pose(self):
+        try:
+            (trans, rot) = self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
+            return (trans[0], trans[1])
+        except:
+            return None
 
     def publish_goal(self, coords):
-        """Helper to send a PoseStamped goal to move_base"""
         goal = PoseStamped()
         goal.header.frame_id = "map"
         goal.header.stamp = rospy.Time.now()
         goal.pose.position.x = coords[0]
         goal.pose.position.y = coords[1]
-        goal.pose.orientation.w = 1.0 # Neutral orientation
+        goal.pose.orientation.w = 1.0
         self.goal_pub.publish(goal)
 
     def publish_frontier_map(self, original_msg, debug_data):
@@ -129,8 +143,5 @@ class FrontierNode:
         self.frontier_map_pub.publish(f_map)
 
 if __name__ == '__main__':
-    try:
-        node = FrontierNode()
-        rospy.spin()
-    except rospy.ROSInterruptException:
-        pass
+    node = FrontierNode()
+    rospy.spin()
