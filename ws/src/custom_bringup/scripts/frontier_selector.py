@@ -74,7 +74,8 @@ class FrontierSelector:
                 return f 
             else:
                 # If path doesn't reach goal or is empty, blacklist it
-                self.blacklist[centroid] = time.time()
+                #self.blacklist[centroid] = time.time()
+                pass
 
         return None
 
