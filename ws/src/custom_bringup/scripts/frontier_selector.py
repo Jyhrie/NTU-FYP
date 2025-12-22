@@ -73,7 +73,8 @@ class FrontierSelector:
                 f['path_length'] = self.calculate_path_length_grid(path)
                 return f 
             else:
-                print(safe_goal)
+                print("Path -1 :", path[-1])
+                print("Safe Goal: ", safe_goal)
                 # If path doesn't reach goal or is empty, blacklist it
                 #self.blacklist[centroid] = time.time()
                 pass
