@@ -87,7 +87,7 @@ class FrontierNode:
         )
 
         # 3. Select the best goal based on Mode (greedy/fast)
-        best_f_dict = self.selector.select_best_frontier(robot_pose, frontiers_metadata)
+        best_f_dict = self.selector.select_frontier(robot_pose, frontiers_metadata)
         print("Best Frontier: ", best_f_dict)
 
         # 4. Publish Visualization (RViz)
