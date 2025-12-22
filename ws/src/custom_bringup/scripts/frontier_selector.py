@@ -72,7 +72,7 @@ class FrontierSelector:
             
             # Call your local A* implementation
             path = a_star_exploration(static_map, global_costmap, start_idx, safe_goal)
-            print("Path: ", path)
+            #print("Path: ", path)
             
             # Check if path is valid and reaches the goal area
             # (Note: a_star_exploration returns best_node if unreachable)
