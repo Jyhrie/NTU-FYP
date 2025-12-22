@@ -5,6 +5,7 @@ import tf
 import numpy as np
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Path
 from move_base_msgs.msg import MoveBaseActionResult
 from frontier_finder import FrontierDetector 
 from frontier_selector import FrontierSelector
@@ -30,6 +31,7 @@ class FrontierNode:
         # 3. Publishers
         self.frontier_map_pub = rospy.Publisher('/detected_frontiers', OccupancyGrid, queue_size=1)
         self.goal_pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
+        self.path_pub = rospy.Publisher('/global_exploration_path', Path, queue_size=1)
 
         # 4. Loop Timer
         self.timer = rospy.Timer(rospy.Duration(2.0), self.process_frontiers)
@@ -109,6 +111,7 @@ class FrontierNode:
         self.publish_frontier_map(self.latest_map, frontier_map_data)
 
         if best_f_dict:
+            self.publish_visual_path(best_f_dict['path'])
             grid_goal = best_f_dict['centroid']
             
             # Convert back to World Coordinates for move_base
@@ -118,7 +121,6 @@ class FrontierNode:
                 best_f_dict.get('id', 'N/A'), world_goal))
 
             self.current_goal = grid_goal
-            self.publish_goal(world_goal)
 
     def get_robot_pose(self):
         try:
@@ -143,6 +145,24 @@ class FrontierNode:
         f_map.info = original_msg.info 
         f_map.data = debug_data
         self.frontier_map_pub.publish(f_map)
+
+    def publish_visual_path(self, grid_path):
+        path_msg = Path()
+        path_msg.header.frame_id = "map"
+        path_msg.header.stamp = rospy.Time.now()
+
+        for grid_point in grid_path:
+            # Convert each grid point back to meters (world coords)
+            world_x, world_y = self.grid_to_world(grid_point)
+            
+            pose = PoseStamped()
+            pose.header = path_msg.header
+            pose.pose.position.x = world_x
+            pose.pose.position.y = world_y
+            pose.pose.orientation.w = 1.0 # Default orientation
+            path_msg.poses.append(pose)
+
+        self.path_pub.publish(path_msg)
 
 if __name__ == '__main__':
     node = FrontierNode()
