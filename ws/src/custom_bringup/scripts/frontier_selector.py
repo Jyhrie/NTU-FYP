@@ -44,13 +44,16 @@ class FrontierSelector:
         static_map: 2D array (-1, 0, 100)
         """
         if not frontiers:
+            print("No Frontiers")
             return None
 
+        print("frontiers: ", frontiers)
         # 1. Sort by Euclidean distance
         frontiers.sort(key=lambda f: self.get_euclidean(start_idx, f['centroid']))
 
         # 2. Validation Loop
         for f in frontiers:
+            print("Detecting Frontier f: ", f)
             centroid = f['centroid']
             
             if centroid in self.blacklist:
@@ -61,6 +64,7 @@ class FrontierSelector:
             
             # Call your local A* implementation
             path = a_star_exploration(static_map, global_costmap, start_idx, safe_goal)
+            print("Path: ", path)
             
             # Check if path is valid and reaches the goal area
             # (Note: a_star_exploration returns best_node if unreachable)
