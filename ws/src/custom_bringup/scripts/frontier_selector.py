@@ -9,7 +9,7 @@ from astar_planner import a_star_exploration
 
 class FrontierSelector:
     def __init__(self):
-        self.blacklist = {} 
+        # self.blacklist = {} 
         self.blacklist_dist = 0.5 
         # No longer need to wait for move_base/make_plan service
 
@@ -56,8 +56,8 @@ class FrontierSelector:
             print("Detecting Frontier f: ", f)
             centroid = f['centroid']
             
-            if centroid in self.blacklist:
-                continue
+            # if centroid in self.blacklist:
+            #     continue
 
             # Ensure the goal is actually reachable (not in -1 space)
             safe_goal = self.sanitize_goal(centroid, static_map)
