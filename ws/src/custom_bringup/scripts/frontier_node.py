@@ -103,6 +103,8 @@ class FrontierNode:
             static_2d
         )
 
+        print("Best Frontier", best_f_dict)
+
         # 5. Visualization
         self.publish_frontier_map(self.latest_map, frontier_map_data)
 
