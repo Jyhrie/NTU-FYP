@@ -21,18 +21,21 @@ class FrontierSelector:
         If the goal is in unknown (-1) or occupied (100) space,
         find the nearest free (0) neighbor.
         """
-        x, y = goal_idx
+        # Force coordinates to integers to avoid IndexError
+        x, y = int(goal_idx[0]), int(goal_idx[1]) 
+        
         if static_map[y][x] == 0:
-            return goal_idx
+            return (x, y)
 
         # Search 8-neighbors for a valid '0' cell
         for dx, dy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]:
             nx, ny = x + dx, y + dy
-            if 0 <= nx < len(static_map[0]) and 0 <= ny < len(static_map):
+            # Ensure neighbors are within map bounds
+            if 0 <= nx < static_map.shape[1] and 0 <= ny < static_map.shape[0]:
                 if static_map[ny][nx] == 0:
                     return (nx, ny)
-        return goal_idx
-
+        return (x, y)
+    
     def select_frontier(self, start_idx, frontiers, global_costmap, static_map):
         """
         start_idx: (x, y) in grid coordinates
