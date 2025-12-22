@@ -99,7 +99,5 @@ class FrontierDetector:
     def calculate_centroid(self, cluster):
         avg_x = sum(p[0] for p in cluster) / len(cluster)
         avg_y = sum(p[1] for p in cluster) / len(cluster)
-        
-        world_x = (avg_x * self.res) + self.origin_x
-        world_y = (avg_y * self.res) + self.origin_y
-        return (world_x, world_y)
+    
+        return (avg_x, avg_y)
