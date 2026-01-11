@@ -35,7 +35,7 @@ class FrontierNode:
         self.path_pub = rospy.Publisher('/global_exploration_path', Path, queue_size=1)
 
         # 4. Loop Timer //enable this to make this loop
-        #self.timer = rospy.Timer(rospy.Duration(2.0), self.process_frontiers)
+        self.timer = rospy.Timer(rospy.Duration(2.0), self.process_frontiers)
 
     def map_callback(self, msg):
         self.latest_map = msg
