@@ -37,6 +37,8 @@ class MainControllerFSM:
             self.set_state("EXECUTING")
 
     def pure_pursuit_cb(self, msg):
+        if msg == "RESCAN":
+            print("Pure Pursuit requested rescan")
         if self.state == "TRAVELLING":
             if msg == "CLOSE_TO_ENDPOINT":
                 pass

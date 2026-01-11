@@ -32,8 +32,10 @@ class PurePursuitController:
         # ---------------- Pub/Sub ----------------
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
         self.done_pub = rospy.Publisher("/path_done", Empty, queue_size=1)
+        self.pub = rospy.Publisher("/frontier_node_message", Empty, queue_size=1)
 
         rospy.Subscriber("/global_exploration_path", Path, self.path_cb)
+        
 
         self.rate = rospy.Rate(30)
 
@@ -152,7 +154,7 @@ class PurePursuitController:
 
             #rospy.loginfo("Lookahead relative distance: %.2f m, relative angle: %.2f deg", distance, math.degrees(lookahead_angle))
 
-            if abs(lookahead_angle) > 1.57:  # 90 degrees
+            if abs(lookahead_angle) >2.36:  # 135
                 # too sharp of a turn, turn to said angle, then call main_controller to perform rescan.
                 while abs(lookahead_angle) > 0.05 and not rospy.is_shutdown():
                     cmd = Twist()
@@ -186,7 +188,20 @@ class PurePursuitController:
 
                 self.cmd_pub.publish(cmd)
                 self.path = None
-                
+                self.pub.publish("RESCAN") 
+
+            # Only execute if angle is not a sharp turn
+            if abs(lookahead_angle) <= 2.36:  # 135 degrees
+                # Pure Pursuit curvature
+                kappa = 2.0 * y_r / (self.lookahead**2)
+
+                # velocity commands
+                cmd = Twist()
+                cmd.linear.x = self.linear_vel         # forward speed
+                cmd.angular.z = max(min(kappa * self.linear_vel, 0.3), -0.3)  # clamp omega
+
+                self.cmd_pub.publish(cmd)
+            
 
             
             self.rate.sleep()
