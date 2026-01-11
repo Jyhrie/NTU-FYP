@@ -4,7 +4,7 @@
     <rosparam file="$(find custom_bringup)/config/local_costmap_params.yaml" command="load"/> -->
 
     <!-- define vars -->
-    <arg name="use_gui" default="false"/>
+    <arg name="use_gui" default="true"/>
     <arg name="robot_model" default="astra" doc="robot_model type [astra,camera]"/>
 
     <param name="robot_description"
