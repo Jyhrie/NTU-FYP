@@ -35,7 +35,7 @@ class PurePursuitController:
 
         rospy.Subscriber("/global_exploration_path", Path, self.path_cb)
 
-        self.rate = rospy.Rate(20)
+        self.rate = rospy.Rate(3)
 
     # -------------------------------------------------
 
@@ -172,6 +172,8 @@ class PurePursuitController:
             cmd = Twist()
             cmd.linear.x = v
             cmd.angular.z = omega
+
+            print(cmd)
 
             #self.cmd_pub.publish(cmd)
 
