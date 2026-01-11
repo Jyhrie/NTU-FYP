@@ -84,8 +84,8 @@ class FrontierSelector:
                     f['path_length'] = self.calculate_path_length_grid(path)
                     return f
             else:
-                print("Path -1 :", path[-1])
-                print("Safe Goal: ", safe_goal)
+                # print("Path -1 :", path[-1])
+                # print("Safe Goal: ", safe_goal)
                 pass
 
         return None
