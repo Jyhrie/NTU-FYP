@@ -7,7 +7,7 @@ import tf2_ros
 
 from nav_msgs.msg import Path
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Empty
+from std_msgs.msg import String
 
 
 class PurePursuitController:
@@ -31,8 +31,7 @@ class PurePursuitController:
 
         # ---------------- Pub/Sub ----------------
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
-        self.done_pub = rospy.Publisher("/path_done", Empty, queue_size=1)
-        self.pub = rospy.Publisher("/frontier_node_message", Empty, queue_size=1)
+        self.pub = rospy.Publisher("/frontier_node_message", String, queue_size=1)
 
         rospy.Subscriber("/global_exploration_path", Path, self.path_cb)
         
@@ -178,30 +177,35 @@ class PurePursuitController:
 
 
                 print("Turn Complete")
-                cmd = Twist()
-                cmd.linear.x = 0
-                cmd.linear.y = 0
-                cmd.linear.z = 0
-                cmd.angular.x = 0
-                cmd.angular.y = 0
-                cmd.angular.z = 0
-
-                self.cmd_pub.publish(cmd)
+                self.stop_robot()
                 self.path = None
                 self.pub.publish("RESCAN") 
 
-            # Only execute if angle is not a sharp turn
-            if abs(lookahead_angle) <= 2.36:  # 135 degrees
+            elif abs(lookahead_angle) <= 2.36:  # 135 degrees
                 # Pure Pursuit curvature
                 kappa = 2.0 * y_r / (self.lookahead**2)
 
-                # velocity commands
-                cmd = Twist()
-                cmd.linear.x = self.linear_vel         # forward speed
-                cmd.angular.z = max(min(kappa * self.linear_vel, 0.3), -0.3)  # clamp omega
+                # compute angular velocity
+                omega = max(min(kappa * self.linear_vel, 0.3), -0.3)  # clamp omega
 
+                # scale linear speed: higher omega → slower linear
+                max_linear = self.linear_vel
+                min_linear = 0.05  # don't stop completely
+                scaling = 1.0 - min(abs(omega) / 0.3, 1.0)  # simple linear scaling
+                v = min_linear + scaling * (max_linear - min_linear)
+
+                # create and publish command
+                cmd = Twist()
+                cmd.linear.x = v
+                cmd.angular.z = omega
                 self.cmd_pub.publish(cmd)
-            
+
+                
+            if self.goal_reached(x, y):
+                rospy.loginfo("[PP] Goal reached!")
+                self.stop_robot()
+                self.path = None
+                self.pub.publish("END")
 
             
             self.rate.sleep()
