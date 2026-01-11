@@ -5,7 +5,7 @@ import tf
 import numpy as np
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import PoseStamped
-from nav_msgs.msg import Path
+from nav_msgs.msg import Path, Empty, String
 from move_base_msgs.msg import MoveBaseActionResult
 from frontier_finder import FrontierDetector 
 from frontier_selector import FrontierSelector
@@ -27,14 +27,15 @@ class FrontierNode:
         self.map_sub = rospy.Subscriber('/map', OccupancyGrid, self.map_callback)
         self.costmap_sub = rospy.Subscriber("/move_base/global_costmap/costmap", OccupancyGrid, self.costmap_callback)
         self.result_sub = rospy.Subscriber("/move_base/result", MoveBaseActionResult, self.result_callback)
+        self.controller_sub = rospy.Subscriber("controller_main", String, self.controller_cb)
 
         # 3. Publishers
         self.frontier_map_pub = rospy.Publisher('/detected_frontiers', OccupancyGrid, queue_size=1)
         self.goal_pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
         self.path_pub = rospy.Publisher('/global_exploration_path', Path, queue_size=1)
 
-        # 4. Loop Timer
-        self.timer = rospy.Timer(rospy.Duration(2.0), self.process_frontiers)
+        # 4. Loop Timer //enable this to make this loop
+        #self.timer = rospy.Timer(rospy.Duration(2.0), self.process_frontiers)
 
     def map_callback(self, msg):
         self.latest_map = msg
@@ -49,6 +50,11 @@ class FrontierNode:
 
     def costmap_callback(self, msg):
         self.latest_costmap = msg
+
+    def controller_cb(self, msg):
+        if msg == "process_frontiers":
+            pass 
+        #TODO: do this tmr
 
     def result_callback(self, msg):
         if msg.status.status == 4 and self.current_goal:
