@@ -53,7 +53,8 @@ class FrontierNode:
 
     def controller_cb(self, msg):
         if msg == "process_frontiers":
-            pass 
+            print("Processing Frontiers...")
+            self.process_frontiers(None)        
         #TODO: do this tmr
 
     def result_callback(self, msg):
