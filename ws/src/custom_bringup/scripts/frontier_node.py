@@ -54,7 +54,7 @@ class FrontierNode:
 
     def controller_cb(self, msg):
         print("Controller Callback Triggered: ", msg.data)
-        if msg == "process_frontiers":
+        if msg.data == "process_frontiers":
             print("Processing Frontiers...")
             self.process_frontiers(None)        
         #TODO: do this tmr
