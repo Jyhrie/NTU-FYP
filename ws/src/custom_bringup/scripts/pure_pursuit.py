@@ -193,12 +193,14 @@ class PurePursuitController:
                 cmd.angular.z = omega
                 self.cmd_pub.publish(cmd)
 
+                if self.goal_reached(x, y):
+                    rospy.loginfo("[PP] Goal reached!")
+                    self.stop_robot()
+                    self.path = None
+                    self.pub.publish("END")
+
                 
-            if self.goal_reached(x, y):
-                rospy.loginfo("[PP] Goal reached!")
-                self.stop_robot()
-                self.path = None
-                self.pub.publish("END")
+
 
             
             self.rate.sleep()
