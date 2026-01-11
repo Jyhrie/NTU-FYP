@@ -90,19 +90,12 @@ class PurePursuitController:
 
     # -------------------------------------------------
 
-    def find_lookahead_point(self, x, y, start_idx):
+    def find_lookahead_point(self, x, y, start_idx, lookahead_steps = 7):
 
-        L2 = self.lookahead * self.lookahead
 
-        for i in range(start_idx, len(self.path)):
-            p = self.path[i].pose.position
-            d2 = (p.x - x)**2 + (p.y - y)**2
-            if d2 >= L2:
-                return p.x, p.y
-
-        # if no point is far enough, return the last point
-        last = self.path[-1].pose.position
-        return last.x, last.y
+        target_idx = min(start_idx + lookahead_steps, len(self.path) - 1)
+        p = self.path[target_idx].pose.position
+        return p.x, p.y
 
     # -------------------------------------------------
 
