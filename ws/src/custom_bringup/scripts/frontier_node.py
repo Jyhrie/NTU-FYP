@@ -53,6 +53,7 @@ class FrontierNode:
         self.latest_costmap = msg
 
     def controller_cb(self, msg):
+        print("Controller Callback Triggered: ", msg.data)
         if msg == "process_frontiers":
             print("Processing Frontiers...")
             self.process_frontiers(None)        
