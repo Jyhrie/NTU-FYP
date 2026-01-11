@@ -150,8 +150,7 @@ class PurePursuitController:
             distance = math.hypot(x_r, y_r)            # straight-line distance
             lookahead_angle = math.atan2(y_r, x_r)     # relative rotation
 
-            rospy.loginfo("Lookahead relative distance: %.2f m, relative angle: %.2f deg",
-              distance, math.degrees(lookahead_angle))
+            rospy.loginfo("Lookahead relative distance: %.2f m, relative angle: %.2f deg", distance, math.degrees(lookahead_angle))
 
 
             self.rate.sleep()
