@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import rospy
 import math
@@ -115,7 +115,6 @@ class PurePursuitController:
     # -------------------------------------------------
 
     def run(self):
-
         rospy.loginfo("[PP] Pure Pursuit controller started")
 
         while not rospy.is_shutdown():

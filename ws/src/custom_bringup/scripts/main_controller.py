@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from std_msgs.msg import Empty, String
+from nav_msgs.msg import Path
 
 class MainControllerFSM:
 
@@ -32,6 +33,7 @@ class MainControllerFSM:
 
     def frontier_node_cb(self, msg):
         if self.state == "WAIT_FOR_PATH":
+            
             self.set_state("EXECUTING")
 
     def pure_pursuit_cb(self, msg):
