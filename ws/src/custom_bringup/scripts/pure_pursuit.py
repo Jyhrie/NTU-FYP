@@ -101,7 +101,12 @@ class PurePursuitController:
 
     def goal_reached(self, x, y, yaw):
         """
-        Returns True if the robot is close enough to the goal and facing the goal direction.
+        Returns True if the robot is considered at the goal.
+        
+        Goal is reached if either:
+        1. Robot is within `dist_tol_far` meters of the goal (ignoring orientation)
+        OR
+        2. Robot is within `dist_tol_near` meters AND heading aligned within `yaw_tol` radians
         """
         if self.path is None or len(self.path) == 0:
             return False
@@ -117,15 +122,22 @@ class PurePursuitController:
         # direction from robot to goal
         goal_direction = math.atan2(dy, dx)
 
-        # difference between robot heading and goal direction, wrapped to [-pi, pi]
+        # heading error, wrapped to [-pi, pi]
         heading_error = math.atan2(math.sin(goal_direction - yaw),
                                 math.cos(goal_direction - yaw))
 
         # thresholds
-        distance_tol = self.goal_tol       # e.g., 0.3 m
-        yaw_tol = 0.1                      # e.g., ~6 degrees
+        dist_tol_far = 0.2    # within 0.2 m → goal reached regardless of heading
+        dist_tol_near = 0.5   # within 0.5 m AND aligned
+        yaw_tol = 0.2         # radians (~11 degrees)
 
-        return dist_to_goal <= distance_tol and abs(heading_error) <= yaw_tol
+        # goal conditions
+        if dist_to_goal <= dist_tol_far:
+            return True
+        elif dist_to_goal <= dist_tol_near and abs(heading_error) <= yaw_tol:
+            return True
+        else:
+            return False
 
     # -------------------------------------------------
 
