@@ -131,7 +131,6 @@ class PurePursuitController:
                 continue
 
             x, y, yaw = pose
-
             nearest = self.find_nearest_index(x, y)
 
             look = self.find_lookahead_point(x, y, nearest)
@@ -140,7 +139,6 @@ class PurePursuitController:
             else:
                 lx, ly = look
                 rospy.loginfo("Lookahead point: x=%.2f, y=%.2f", lx, ly)
-
             dx = lx - x
             dy = ly - y
 
@@ -152,7 +150,30 @@ class PurePursuitController:
 
             rospy.loginfo("Lookahead relative distance: %.2f m, relative angle: %.2f deg", distance, math.degrees(lookahead_angle))
 
+            if abs(lookahead_angle) > 1.57:  # 90 degrees
+                # too sharp of a turn, turn to said angle, then call main_controller to perform rescan.
+                while abs(lookahead_angle) > 0.05 and not rospy.is_shutdown():
+                    cmd = Twist()
+                    cmd.linear.x = 0  # stop forward motion
+                    # rotate toward lookahead
+                    cmd.angular.z = max(min(lookahead_angle * 2.0, 1.5), -1.5)  # proportional controller
+                    self.cmd_pub.publish(cmd)
+                    
+                    self.rate.sleep()
+                    
+                    # update robot pose and relative angle
+                    pose = self.get_robot_pose()
+                    if pose is None:
+                        continue
+                    x, y, yaw = pose
+                    dx = lx - x
+                    dy = ly - y
+                    x_r = math.cos(-yaw)*dx - math.sin(-yaw)*dy
+                    y_r = math.sin(-yaw)*dx + math.cos(-yaw)*dy
+                    lookahead_angle = math.atan2(y_r, x_r)
+                
 
+            
             self.rate.sleep()
 
 
