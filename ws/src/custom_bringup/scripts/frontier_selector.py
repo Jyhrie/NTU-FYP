@@ -63,7 +63,7 @@ class FrontierSelector:
             #     continue
 
             # Ensure the goal is actually reachable (not in -1 space)
-            safe_goal = self.sanitize_goal(centroid, static_map)
+            safe_goal = self.sanitize_goal(centroid, static_map, global_costmap)
             
             # Call your local A* implementation
             path = a_star_exploration(static_map, global_costmap, start_idx, safe_goal)
