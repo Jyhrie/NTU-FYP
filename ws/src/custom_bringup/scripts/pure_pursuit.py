@@ -158,7 +158,7 @@ class PurePursuitController:
                     cmd = Twist()
                     cmd.linear.x = 0  # stop forward motion
                     # rotate toward lookahead
-                    cmd.angular.z = max(min(lookahead_angle * 2.0, 1.5), -1.5)  # proportional controller
+                    cmd.angular.z = max(min(lookahead_angle * 1, 0.3), -0.3)  # proportional controller
                     self.cmd_pub.publish(cmd)
                     
                     self.rate.sleep()
