@@ -5,6 +5,8 @@ global_costmap:
   publish_frequency: 0.5
   static_map: true
   rolling_window: false
+  track_unknown_space: true     # Must be true to distinguish from free space
+  unknown_cost_value: 253       # (Optional) Sets the internal raw value for unknown
 
   plugins:
     - {name: static_layer,    type: "costmap_2d::StaticLayer"}
