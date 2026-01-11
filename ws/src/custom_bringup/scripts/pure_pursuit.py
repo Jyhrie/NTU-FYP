@@ -99,7 +99,9 @@ class PurePursuitController:
             if d2 >= L2:
                 return p.x, p.y
 
-        return None
+        # if no point is far enough, return the last point
+        last = self.path[-1].pose.position
+        return last.x, last.y
 
     # -------------------------------------------------
 
