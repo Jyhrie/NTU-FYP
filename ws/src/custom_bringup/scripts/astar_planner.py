@@ -2,10 +2,6 @@ import heapq
 import math
 
 def a_star_exploration(static_map, costmap, start, goal):
-    """
-    static_map: -1 (Unknown), 0 (Free), 100 (Occupied)
-    costmap: 0-100 (0: Free, 1-98: Inflated, 99-100: Fatal)
-    """
     rows = len(static_map)
     cols = len(static_map[0])
     
@@ -15,17 +11,18 @@ def a_star_exploration(static_map, costmap, start, goal):
     came_from = {start: None}
     cost_so_far = {start: 0}
     
-    # Track the best node reached in case goal is unreachable
+    # Track the best node reached that is NOT unknown and NOT occupied
     best_node = start
+    # Initialize min_h with a very large number if the start is far from goal
     min_h = math.hypot(goal[0]-start[0], goal[1]-start[1])
 
     while frontier_queue:
         _, current = heapq.heappop(frontier_queue)
 
-        if current == goal:
+        # If we reached the goal and it's a valid cell, return immediately
+        if current == goal and static_map[goal[1]][goal[0]] != -1:
             return reconstruct_path(came_from, start, goal)
 
-        # Explore 8 neighbors
         for dx, dy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]:
             neighbor = (current[0] + dx, current[1] + dy)
             
@@ -35,29 +32,17 @@ def a_star_exploration(static_map, costmap, start, goal):
             s_val = static_map[neighbor[1]][neighbor[0]]
             c_val = costmap[neighbor[1]][neighbor[0]]
 
-            # --- THE NAVIGATION LOGIC ---
-            
-            # 1. HARD BLOCK: Static Map says it's a wall
-            if s_val == 100:
+            # 1. HARD BLOCK: Only actual walls or lethal obstacles
+            if s_val == 100 or c_val >= 99:
                 continue
             
-            # 2. FATAL BLOCK: Costmap says robot will hit something 
-            # (99 is inscribed, 100 is lethal)
-            if c_val >= 99:
-                continue
-            
-            # 3. COST CALCULATION
+            # 2. COST CALCULATION
             dist = math.sqrt(dx**2 + dy**2)
+            move_cost = dist + (c_val * 0.5)
             
-            # Weighting factors:
-            # - Use distance as base
-            # - Use costmap values to push robot to center of hallways
-            # - Use static map -1 (Unknown) as a slight penalty (exploration curiosity)
-            
-            move_cost = dist + (c_val * 0.5) #high costmap influence
-            
+            # 3. UNKNOWN PENALTY (Treat as dangerous, but passable)
             if s_val == -1:
-                move_cost += 5.0 # Penalty for entering unknown territory
+                move_cost += 50.0 
             
             new_cost = cost_so_far[current] + move_cost
 
@@ -65,8 +50,10 @@ def a_star_exploration(static_map, costmap, start, goal):
                 cost_so_far[neighbor] = new_cost
                 h = math.hypot(goal[0]-neighbor[0], goal[1]-neighbor[1])
                 
-                # Update fallback point
-                if h < min_h:
+                # --- FALLBACK LOGIC ---
+                # Update best_node ONLY if neighbor is KNOWN and FREE
+                # This ensures the path never ends at -1
+                if s_val == 0 and h < min_h:
                     min_h = h
                     best_node = neighbor
                 
@@ -74,6 +61,7 @@ def a_star_exploration(static_map, costmap, start, goal):
                 heapq.heappush(frontier_queue, (priority, neighbor))
                 came_from[neighbor] = current
 
+    # If goal unreachable or is -1, return path to the closest known free cell
     return reconstruct_path(came_from, start, best_node)
 
 def reconstruct_path(came_from, start, goal):
