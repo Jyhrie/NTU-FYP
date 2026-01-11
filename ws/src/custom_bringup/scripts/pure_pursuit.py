@@ -188,7 +188,7 @@ class PurePursuitController:
                 # compute angular velocity
                 omega = max(min(kappa * self.linear_vel, 0.3), -0.3)  # clamp omega
 
-                # scale linear speed: higher omega → slower linear
+                # scale linear speed: higher omega -> slower linear
                 max_linear = self.linear_vel
                 min_linear = 0.05  # don't stop completely
                 scaling = 1.0 - min(abs(omega) / 0.3, 1.0)  # simple linear scaling
