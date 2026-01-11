@@ -76,10 +76,13 @@ class FrontierSelector:
             
             # Check if path is valid and reaches the goal area
             # (Note: a_star_exploration returns best_node if unreachable)
-            if path and path[-1] == safe_goal:
-                f['path'] = path
-                f['path_length'] = self.calculate_path_length_grid(path)
-                return f 
+            if path:
+                dist_to_target = self.get_euclidean(path[-1], safe_goal)
+                # 5.0 pixels is usually safe for a 0.05m resolution map (0.25m tolerance)
+                if dist_to_target < 5.0:
+                    f['path'] = path
+                    f['path_length'] = self.calculate_path_length_grid(path)
+                    return f
             else:
                 print("Path -1 :", path[-1])
                 print("Safe Goal: ", safe_goal)
