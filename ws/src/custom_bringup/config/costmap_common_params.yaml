@@ -1,4 +1,4 @@
-footprint: [[-0.2, -0.2], [-0.2, 0.2], [0.2, 0.2], [0.2, -0.2]]
+footprint: [[-0.15, -0.15], [-0.15, 0.15], [0.15, 0.15], [0.15, -0.15]]
 # robot_radius: 0.2 # Use this if your robot is circular
 
 obstacle_layer:
@@ -10,5 +10,5 @@ obstacle_layer:
 
 inflation_layer:
   enabled: true
-  inflation_radius: 0.55
-  cost_scaling_factor: 7
+  inflation_radius: 1
+  cost_scaling_factor: 10
