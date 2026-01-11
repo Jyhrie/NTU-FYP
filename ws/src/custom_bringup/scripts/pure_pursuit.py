@@ -140,7 +140,7 @@ class PurePursuitController:
                 rospy.loginfo("No lookahead point found")
             else:
                 lx, ly = look
-                rospy.loginfo("Lookahead point: x=%.2f, y=%.2f", lx, ly)
+                #rospy.loginfo("Lookahead point: x=%.2f, y=%.2f", lx, ly)
             dx = lx - x
             dy = ly - y
 
@@ -150,7 +150,7 @@ class PurePursuitController:
             distance = math.hypot(x_r, y_r)            # straight-line distance
             lookahead_angle = math.atan2(y_r, x_r)     # relative rotation
 
-            rospy.loginfo("Lookahead relative distance: %.2f m, relative angle: %.2f deg", distance, math.degrees(lookahead_angle))
+            #rospy.loginfo("Lookahead relative distance: %.2f m, relative angle: %.2f deg", distance, math.degrees(lookahead_angle))
 
             if abs(lookahead_angle) > 1.57:  # 90 degrees
                 # too sharp of a turn, turn to said angle, then call main_controller to perform rescan.
