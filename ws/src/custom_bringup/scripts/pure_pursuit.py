@@ -99,11 +99,33 @@ class PurePursuitController:
 
     # -------------------------------------------------
 
-    def goal_reached(self, x, y):
+    def goal_reached(self, x, y, yaw):
+        """
+        Returns True if the robot is close enough to the goal and facing the goal direction.
+        """
+        if self.path is None or len(self.path) == 0:
+            return False
 
+        # get the final goal position
         goal = self.path[-1].pose.position
-        dist = math.hypot(goal.x - x, goal.y - y)
-        return dist < self.goal_tol
+        dx = goal.x - x
+        dy = goal.y - y
+
+        # straight-line distance to goal
+        dist_to_goal = math.hypot(dx, dy)
+
+        # direction from robot to goal
+        goal_direction = math.atan2(dy, dx)
+
+        # difference between robot heading and goal direction, wrapped to [-pi, pi]
+        heading_error = math.atan2(math.sin(goal_direction - yaw),
+                                math.cos(goal_direction - yaw))
+
+        # thresholds
+        distance_tol = self.goal_tol       # e.g., 0.3 m
+        yaw_tol = 0.1                      # e.g., ~6 degrees
+
+        return dist_to_goal <= distance_tol and abs(heading_error) <= yaw_tol
 
     # -------------------------------------------------
 
@@ -117,47 +139,50 @@ class PurePursuitController:
 
         while not rospy.is_shutdown():
 
-            if self.path is None:
+            # ---------------- Check path ----------------
+            if self.path is None or len(self.path) == 0:
                 self.rate.sleep()
                 continue
 
+            # ---------------- Get robot pose ----------------
             pose = self.get_robot_pose()
             if pose is None:
                 self.rate.sleep()
                 continue
 
             x, y, yaw = pose
+
+            # ---------------- Nearest path point ----------------
             nearest = self.find_nearest_index(x, y)
 
+            # ---------------- Lookahead point ----------------
             look = self.find_lookahead_point(x, y, nearest)
             if look is None:
                 rospy.loginfo("No lookahead point found")
-            else:
-                lx, ly = look
-                #rospy.loginfo("Lookahead point: x=%.2f, y=%.2f", lx, ly)
+                self.rate.sleep()
+                continue
+            lx, ly = look
+
+            # ---------------- Transform to robot frame ----------------
             dx = lx - x
             dy = ly - y
-
             x_r = math.cos(-yaw)*dx - math.sin(-yaw)*dy
             y_r = math.sin(-yaw)*dx + math.cos(-yaw)*dy
 
-            distance = math.hypot(x_r, y_r)            # straight-line distance
-            lookahead_angle = math.atan2(y_r, x_r)     # relative rotation
+            distance = math.hypot(x_r, y_r)
+            lookahead_angle = math.atan2(y_r, x_r)  # relative angle to lookahead
 
-            #rospy.loginfo("Lookahead relative distance: %.2f m, relative angle: %.2f deg", distance, math.degrees(lookahead_angle))
-
-            if abs(lookahead_angle) >2.36:  # 135
-                # too sharp of a turn, turn to said angle, then call main_controller to perform rescan.
+            # ---------------- Sharp turn handling ----------------
+            if abs(lookahead_angle) > 2.36:  # 135 deg
+                rospy.loginfo("[PP] Sharp turn detected, rotating in place")
                 while abs(lookahead_angle) > 0.05 and not rospy.is_shutdown():
                     cmd = Twist()
                     cmd.linear.x = 0  # stop forward motion
-                    # rotate toward lookahead
-                    cmd.angular.z = max(min(lookahead_angle * 1, 0.3), -0.3)  # proportional controller
+                    cmd.angular.z = max(min(lookahead_angle * 1.0, 0.3), -0.3)
                     self.cmd_pub.publish(cmd)
-                    
                     self.rate.sleep()
-                    
-                    # update robot pose and relative angle
+
+                    # update pose and angle
                     pose = self.get_robot_pose()
                     if pose is None:
                         continue
@@ -168,41 +193,39 @@ class PurePursuitController:
                     y_r = math.sin(-yaw)*dx + math.cos(-yaw)*dy
                     lookahead_angle = math.atan2(y_r, x_r)
 
-
-                print("Turn Complete")
+                rospy.loginfo("[PP] Turn complete")
                 self.stop_robot()
                 self.path = None
-                self.pub.publish("RESCAN") 
+                self.pub.publish("RESCAN")
+                continue
 
-            elif abs(lookahead_angle) <= 2.36:  # 135 degrees
+            # ---------------- Pure Pursuit motion ----------------
+            else:
                 # Pure Pursuit curvature
                 kappa = 2.0 * y_r / (self.lookahead**2)
 
-                # compute angular velocity
-                omega = max(min(kappa * self.linear_vel, 0.3), -0.3)  # clamp omega
+                # angular velocity
+                omega = max(min(kappa * self.linear_vel, 0.3), -0.3)
 
-                # scale linear speed: higher omega -> slower linear
+                # scale linear speed based on angular velocity
                 max_linear = self.linear_vel
-                min_linear = 0.05  # don't stop completely
-                scaling = 1.0 - min(abs(omega) / 0.3, 1.0)  # simple linear scaling
+                min_linear = 0.05
+                scaling = 1.0 - min(abs(omega) / 0.3, 1.0)
                 v = min_linear + scaling * (max_linear - min_linear)
 
-                # create and publish command
+                # publish command
                 cmd = Twist()
                 cmd.linear.x = v
                 cmd.angular.z = omega
                 self.cmd_pub.publish(cmd)
 
-                if self.goal_reached(x, y):
-                    rospy.loginfo("[PP] Goal reached!")
-                    self.stop_robot()
-                    self.path = None
-                    self.pub.publish("END")
+            # ---------------- Goal check ----------------
+            if self.goal_reached(x, y, yaw):
+                rospy.loginfo("[PP] Goal reached!")
+                self.stop_robot()
+                self.path = None
+                self.pub.publish("END")
 
-                
-
-
-            
             self.rate.sleep()
 
 
