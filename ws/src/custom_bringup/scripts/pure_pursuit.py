@@ -174,17 +174,18 @@ class PurePursuitController:
                     y_r = math.sin(-yaw)*dx + math.cos(-yaw)*dy
                     lookahead_angle = math.atan2(y_r, x_r)
 
-            cmd = Twist()
-            cmd.linear.x = 0
-            cmd.linear.y = 0
-            cmd.linear.z = 0
-            cmd.angular.x = 0
-            cmd.angular.y = 0
-            cmd.angular.z = 0
 
-            # publish it
-            self.cmd_pub.publish(cmd)
-            self.path = None
+                print("Turn Complete")
+                cmd = Twist()
+                cmd.linear.x = 0
+                cmd.linear.y = 0
+                cmd.linear.z = 0
+                cmd.angular.x = 0
+                cmd.angular.y = 0
+                cmd.angular.z = 0
+
+                self.cmd_pub.publish(cmd)
+                self.path = None
                 
 
             
