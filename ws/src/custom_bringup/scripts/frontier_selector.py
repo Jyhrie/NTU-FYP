@@ -77,6 +77,10 @@ class FrontierSelector:
             # Check if path is valid and reaches the goal area
             # (Note: a_star_exploration returns best_node if unreachable)
             if path:
+                if math.hypot(path[-1][0]-safe_goal[0], path[-1][1]-safe_goal[1]) > 5.0:
+                    print("Path blocked by physical obstacle, skipping...")
+                    continue
+
                 dist_to_target = self.get_euclidean(path[-1], safe_goal)
                 # 5.0 pixels is usually safe for a 0.05m resolution map (0.25m tolerance)
                 if dist_to_target < 5.0:
