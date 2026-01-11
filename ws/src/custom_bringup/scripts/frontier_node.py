@@ -5,7 +5,8 @@ import tf
 import numpy as np
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import PoseStamped
-from nav_msgs.msg import Path, String
+from nav_msgs.msg import Path
+from std_msgs.msg import String
 from move_base_msgs.msg import MoveBaseActionResult
 from frontier_finder import FrontierDetector 
 from frontier_selector import FrontierSelector
