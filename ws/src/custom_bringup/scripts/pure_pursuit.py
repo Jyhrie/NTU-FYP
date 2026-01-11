@@ -63,6 +63,8 @@ class PurePursuitController:
                 [q.x, q.y, q.z, q.w]
             )
 
+            print("Robot Pose: ", x, y, yaw)
+
             return x, y, yaw
 
         except:
@@ -171,7 +173,7 @@ class PurePursuitController:
             cmd.linear.x = v
             cmd.angular.z = omega
 
-            self.cmd_pub.publish(cmd)
+            #self.cmd_pub.publish(cmd)
 
             self.rate.sleep()
 
