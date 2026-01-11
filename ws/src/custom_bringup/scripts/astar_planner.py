@@ -62,7 +62,7 @@ def a_star_exploration(static_map, costmap, start, goal):
                 came_from[neighbor] = current
     
     if min_h > 5.0: 
-        return [] # Return empty list: Goal is unreachable
+        return None
 
     # If goal unreachable or is -1, return path to the closest known free cell
     return reconstruct_path(came_from, start, best_node)
