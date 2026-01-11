@@ -54,7 +54,7 @@ def a_star_exploration(static_map, costmap, start, goal):
             # - Use costmap values to push robot to center of hallways
             # - Use static map -1 (Unknown) as a slight penalty (exploration curiosity)
             
-            move_cost = dist + (c_val / 5) #high costmap influence
+            move_cost = dist + (c_val * 5) #high costmap influence
             
             if s_val == -1:
                 move_cost += 5.0 # Penalty for entering unknown territory
