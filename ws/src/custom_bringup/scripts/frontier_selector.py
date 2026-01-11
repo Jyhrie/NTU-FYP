@@ -16,33 +16,28 @@ class FrontierSelector:
     def get_euclidean(self, p1, p2):
         return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
-    def sanitize_goal(self, goal_idx, static_map):
-        """
-        If the goal is in unknown (-1) or occupied (100) space,
-        find the nearest free (0) neighbor.
-        """
-        # Get dimensions (NumPy: height is shape[0], width is shape[1])
-        h, w = static_map.shape
-
-        # 1. Force to int and CLIP to ensure they are inside the array bounds
-        x = max(0, min(int(goal_idx[0]), w - 1))
-        y = max(0, min(int(goal_idx[1]), h - 1))
-        
-        # 2. Check current cell (Indexed as [row][col] -> [y][x])
-        if static_map[y][x] == 0:
-            return (x, y)
-
-        # 3. Search 8-neighbors for a valid '0' cell
-        for dx, dy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]:
-            nx, ny = x + dx, y + dy
+    def sanitize_goal(self, goal_idx, static_map, global_costmap):
+            """
+            Finds the nearest cell that is both KNOWN FREE (0) and 
+            NOT LETHAL (<99) in the costmap.
+            """
+            h, w = static_map.shape
+            x = max(0, min(int(goal_idx[0]), w - 1))
+            y = max(0, min(int(goal_idx[1]), h - 1))
             
-            # Ensure neighbors are within map bounds
-            if 0 <= nx < w and 0 <= ny < h:
-                if static_map[ny][nx] == 0:
-                    return (nx, ny)
-        
-        # If no free neighbor is found, return the clipped original
-        return (x, y)
+            # If already safe, return it
+            if static_map[y][x] == 0 and global_costmap[y][x] < 99:
+                return (x, y)
+
+            # BFS-style search in a 10-pixel radius (approx 0.5m)
+            for r in range(1, 11):
+                for dx in range(-r, r + 1):
+                    for dy in range(-r, r + 1):
+                        nx, ny = x + dx, y + dy
+                        if 0 <= nx < w and 0 <= ny < h:
+                            if static_map[ny][nx] == 0 and global_costmap[ny][nx] < 99:
+                                return (nx, ny)
+            return (x, y)
     
     def select_frontier(self, start_idx, frontiers, global_costmap, static_map):
         """
