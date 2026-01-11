@@ -76,7 +76,7 @@ class FrontierSelector:
             
             # Check if path is valid and reaches the goal area
             # (Note: a_star_exploration returns best_node if unreachable)
-            if path:
+            if path is not None and len(path) > 0:
                 dist_to_target = self.get_euclidean(path[-1], safe_goal)
                 # 5.0 pixels is usually safe for a 0.05m resolution map (0.25m tolerance)
                 if dist_to_target < 5.0:
@@ -86,8 +86,6 @@ class FrontierSelector:
             else:
                 print("Path -1 :", path[-1])
                 print("Safe Goal: ", safe_goal)
-                # If path doesn't reach goal or is empty, blacklist it
-                #self.blacklist[centroid] = time.time()
                 pass
 
         return None
