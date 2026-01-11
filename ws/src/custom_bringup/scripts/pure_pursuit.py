@@ -132,50 +132,27 @@ class PurePursuitController:
 
             x, y, yaw = pose
 
-            # ----- Goal check -----
-            if self.goal_reached(x, y):
-                rospy.loginfo("[PP] Goal reached")
-                self.stop_robot()
-                self.done_pub.publish(Empty())
-                self.path = None
-                self.rate.sleep()
-                continue
-
-            # ----- Pure Pursuit -----
             nearest = self.find_nearest_index(x, y)
+
             look = self.find_lookahead_point(x, y, nearest)
-
             if look is None:
-                self.stop_robot()
-                self.rate.sleep()
-                continue
+                rospy.loginfo("No lookahead point found")
+            else:
+                lx, ly = look
+                rospy.loginfo("Lookahead point: x=%.2f, y=%.2f", lx, ly)
 
-            lx, ly = look
-
-            # transform to robot frame
             dx = lx - x
             dy = ly - y
 
-            x_r =  math.cos(-yaw)*dx - math.sin(-yaw)*dy
-            y_r =  math.sin(-yaw)*dx + math.cos(-yaw)*dy
+            x_r = math.cos(-yaw)*dx - math.sin(-yaw)*dy
+            y_r = math.sin(-yaw)*dx + math.cos(-yaw)*dy
 
-            # curvature
-            kappa = 2.0 * y_r / (self.lookahead**2)
+            distance = math.hypot(x_r, y_r)            # straight-line distance
+            lookahead_angle = math.atan2(y_r, x_r)     # relative rotation
 
-            # velocity commands (diff drive)
-            v = self.linear_vel
-            omega = v * kappa
+            rospy.loginfo("Lookahead relative distance: %.2f m, relative angle: %.2f deg",
+              distance, math.degrees(lookahead_angle))
 
-            # clamp omega
-            omega = max(min(omega, 1.5), -1.5)
-
-            cmd = Twist()
-            cmd.linear.x = v
-            cmd.angular.z = omega
-
-            print(cmd)
-
-            #self.cmd_pub.publish(cmd)
 
             self.rate.sleep()
 
