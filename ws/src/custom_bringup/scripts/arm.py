@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 import moveit_commander
 import geometry_msgs.msg
