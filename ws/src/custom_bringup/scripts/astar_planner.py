@@ -77,7 +77,8 @@ def a_star_exploration(static_map, costmap, start, goal):
                 came_from[neighbor] = current
 
     print("[A* DEBUG] FAILED: Queue empty. Reached best node {} (Dist: {:.2f})".format(best_node, min_h))
-    return reconstruct_path(came_from, start, best_node)
+    return [] # Return an empty list so the robot stays still
+    #return reconstruct_path(came_from, start, best_node)
 
 def reconstruct_path(came_from, start, goal):
     path = []
@@ -89,8 +90,6 @@ def reconstruct_path(came_from, start, goal):
     path.append(start)
     path.reverse()
 
-    return path
-
-    # if len(path) > 5:
-    #     return path[:-5]
-    # return []
+    if len(path) > 5:
+        return path[:-5]
+    return []
