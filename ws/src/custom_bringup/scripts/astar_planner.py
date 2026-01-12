@@ -82,24 +82,10 @@ def a_star_exploration(static_map, costmap, start, goal):
 def reconstruct_path(came_from, start, goal):
     path = []
     curr = goal
-    
-    # If the goal was never reached, return empty
-    if goal not in came_from: 
-        return []
-        
-    # Trace back from goal to start
+    if goal not in came_from: return []
     while curr != start:
         path.append(curr)
         curr = came_from[curr]
     path.append(start)
-    
-    # Reverse so it goes [start, ..., goal]
     path.reverse()
-    
-    # --- SNIP LOGIC ---
-    # If path length is 10, path[:-5] returns the first 5 nodes.
-    # We check > 5 to ensure we don't return an empty list if the path is very short.
-    if len(path) > 5:
-        return path[:-5]
-        
     return path
