@@ -58,7 +58,7 @@ def a_star_exploration(static_map, costmap, start, goal):
             # STEEP EXPONENTIAL: Makes hugging the wall very expensive
             # Scaling c_val/10 keeps the math from overflowing while 1.5 is a strong curve
             if c_val > 0:
-                penalty = math.pow(1.5, c_val / 10.0) * 5.0
+                penalty = math.pow(1.8, c_val / 10.0) * 5.0
             else:
                 penalty = 0
 
@@ -74,7 +74,7 @@ def a_star_exploration(static_map, costmap, start, goal):
                     best_node = neighbor
                 
                 # WEIGHTED PRIORITY: 0.7 weight on H reduces the "greedy" straight-line pull
-                priority = new_cost + (h * 0.7)
+                priority = new_cost + (h * 0.2)
                 
                 heapq.heappush(frontier_queue, (priority, neighbor))
                 came_from[neighbor] = current
