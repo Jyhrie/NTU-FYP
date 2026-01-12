@@ -45,7 +45,7 @@ def a_star_exploration(static_map, costmap, start, goal):
             if s_val >= 100 or s_val <= -1:
                 # Uncomment the line below to see exactly which cells are blocked
                 print("[A* DEBUG] Static Block at {}: s_val={}".format(neighbor, s_val))
-                continue
+                return []
             
             # 2. FATAL BLOCK: Costmap says robot will hit something 
             # if c_val >= 99:
