@@ -85,10 +85,6 @@ def a_star_exploration(static_map, costmap, start, goal):
             # We stop here so the robot doesn't drive into the dark.
             break
         safe_path.append(node)
-
-    if len(safe_path) > SNIP_DISTANCE:
-        # This removes the last 5 nodes from the safe portion
-        return safe_path[:-SNIP_DISTANCE]
         
     # If safe_path is just the start, the robot is already at the frontier.
-    return []
+    return safe_path
