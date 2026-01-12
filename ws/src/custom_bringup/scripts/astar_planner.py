@@ -55,7 +55,7 @@ def a_star_exploration(static_map, costmap, start, goal):
             # 3. COST CALCULATION
             dist = math.sqrt(dx**2 + dy**2)
             
-            move_cost = dist + (c_val * 10) 
+            move_cost = dist + (c_val * 50) 
             
             # Note: This block is unreachable because of the 's_val == -1' continue above
             if s_val == -1:
@@ -82,10 +82,24 @@ def a_star_exploration(static_map, costmap, start, goal):
 def reconstruct_path(came_from, start, goal):
     path = []
     curr = goal
-    if goal not in came_from: return []
+    
+    # If the goal was never reached, return empty
+    if goal not in came_from: 
+        return []
+        
+    # Trace back from goal to start
     while curr != start:
         path.append(curr)
         curr = came_from[curr]
     path.append(start)
+    
+    # Reverse so it goes [start, ..., goal]
     path.reverse()
+    
+    # --- SNIP LOGIC ---
+    # If path length is 10, path[:-5] returns the first 5 nodes.
+    # We check > 5 to ensure we don't return an empty list if the path is very short.
+    if len(path) > 5:
+        return path[:-5]
+        
     return path
