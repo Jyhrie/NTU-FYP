@@ -4,6 +4,9 @@ import math
 def a_star_exploration(static_map, costmap, start, goal):
     rows = len(static_map)
     cols = len(static_map[0])
+
+    SNIP_DISTANCE = 5  # Stop 5 units before unknown/wall
+    FATAL_COST = 100   # Hard collision value
     
     # 1. PHYSICAL WALL CHECK
     # Only return empty if the goal is an actual wall (100).
@@ -71,17 +74,25 @@ def a_star_exploration(static_map, costmap, start, goal):
         curr = came_from.get(curr)
     full_path.reverse()
 
-    # 3. FRONTIER CLIPPING
-    # We keep points as long as they are KNOWN (0).
-    # The moment we hit an UNKNOWN (-1) point, we stop.
-    safe_path = []
-    for node in full_path:
-        val = static_map[node[1]][node[0]]
-        if val == -1:
-            # We reached the edge of the known world. 
-            # We stop here so the robot doesn't drive into the dark.
-            break
-        safe_path.append(node)
+    # 3. IDENTIFY DANGER ZONE
+    # Find the first index in the path that is UNKNOWN or FATAL
+    first_unsafe_idx = len(full_path)
+    for i, node in enumerate(full_path):
+        s_val = static_map[node[1]][node[0]]
+        c_val = costmap[node[1]][node[0]]
         
-    # If safe_path is just the start, the robot is already at the frontier.
-    return safe_path
+        if s_val == -1 or c_val >= FATAL_COST:
+            first_unsafe_idx = i
+            break
+            
+    # 4. APPLY THE 5-UNIT SNIP
+    # We want to end the path 5 indices BEFORE the first unsafe cell.
+    # We use max(1, ...) so it at least returns the start point if we're already close.
+    end_idx = max(1, first_unsafe_idx - SNIP_DISTANCE)
+    
+    # Special Case: If the whole path is shorter than the snip distance,
+    # and the goal is already in unknown space, we just stay put (return start).
+    if first_unsafe_idx < SNIP_DISTANCE:
+        return [start]
+        
+    return full_path[:end_idx]
