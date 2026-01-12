@@ -25,18 +25,18 @@ class FrontierSelector:
             x = max(0, min(int(goal_idx[0]), w - 1))
             y = max(0, min(int(goal_idx[1]), h - 1))
             
-            # If already safe, return it
-            if static_map[y][x] == 0 and global_costmap[y][x] < 99:
-                return (x, y)
+            # # If already safe, return it
+            # if static_map[y][x] == 0 and global_costmap[y][x] < 99:
+            #     return (x, y)
 
-            # BFS-style search in a 10-pixel radius (approx 0.5m)
-            for r in range(1, 11):
-                for dx in range(-r, r + 1):
-                    for dy in range(-r, r + 1):
-                        nx, ny = x + dx, y + dy
-                        if 0 <= nx < w and 0 <= ny < h:
-                            if static_map[ny][nx] == 0 and global_costmap[ny][nx] < 99:
-                                return (nx, ny)
+            # # BFS-style search in a 10-pixel radius (approx 0.5m)
+            # for r in range(1, 11):
+            #     for dx in range(-r, r + 1):
+            #         for dy in range(-r, r + 1):
+            #             nx, ny = x + dx, y + dy
+            #             if 0 <= nx < w and 0 <= ny < h:
+            #                 if static_map[ny][nx] == 0 and global_costmap[ny][nx] < 99:
+            #                     return (nx, ny)
             return (x, y)
     
     def select_frontier(self, start_idx, frontiers, global_costmap, static_map):
