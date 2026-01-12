@@ -55,7 +55,7 @@ def a_star_exploration(static_map, costmap, start, goal):
             # 3. COST CALCULATION
             dist = math.sqrt(dx**2 + dy**2)
             
-            move_cost = dist + (c_val * 50) 
+            move_cost = dist + (c_val * 35) 
             
             # Note: This block is unreachable because of the 's_val == -1' continue above
             if s_val == -1:
@@ -83,9 +83,16 @@ def reconstruct_path(came_from, start, goal):
     path = []
     curr = goal
     if goal not in came_from: return []
+    
     while curr != start:
         path.append(curr)
         curr = came_from[curr]
     path.append(start)
     path.reverse()
+
+    # If the path is long, snip it. 
+    # If it's short, keep it so the robot at least reaches the edge.
+    if len(path) > 5:
+        return path[:-5]
+    
     return path
