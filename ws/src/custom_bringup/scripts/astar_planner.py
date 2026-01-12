@@ -88,4 +88,7 @@ def reconstruct_path(came_from, start, goal):
         curr = came_from[curr]
     path.append(start)
     path.reverse()
-    return path
+
+    if len(path) > 5:
+        return path[:-5]
+    return []
