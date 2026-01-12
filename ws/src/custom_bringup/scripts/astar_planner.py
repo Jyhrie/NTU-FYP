@@ -55,7 +55,7 @@ def a_star_exploration(static_map, costmap, start, goal):
             # 3. COST CALCULATION
             dist = math.sqrt(dx**2 + dy**2)
             
-            move_cost = dist + (c_val * 50) 
+            move_cost = dist + (math.pow(1.2, c_val) * 0.5) 
             
             # Note: This block is unreachable because of the 's_val == -1' continue above
             if s_val == -1:
