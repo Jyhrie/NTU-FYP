@@ -93,6 +93,6 @@ def reconstruct_path(came_from, start, goal):
     path.append(start)
     path.reverse()
 
-    if len(path) > 5:
-        return path[:-5]
+    if len(path) > 7:
+        return path[:-7]
     return []
