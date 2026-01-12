@@ -44,13 +44,13 @@ def a_star_exploration(static_map, costmap, start, goal):
             # 1. HARD BLOCK: Static Map says it's a wall or unknown
             if s_val == 100 or s_val == -1:
                 # Uncomment the line below to see exactly which cells are blocked
-                # print("[A* DEBUG] Static Block at {}: s_val={}".format(neighbor, s_val))
+                print("[A* DEBUG] Static Block at {}: s_val={}".format(neighbor, s_val))
                 continue
             
             # 2. FATAL BLOCK: Costmap says robot will hit something 
-            if c_val >= 99:
-                # print("[A* DEBUG] Costmap Block at {}: c_val={}".format(neighbor, c_val))
-                continue
+            # if c_val >= 99:
+            #     print("[A* DEBUG] Costmap Block at {}: c_val={}".format(neighbor, c_val))
+            #     continue
             
             # 3. COST CALCULATION
             dist = math.sqrt(dx**2 + dy**2)
