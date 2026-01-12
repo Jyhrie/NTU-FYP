@@ -50,8 +50,7 @@ def a_star_exploration(static_map, costmap, start, goal):
             
             # 3. UNKNOWN PENALTY (Treat as dangerous, but passable)
             if s_val == -1:
-                continue
-                #move_cost += 500.0 
+                move_cost += 500.0 
             
             new_cost = cost_so_far[current] + move_cost
 
