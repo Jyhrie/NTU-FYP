@@ -16,42 +16,28 @@ class FrontierSelector:
     def get_euclidean(self, p1, p2):
         return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
-    def sanitize_goal(self, start_idx, goal_idx, static_map, global_costmap):
+    def sanitize_goal(self, goal_idx, static_map, global_costmap):
             """
-            Projects a line from start to goal and finds the furthest SAFE point 
-            along that line that is NOT unknown and NOT lethal.
+            Finds the nearest cell that is both KNOWN FREE (0) and 
+            NOT LETHAL (<99) in the costmap.
             """
             h, w = static_map.shape
-            x0, y0 = start_idx
-            x1, y1 = int(goal_idx[0]), int(goal_idx[1])
+            x = max(0, min(int(goal_idx[0]), w - 1))
+            y = max(0, min(int(goal_idx[1]), h - 1))
+            
+            # If already safe, return it
+            if static_map[y][x] == 0 and global_costmap[y][x] < 99:
+                return (x, y)
 
-            # Simple Bresenham-like line sampling
-            steps = int(math.hypot(x1 - x0, y1 - y0))
-            if steps == 0: return (x0, y0)
-
-            last_safe = (x0, y0)
-
-            for i in range(steps + 1):
-                t = float(i) / steps
-                curr_x = int(x0 + t * (x1 - x0))
-                curr_y = int(y0 + t * (y1 - y0))
-                
-                # Bounds check
-                if not (0 <= curr_x < w and 0 <= curr_y < h):
-                    break
-                
-                # If we hit a wall, stop and use the last safe point
-                if static_map[curr_y][curr_x] == 100 or global_costmap[curr_y][curr_x] >= 99:
-                    break
-                    
-                # If it is known free space, update our last safe point
-                if static_map[curr_y][curr_x] == 0:
-                    last_safe = (curr_x, curr_y)
-                
-                # If we enter unknown space, we stop updating last_safe but keep 
-                # looking (in case the line goes unknown -> known again)
-                
-            return last_safe
+            # BFS-style search in a 10-pixel radius (approx 0.5m)
+            for r in range(1, 11):
+                for dx in range(-r, r + 1):
+                    for dy in range(-r, r + 1):
+                        nx, ny = x + dx, y + dy
+                        if 0 <= nx < w and 0 <= ny < h:
+                            if static_map[ny][nx] == 0 and global_costmap[ny][nx] < 99:
+                                return (nx, ny)
+            return (x, y)
     
     def select_frontier(self, start_idx, frontiers, global_costmap, static_map):
         """
@@ -77,7 +63,7 @@ class FrontierSelector:
             #     continue
 
             # Ensure the goal is actually reachable (not in -1 space)
-            safe_goal = self.sanitize_goal(start_idx, f['centroid'], static_map, global_costmap)
+            safe_goal = self.sanitize_goal(centroid, static_map, global_costmap)
             
             # Call your local A* implementation
             path = a_star_exploration(static_map, global_costmap, start_idx, safe_goal)
