@@ -19,22 +19,21 @@ def a_star_exploration(static_map, costmap, start, goal):
     best_node = start
     min_h = math.hypot(goal[0]-start[0], goal[1]-start[1])
 
-    print(f"[A* DEBUG] Starting search from {start} to {goal}")
+    # Changed f-string to .format() for compatibility
+    print("[A* DEBUG] Starting search from {} to {}".format(start, goal))
 
     while frontier_queue:
         _, current = heapq.heappop(frontier_queue)
 
         if current == goal:
-            print(f"[A* DEBUG] SUCCESS: Goal {goal} reached.")
+            print("[A* DEBUG] SUCCESS: Goal {} reached.".format(goal))
             return reconstruct_path(came_from, start, goal)
 
         # Explore 8 neighbors
         for dx, dy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]:
             neighbor = (current[0] + dx, current[1] + dy)
             
-            # Debug: Out of Bounds
             if not (0 <= neighbor[0] < cols and 0 <= neighbor[1] < rows):
-                # print(f"[A* DEBUG] Boundary: {neighbor} is outside map.")
                 continue
             
             s_val = static_map[neighbor[1]][neighbor[0]]
@@ -44,12 +43,13 @@ def a_star_exploration(static_map, costmap, start, goal):
             
             # 1. HARD BLOCK: Static Map says it's a wall or unknown
             if s_val == 100 or s_val == -1:
-                # print(f"[A* DEBUG] Static Block: {neighbor} s_val={s_val}")
+                # Uncomment the line below to see exactly which cells are blocked
+                # print("[A* DEBUG] Static Block at {}: s_val={}".format(neighbor, s_val))
                 continue
             
             # 2. FATAL BLOCK: Costmap says robot will hit something 
             if c_val >= 99:
-                # print(f"[A* DEBUG] Costmap Block: {neighbor} c_val={c_val}")
+                # print("[A* DEBUG] Costmap Block at {}: c_val={}".format(neighbor, c_val))
                 continue
             
             # 3. COST CALCULATION
@@ -57,8 +57,7 @@ def a_star_exploration(static_map, costmap, start, goal):
             
             move_cost = dist + (c_val * 10) 
             
-            # This logic below will actually never be triggered because 
-            # of the 'continue' on s_val == -1 above.
+            # Note: This block is unreachable because of the 's_val == -1' continue above
             if s_val == -1:
                 move_cost += 5.0 
             
@@ -77,7 +76,7 @@ def a_star_exploration(static_map, costmap, start, goal):
                 heapq.heappush(frontier_queue, (priority, neighbor))
                 came_from[neighbor] = current
 
-    print(f"[A* DEBUG] FAILED: Queue empty. Reached best node {best_node} (Dist to goal: {min_h:.2f})")
+    print("[A* DEBUG] FAILED: Queue empty. Reached best node {} (Dist: {:.2f})".format(best_node, min_h))
     return reconstruct_path(came_from, start, best_node)
 
 def reconstruct_path(came_from, start, goal):
