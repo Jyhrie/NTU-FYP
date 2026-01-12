@@ -19,17 +19,22 @@ def a_star_exploration(static_map, costmap, start, goal):
     best_node = start
     min_h = math.hypot(goal[0]-start[0], goal[1]-start[1])
 
+    print(f"[A* DEBUG] Starting search from {start} to {goal}")
+
     while frontier_queue:
         _, current = heapq.heappop(frontier_queue)
 
         if current == goal:
+            print(f"[A* DEBUG] SUCCESS: Goal {goal} reached.")
             return reconstruct_path(came_from, start, goal)
 
         # Explore 8 neighbors
         for dx, dy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]:
             neighbor = (current[0] + dx, current[1] + dy)
             
+            # Debug: Out of Bounds
             if not (0 <= neighbor[0] < cols and 0 <= neighbor[1] < rows):
+                # print(f"[A* DEBUG] Boundary: {neighbor} is outside map.")
                 continue
             
             s_val = static_map[neighbor[1]][neighbor[0]]
@@ -37,27 +42,25 @@ def a_star_exploration(static_map, costmap, start, goal):
 
             # --- THE NAVIGATION LOGIC ---
             
-            # 1. HARD BLOCK: Static Map says it's a wall
+            # 1. HARD BLOCK: Static Map says it's a wall or unknown
             if s_val == 100 or s_val == -1:
+                # print(f"[A* DEBUG] Static Block: {neighbor} s_val={s_val}")
                 continue
             
             # 2. FATAL BLOCK: Costmap says robot will hit something 
-            # (99 is inscribed, 100 is lethal)
             if c_val >= 99:
+                # print(f"[A* DEBUG] Costmap Block: {neighbor} c_val={c_val}")
                 continue
             
             # 3. COST CALCULATION
             dist = math.sqrt(dx**2 + dy**2)
             
-            # Weighting factors:
-            # - Use distance as base
-            # - Use costmap values to push robot to center of hallways
-            # - Use static map -1 (Unknown) as a slight penalty (exploration curiosity)
+            move_cost = dist + (c_val * 10) 
             
-            move_cost = dist + (c_val * 10) #high costmap
-            
+            # This logic below will actually never be triggered because 
+            # of the 'continue' on s_val == -1 above.
             if s_val == -1:
-                move_cost += 5.0 # Penalty for entering unknown territory
+                move_cost += 5.0 
             
             new_cost = cost_so_far[current] + move_cost
 
@@ -74,6 +77,7 @@ def a_star_exploration(static_map, costmap, start, goal):
                 heapq.heappush(frontier_queue, (priority, neighbor))
                 came_from[neighbor] = current
 
+    print(f"[A* DEBUG] FAILED: Queue empty. Reached best node {best_node} (Dist to goal: {min_h:.2f})")
     return reconstruct_path(came_from, start, best_node)
 
 def reconstruct_path(came_from, start, goal):
