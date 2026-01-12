@@ -42,7 +42,7 @@ def a_star_exploration(static_map, costmap, start, goal):
             # --- THE NAVIGATION LOGIC ---
             
             # 1. HARD BLOCK: Static Map says it's a wall or unknown
-            if s_val == 100 or s_val == -1:
+            if s_val >= 100 or s_val <= -1:
                 # Uncomment the line below to see exactly which cells are blocked
                 print("[A* DEBUG] Static Block at {}: s_val={}".format(neighbor, s_val))
                 continue
