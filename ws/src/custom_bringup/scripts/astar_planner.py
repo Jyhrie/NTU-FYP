@@ -70,8 +70,8 @@ def a_star_exploration(static_map, costmap, start, goal):
                 heapq.heappush(frontier_queue, (priority, neighbor))
                 came_from[neighbor] = current
     
-    if min_h > 10.0: 
-        return None
+    # if min_h > 10.0: 
+    #     return None
 
     # If goal unreachable or is -1, return path to the closest known free cell
     return reconstruct_path(came_from, start, best_node)
