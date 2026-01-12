@@ -73,8 +73,9 @@ class FrontierSelector:
             # (Note: a_star_exploration returns best_node if unreachable)
             if path is not None and len(path) > 0:
                 dist_to_target = self.get_euclidean(path[-1], safe_goal)
+                path_len = self.calculate_path_length_grid(path)
                 # 5.0 pixels is usually safe for a 0.05m resolution map (0.25m tolerance)
-                if dist_to_target < 5.0:
+                if dist_to_target < 5.0 and path_len > 10.0:
                     f['path'] = path
                     f['path_length'] = self.calculate_path_length_grid(path)
                     return f
