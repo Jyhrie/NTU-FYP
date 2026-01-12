@@ -55,24 +55,27 @@ def a_star_exploration(static_map, costmap, start, goal):
             # 3. COST CALCULATION
             dist = math.sqrt(dx**2 + dy**2)
             
-            move_cost = dist + (math.pow(1.2, c_val) * 0.5) 
-            
-            # Note: This block is unreachable because of the 's_val == -1' continue above
-            if s_val == -1:
-                move_cost += 5.0 
-            
+            # STEEP EXPONENTIAL: Makes hugging the wall very expensive
+            # Scaling c_val/10 keeps the math from overflowing while 1.5 is a strong curve
+            if c_val > 0:
+                penalty = math.pow(1.5, c_val / 10.0) * 5.0
+            else:
+                penalty = 0
+
+            move_cost = dist + penalty
             new_cost = cost_so_far[current] + move_cost
 
             if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
                 cost_so_far[neighbor] = new_cost
                 h = math.hypot(goal[0]-neighbor[0], goal[1]-neighbor[1])
                 
-                # Update fallback point
                 if h < min_h:
                     min_h = h
                     best_node = neighbor
                 
-                priority = new_cost + h
+                # WEIGHTED PRIORITY: 0.7 weight on H reduces the "greedy" straight-line pull
+                priority = new_cost + (h * 0.7)
+                
                 heapq.heappush(frontier_queue, (priority, neighbor))
                 came_from[neighbor] = current
 
