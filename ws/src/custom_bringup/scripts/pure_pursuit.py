@@ -127,9 +127,9 @@ class PurePursuitController:
                                 math.cos(goal_direction - yaw))
 
         # thresholds
-        dist_tol_far = 0.15    # within 0.2 m -> goal reached regardless of heading
-        dist_tol_near = 0.3   # within 0.5 m AND aligned
-        yaw_tol = 0.2         # radians (~11 degrees)
+        dist_tol_far = 0.07    # within 0.2 m -> goal reached regardless of heading
+        dist_tol_near = 0.1   # within 0.5 m AND aligned
+        yaw_tol = 0.1         # radians (~11 degrees)
 
         # goal conditions
         if dist_to_goal <= dist_tol_far:
