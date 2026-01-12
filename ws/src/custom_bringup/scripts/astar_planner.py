@@ -25,6 +25,14 @@ def a_star_exploration(static_map, costmap, start, goal):
 
         for dx, dy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]:
             neighbor = (current[0] + dx, current[1] + dy)
+
+            # NEW: Block diagonal movement if it cuts through a wall corner
+            if dx != 0 and dy != 0:
+                # If we are moving diagonally, check the two cardinal neighbors
+                # that form the 'corner'. If either is a wall, don't cut the corner.
+                if static_map[current[1]][current[0] + dx] == 100 or \
+                   static_map[current[1] + dy][current[0]] == 100:
+                    continue
             
             if not (0 <= neighbor[0] < cols and 0 <= neighbor[1] < rows):
                 continue
