@@ -50,7 +50,8 @@ def a_star_exploration(static_map, costmap, start, goal):
             
             # 3. UNKNOWN PENALTY (Treat as dangerous, but passable)
             if s_val == -1:
-                move_cost += 500.0 
+                continue
+                #move_cost += 500.0 
             
             new_cost = cost_so_far[current] + move_cost
 
@@ -69,7 +70,7 @@ def a_star_exploration(static_map, costmap, start, goal):
                 heapq.heappush(frontier_queue, (priority, neighbor))
                 came_from[neighbor] = current
     
-    if min_h > 5.0: 
+    if min_h > 10.0: 
         return None
 
     # If goal unreachable or is -1, return path to the closest known free cell
