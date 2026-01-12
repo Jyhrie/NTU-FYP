@@ -83,16 +83,9 @@ def reconstruct_path(came_from, start, goal):
     path = []
     curr = goal
     if goal not in came_from: return []
-    
     while curr != start:
         path.append(curr)
         curr = came_from[curr]
     path.append(start)
     path.reverse()
-
-    # If the path is long, snip it. 
-    # If it's short, keep it so the robot at least reaches the edge.
-    if len(path) > 5:
-        return path[:-5]
-    
     return path
