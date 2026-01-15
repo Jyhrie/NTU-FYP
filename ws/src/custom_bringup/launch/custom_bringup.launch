@@ -61,7 +61,7 @@
 
 
     <!-- launch astrapro from their launchfile, too much stuff to copy into here, -->
-    <include file="$(find astra_camera)/launch/astrapro.launch"/>
+    <!-- <include file="$(find astra_camera)/launch/astrapro.launch"/> -->
 
     <!-- <node pkg="tf" type="static_transform_publisher" name="base_footprint_to_base_link"
       args="0 0 0 0 0 0 /base_footprint /base_link 100"/> -->
@@ -102,6 +102,4 @@
         <remap from="scan" to="/scan"/>
     </node> -->
 
-    <!-- <node pkg="custom_bringup" type="local_costmap_new.py" name="costmap" required="true" output="screen">
-    </node> -->
 </launch>
