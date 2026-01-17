@@ -61,10 +61,10 @@
 
 
     <!-- launch astrapro from their launchfile, too much stuff to copy into here, -->
-    <!-- <include file="$(find astra_camera)/launch/astrapro.launch"/> -->
+    <include file="$(find astra_camera)/launch/astrapro.launch"/>
 
-    <!-- <node pkg="tf" type="static_transform_publisher" name="base_footprint_to_base_link"
-      args="0 0 0 0 0 0 /base_footprint /base_link 100"/> -->
+    <!-- republish raw image to compressed image topic -->
+    <node name="image_compressor" pkg="image_transport" type="republish" args="raw in:=/camera/rgb/image_raw compressed out:=/camera/rgb/image_compressed" output="screen" />
 
     <!-- add physical offset to camera-->
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_camera"
