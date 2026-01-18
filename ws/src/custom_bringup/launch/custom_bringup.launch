@@ -17,6 +17,8 @@
     <group unless="$(arg use_gui)">
         <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
     </group>
+    
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
 
     <node pkg="transbot_bringup" type="transbot_driver.py" name="transbot_node" required="true" output="screen">
