@@ -68,7 +68,7 @@
         <arg name="info" value="true"/>
         <arg name="pipeline" value="ompl"/>
         <arg name="load_robot_description" value="true"/>
-        <arg name="execution_type" value="" /> 
+        <arg name="execution_type" value="interpolate" /> 
     </include>
 
     <!-- republish raw image to compressed image topic -->
