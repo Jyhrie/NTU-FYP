@@ -59,7 +59,7 @@ def move_arm():
         j9.angle = 180 # 180 degrees (Closed tight)
         j9.run_time = 1000
 
-        multi_msg.joint = [j7, j9] # Add both to the list
+        multi_msg.joint = [j7, j8, j9] # Add both to the list
 
         rospy.loginfo("Moving Arm Up and Closing Claw...")
         pub.publish(multi_msg)
