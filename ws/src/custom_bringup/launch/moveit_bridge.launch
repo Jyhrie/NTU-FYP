@@ -10,7 +10,7 @@
     <include ns="move_group" file="$(find transbot_config_astra)/launch/trajectory_execution.launch.xml">
         <arg name="moveit_manage_controllers" value="true" />
         <arg name="moveit_controller_manager" value="transbot_description" />
-        </include>
+    </include>
 
     <node name="move_group" pkg="moveit_ros_move_group" type="move_group" respawn="false" output="screen">
         <param name="allow_trajectory_execution" value="true"/>
