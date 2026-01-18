@@ -3,6 +3,7 @@
 
 import rospy
 import time
+import sys
 # We must import the specific message types your driver checks for
 from transbot_msgs.msg import Arm, Joint 
 
@@ -44,7 +45,7 @@ def move_arm():
         # Joint 1: Lift the main arm (ID 7)
         j7 = Joint()
         j7.id = 7
-        j7.angle = 280 # Middle position
+        j7.angle = 100 # Middle position
         j7.run_time = 1000 
 
         # Joint 1: Lift the main arm (ID 7)
