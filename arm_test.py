@@ -11,6 +11,7 @@ NODE_NAME = 'arm_commander'
 TOPIC_NAME = '/TargetAngle' # Must match the subscriber in your driver
 
 def move_arm():
+    
     rospy.init_node(NODE_NAME, anonymous=False)
     
     # Publisher for the Arm message
@@ -45,7 +46,7 @@ def move_arm():
         # Joint 1: Lift the main arm (ID 7)
         j7 = Joint()
         j7.id = 7
-        j7.angle = 100 # Middle position
+        j7.angle = 180 # Middle position
         j7.run_time = 1000 
 
         # Joint 1: Lift the main arm (ID 7)
