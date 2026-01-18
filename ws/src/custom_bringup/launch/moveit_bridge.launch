@@ -1,21 +1,17 @@
 <launch>
-    <include file="$(find transbot_config_astra)/launch/planning_context.launch">
-        <arg name="load_robot_description" value="false" />
-    </include>
+  <include file="$(find transbot_config_astra)/launch/planning_context.launch">
+    <arg name="load_robot_description" value="false" />
+  </include>
 
-    <include ns="move_group" file="$(find transbot_config_astra)/launch/planning_pipeline.launch.xml">
-        <arg name="pipeline" value="ompl" />
-    </include>
-
-    <include ns="move_group" file="$(find transbot_config_astra)/launch/trajectory_execution.launch.xml">
-        <arg name="moveit_manage_controllers" value="true" />
-        <arg name="moveit_controller_manager" value="transbot_description" />
-    </include>
-
-    <node name="move_group" pkg="moveit_ros_move_group" type="move_group" respawn="false" output="screen">
-        <param name="allow_trajectory_execution" value="true"/>
-        <param name="max_safe_path_cost" value="1"/>
-        <param name="jiggle_fraction" value="0.05" />
-        <param name="planning_scene_monitor/publish_planning_scene" value="true" />
-    </node>
+  <rosparam file="$(find transbot_config_astra)/config/ros_controllers.yaml" command="load"/>
+  
+  <node name="move_group" pkg="moveit_ros_move_group" type="move_group" respawn="false" output="screen">
+    <param name="planning_plugin" value="ompl_interface/OMPLPlanner"/>
+    <param name="request_adapters" value="default_planner_request_adapters/AddTimeParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints"/>
+    
+    <param name="allow_trajectory_execution" value="true"/>
+    <param name="moveit_controller_manager" value="moveit_simple_controller_manager/MoveItSimpleControllerManager"/>
+    
+    <param name="capabilities" value="move_group/MoveGroupCartesianPathService move_group/MoveGroupKinematicsService move_group/MoveGroupMoveAction move_group/MoveGroupPlanService move_group/MoveGroupStateValidationService move_group/MoveGroupGetPlanningSceneService"/>
+  </node>
 </launch>
