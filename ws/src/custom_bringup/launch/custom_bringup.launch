@@ -9,15 +9,16 @@
 
     <param name="robot_description"
            command="$(find xacro)/xacro '$(find transbot_description)/urdf/transbot_$(arg robot_model).urdf'"/>
-    <group if="$(arg use_gui)">
+           
+    <!-- <group if="$(arg use_gui)">
         <node name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui"/>
-    </group>
+    </group> -->
     <!-- GUI adjustable interface -->
 
-    <group unless="$(arg use_gui)">
+    <!-- <group unless="$(arg use_gui)">
         <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
-    </group>
-    
+    </group> -->
+
     <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
 
