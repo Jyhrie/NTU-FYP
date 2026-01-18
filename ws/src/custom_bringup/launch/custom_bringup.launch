@@ -62,6 +62,15 @@
     <!-- launch astrapro from their launchfile, too much stuff to copy into here, -->
     <include file="$(find astra_camera)/launch/astrapro.launch"/>
 
+    <include file="$(find transbot_config_astra)/launch/move_group.launch">
+        <arg name="allow_trajectory_execution" value="true"/>
+        <arg name="fake_execution" value="false"/> 
+        <arg name="info" value="true"/>
+        <arg name="pipeline" value="ompl"/>
+        <arg name="load_robot_description" value="true"/>
+        <arg name="execution_type" value="" /> 
+    </include>
+
     <!-- republish raw image to compressed image topic -->
     <node name="image_compressor" pkg="image_transport" type="republish" args="raw in:=/camera/rgb/image_raw compressed out:=/camera/rgb/image_compressed" output="screen" />
 
@@ -95,12 +104,7 @@
     </node>
 
 
-    <include file="$(find transbot_config_astra)/launch/move_group.launch">
-        <arg name="allow_trajectory_execution" value="true"/>
-        <arg name="fake_execution" value="false"/>
-        <arg name="info" value="true"/>
-        <arg name="load_robot_description" value="true"/>
-    </include>
+
 
     <!-- <node pkg="costmap_2d" type="costmap_2d_node" name="local_costmap" output="screen">
         <rosparam command="load" file="$(find custom_bringup)/config/costmap_common_params.yaml"/>
