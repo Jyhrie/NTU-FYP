@@ -88,7 +88,6 @@
 
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
         <rosparam file="$(find custom_bringup)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
-        
         <rosparam file="$(find custom_bringup)/config/global_costmap_params.yaml" command="load" />
 
         <param name="global_costmap/static_layer/map_topic" value="/map"/>
@@ -98,8 +97,8 @@
 
     <include file="$(find transbot_config_astra)/launch/move_group.launch">
         <arg name="allow_trajectory_execution" value="true"/>
-        <arg name="fake_execution" value="false"/> <arg name="info" value="true"/>
-        <arg name="pipeline" value="ompl"/>
+        <arg name="fake_execution" value="false"/>
+        <arg name="info" value="true"/>
         <arg name="load_robot_description" value="true"/>
     </include>
 
