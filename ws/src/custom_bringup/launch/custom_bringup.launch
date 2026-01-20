@@ -63,7 +63,9 @@
     </node>
 
     <!-- launch astrapro from their launchfile, too much stuff to copy into here, -->
-    <include file="$(find astra_camera)/launch/astrapro.launch"/>
+    <include file="$(find astra_camera)/launch/astrapro.launch">
+        <arg name="depth_align" value="true"/>
+    </include>
     <include file="$(find custom_bringup)/launch/moveit_bridge.launch" />
 
     <!-- republish raw image to compressed image topic -->
