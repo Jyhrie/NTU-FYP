@@ -68,7 +68,9 @@
 
     <!-- republish raw image to compressed image topic -->
     <node name="image_compressor" pkg="image_transport" type="republish" args="raw in:=/camera/rgb/image_raw compressed out:=/camera/rgb/image_compressed" output="screen" />
-    <node name="depth_compressor" pkg="image_transport" type="republish" args="raw in:=/camera/depth/image_raw compressed out:=/camera/depth/image_compressed" output="screen" />
+    <node name="depth_compressor" pkg="image_transport" type="republish" 
+      args="raw in:=/camera/depth/image_raw compressedDepth out:=/camera/depth/compressed" 
+      output="screen" />
 
     <!-- add physical offset to camera-->
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_camera"
