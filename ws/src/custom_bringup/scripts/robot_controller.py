@@ -117,11 +117,11 @@ class Controller:
                 self.state_init()
                 pass
 
-            elif self.state == States.REQUEST_FRONTIER_PATH:
+            elif self.state.state == States.REQUEST_FRONTIER_PATH:
                 self.state_request_frontier_path()
                 pass
             
-            elif self.state == States.NAVIGATE:
+            elif self.state.state == States.NAVIGATE:
                 self.state_navigate()
                 pass
 
