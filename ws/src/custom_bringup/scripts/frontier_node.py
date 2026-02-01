@@ -35,7 +35,7 @@ class FrontierNode:
         self.global_costmap = None
 
         #classes
-        self.detector = FrontierDetector()
+        self.detector = None
 
     def controller_cb(self, msg):
         if msg == "request_frontiers":
@@ -43,6 +43,14 @@ class FrontierNode:
             #self.trigger()
     
     def map_cb(self, msg):
+        if self.detector is None:
+            self.detector = FrontierDetector(
+                map_width=msg.info.width,
+                map_height=msg.info.height,
+                resolution=msg.info.resolution,
+                origin_x=msg.info.origin.position.x,
+                origin_y=msg.info.origin.position.y
+            )
         pass
 
     def global_costmap_cb(self, msg):
