@@ -74,7 +74,7 @@ class Controller:
             self.state.state = nxt_state
 
     def state_init(self):
-        self.init_complete == True
+        self.init_complete = True
         if self.init_complete == True:
             self.transition(States.REQUEST_FRONTIER_PATH)
         pass
