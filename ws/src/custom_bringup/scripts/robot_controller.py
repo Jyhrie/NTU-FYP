@@ -108,6 +108,7 @@ class Controller:
     def run(self):
         rospy.sleep(1.0)
         while not rospy.is_shutdown():
+            print(self.state.state.name)
             if self.state.state == States.INIT:
                 self.state_init()
                 pass
