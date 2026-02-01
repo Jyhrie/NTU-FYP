@@ -10,8 +10,8 @@ import tf2_ros
 import tf
 import numpy as np
 from nav_msgs.msg import OccupancyGrid
-from frontier_detector import FrontierDetector
-from astar_planner import a_star_exploration
+from dependencies.frontier_detector import FrontierDetector
+from dependencies.astar_planner import a_star_exploration
 
 class FrontierNode:
 
