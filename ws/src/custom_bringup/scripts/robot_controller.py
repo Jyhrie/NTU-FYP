@@ -28,7 +28,6 @@ class State:
         pass
 
 class Controller:
-
     def __init__(self):
 
         rospy.init_node("python_controller")
@@ -122,5 +121,10 @@ class Controller:
                 pass
 
             self.rate.sleep()
+
+
+if __name__ == "__main__":
+    ctrl = Controller()
+    ctrl.run()
 
     
