@@ -40,6 +40,12 @@ class FrontierNode:
         if msg == "request_frontiers":
             print("Request Received! Fetching Frontiers")
             #self.trigger()
+    
+    def map_cb(self, msg):
+        pass
+
+    def global_costmap_cb(self, msg):
+        pass
 
     def trigger(self):
         if self.map == None:
