@@ -130,3 +130,7 @@ class FrontierNode:
 
     def costmap_callback(self, msg):
         self.global_costmap = msg
+
+
+if __name__ == "__main__":
+    node = FrontierNode()
