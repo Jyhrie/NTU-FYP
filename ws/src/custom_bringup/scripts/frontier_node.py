@@ -17,6 +17,7 @@ class FrontierNode:
 
     def __init__(self):
         
+        rospy.init_node("frontier_node")
         #in
         self.global_request_topic = rospy.Subscriber("/controller/global", String, self.controller_cb)
 
