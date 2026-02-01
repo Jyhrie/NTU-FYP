@@ -38,7 +38,7 @@ class Controller:
 
         self.fontier_node_sub = rospy.Subscriber("/frontier_node_reply", Path, self.frontier_node_cb)
         self.navigation_node_sub = rospy.Subscriber("/navigation_node_reply", String, self.navigation_node_cb)
-        self.pc_node_sub = rospy.Subscriber("//controller/global", String, self.pc_node_cb)
+        self.pc_node_sub = rospy.Subscriber("/controller/global", String, self.pc_node_cb)
         #self.pure_pursuit_sub = rospy.Subscriber("/pure_pursuit_message", String, self.pure_pursuit_cb)
 
         self.request_sent = False
