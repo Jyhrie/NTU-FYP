@@ -18,6 +18,14 @@ class FrontierNode:
     def __init__(self):
         
         rospy.init_node("frontier_node")
+
+        #vars
+        self.map = None
+        self.global_costmap = None
+
+        #classes
+        self.detector = None
+
         #in
         self.global_request_topic = rospy.Subscriber("/controller/global", String, self.controller_cb)
 
@@ -30,12 +38,7 @@ class FrontierNode:
         #out
         self.frontier_node_pub = rospy.Publisher("/frontier_node_message", String, queue_size=1)
 
-        #vars
-        self.map = None
-        self.global_costmap = None
 
-        #classes
-        self.detector = None
 
     def controller_cb(self, msg):
         if msg == "request_frontiers":
