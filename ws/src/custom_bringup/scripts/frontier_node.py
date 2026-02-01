@@ -41,6 +41,7 @@ class FrontierNode:
 
 
     def controller_cb(self, msg):
+        print(msg)
         if msg == "request_frontiers":
             print("Request Received! Fetching Frontiers")
             #self.trigger()
