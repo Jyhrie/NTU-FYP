@@ -47,6 +47,7 @@ class Controller:
         self.request_timeout = 2
 
         self.prev_state = None
+        self.init_complete = False
         
         self.state = State(state=States.INIT)
         self.rate = rospy.Rate(5)
@@ -73,6 +74,7 @@ class Controller:
             self.state.state = nxt_state
 
     def state_init(self):
+        self.init_complete == True
         if self.init_complete == True:
             self.transition(States.REQUEST_FRONTIER_PATH)
         pass
