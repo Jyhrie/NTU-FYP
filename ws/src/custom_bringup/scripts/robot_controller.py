@@ -68,7 +68,7 @@ class Controller:
     def interrupt(self, clear = False):
         pass
 
-    def transition(self, nxt_state: States):
+    def transition(self, nxt_state):
         if nxt_state != self.state.state:
             print("Transitioning", self.state.state.name, ">", nxt_state.name)
             self.state.state = nxt_state
