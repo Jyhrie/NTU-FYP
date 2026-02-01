@@ -80,6 +80,7 @@ class Controller:
         pass
 
     def state_request_frontier_path(self):
+        print("Trying to Publish!")
         self.global_request.publish("requesting_frontier")
         if not self.request_sent:
             #self.global_request.pub("requesting_frontier")
