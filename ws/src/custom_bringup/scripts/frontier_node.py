@@ -81,15 +81,17 @@ class FrontierNode:
         
         x,y,_ = self.get_robot_pose()
         frontiers = self.detector.get_frontiers(x,y, self.map.data)
+        print(frontiers)
         start = self.pose_to_cell(x,y, self.map)
         paths = []
-        for frontier in frontiers:
-            path = a_star_exploration(self.map, self.global_costmap, start, frontier)
-            paths.append(path)
+        if frontiers:
+            for frontier in frontiers:
+                path = a_star_exploration(self.map, self.global_costmap, start, frontier)
+                paths.append(path)
 
-        sel_path = self.get_shortest_path(paths)
-        print(sel_path)
-        self.frontier_node_pub.publish(sel_path)
+            sel_path = self.get_shortest_path(paths)
+            print(sel_path)
+            self.frontier_node_pub.publish(sel_path)
         return
 
     def get_robot_pose(self):
