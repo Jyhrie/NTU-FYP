@@ -86,6 +86,13 @@ class FrontierDetector:
 
 
     def get_frontier_cell_groups_wfd(self, robot_x, robot_y, raw_data):
+        expected_size = self.height * self.width
+        actual_size = len(raw_data)
+
+        if actual_size != expected_size:
+            print("Frontier Detector: Map data size (%d) does not match expected size (%d). Skipping...", actual_size, expected_size)
+            return []
+
         grid = np.array(raw_data).reshape((self.height, self.width))
         
         # Track visited cells across the whole process
