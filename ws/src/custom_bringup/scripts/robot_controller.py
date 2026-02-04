@@ -51,6 +51,8 @@ class Controller:
         
         self.state = State(state=States.INIT)
         self.rate = rospy.Rate(5)
+
+        print("Initialization Complete, Node is Ready!")
         pass
 
     def frontier_node_cb(self, msg):

@@ -38,10 +38,12 @@ class FrontierNode:
         #out
         self.frontier_node_pub = rospy.Publisher("/frontier_node_message", String, queue_size=1)
 
+        print("Initialization Complete, Node is Ready!")
+
 
     def controller_cb(self, msg):
         print(msg)
-        if msg.data == "request_frontiers":
+        if msg.data == "request_frontier":
             print("Request Received! Fetching Frontiers")
     
     def map_cb(self, msg):
