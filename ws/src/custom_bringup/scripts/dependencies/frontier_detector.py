@@ -20,11 +20,14 @@ class FrontierDetector:
         self.UNKNOWN = -1
 
     def get_frontiers(self, x, y, map):
-        print(x, y, map)
         unfiltered_frontiers = self.get_frontier_cell_groups_wfd(x, y, map)
         filtered_clusters = self.filter_cluster(unfiltered_frontiers)
         centroids = self.frontier_to_centroid(filtered_clusters)
 
+        print(unfiltered_frontiers)
+        print(filtered_clusters)
+        print(centroids)
+        
         final_targets = []
         for i in range(len(centroids)):
             target = self.get_nearest_valid_cell(
