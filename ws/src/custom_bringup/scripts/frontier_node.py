@@ -59,7 +59,7 @@ class FrontierNode:
             self.trigger()
     
     def map_cb(self, msg):
-        self.map = msg
+        self.map = msg.data
         if self.detector is None:
             self.detector = FrontierDetector(
                 map_width=msg.info.width,
