@@ -74,6 +74,8 @@ class FrontierNode:
         pass
 
     def trigger(self):
+
+        print(self.map)
         if self.map == None:
             print("Early Return due to No Map")
             return
