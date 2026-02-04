@@ -20,7 +20,7 @@ class FrontierDetector:
         self.UNKNOWN = -1
 
     def get_frontiers(self, x, y, map):
-        unfiltered_frontiers = self.get_frontier_cell_groups_wfd(x, y, map)
+        unfiltered_frontiers = self.get_frontier_cell_groups_wfd(x, y, map) 
         filtered_clusters = self.filter_cluster(unfiltered_frontiers)
         centroids = self.frontier_to_centroid(filtered_clusters)
 
@@ -90,35 +90,76 @@ class FrontierDetector:
 
 
     def get_frontier_cell_groups_wfd(self, robot_x, robot_y, raw_data):
-
-        grid = np.array(raw_data).reshape((self.height, self.width))
+        if hasattr(raw_data, 'data'):
+            raw_data = raw_data.data
         
-        # Track visited cells across the whole process
+        actual_size = len(raw_data)
+        expected_size = self.height * self.width
+        
+        if actual_size != expected_size:
+            print("!!! SIZE ERROR: Expected {} got {} !!!".format(expected_size, actual_size))
+            return []
+
+        # Reshape and check starting cell value
+        grid = np.array(raw_data).reshape((self.height, self.width))
+        start_val = grid[int(robot_y), int(robot_x)]
+        
+        print(">>>> STARTING WFD DEBUG <<<<")
+        print("Robot Pos: Grid({}, {}) | Map Value at Start: {}".format(int(robot_x), int(robot_y), start_val))
+        print("Map Settings: FREE={}, UNKNOWN={}, OCCUPIED={}".format(self.FREE, self.UNKNOWN, self.OCCUPIED))
+
         visited_map = np.zeros_like(grid, dtype=bool)
         all_clusters = []
         
-        # The primary queue for BFS 1 (starting at the robot)
         queue_map = deque([(int(robot_x), int(robot_y))])
         visited_map[int(robot_y), int(robot_x)] = True
 
+        cells_processed = 0
+
         while queue_map:
             curr_x, curr_y = queue_map.popleft()
+            cells_processed += 1
+            
+            # Periodic summary so you don't lose track of the flood
+            if cells_processed % 100 == 0:
+                print("-- Processed {} cells... Queue size: {} --".format(cells_processed, len(queue_map)))
 
-            # Check all 8 neighbors
             for nx, ny in self.get_neighbors(curr_x, curr_y):
+                val = grid[ny, nx]
+                
+                # FLOOD PRINT: This will print for every single neighbor check
+                # print("Checking Neighbor ({}, {}): Value={}, Visited={}".format(nx, ny, val, visited_map[ny, nx]))
+
                 if not visited_map[ny, nx]:
-                    # 1. If it's a frontier pixel, start BFS 2 to find the whole cluster
-                    if self.is_frontier_pixel(grid, nx, ny):
-                        # self.bfs_cluster will mark pixels as visited so we don't find them twice
+                    is_frontier = self.is_frontier_pixel(grid, nx, ny)
+                    
+                    if is_frontier:
+                        print("!!! FOUND FRONTIER AT ({}, {}) !!! Starting Cluster BFS...".format(nx, ny))
                         new_cluster = self.bfs_cluster(grid, nx, ny, visited_map)
+                        print("Cluster BFS finished. Found {} pixels.".format(len(new_cluster)))
+                        
                         if len(new_cluster) >= 3:
                             all_clusters.append(new_cluster)
-                    
-                    # 2. If it's free space, keep expanding the Map-BFS
-                    elif grid[ny, nx] == self.FREE:
+                            print("Cluster ADDED. Total clusters now: {}".format(len(all_clusters)))
+                        else:
+                            print("Cluster REJECTED (too small).")
+                        
+                        # Mark visited to prevent infinite loops
                         visited_map[ny, nx] = True
                         queue_map.append((nx, ny))
-                        
+
+                    elif val == self.FREE:
+                        # Only expand into FREE space
+                        visited_map[ny, nx] = True
+                        queue_map.append((nx, ny))
+                    else:
+                        # It's unknown or occupied, we don't expand but we mark visited
+                        visited_map[ny, nx] = True
+
+        print(">>>> WFD COMPLETE <<<<")
+        print("Total Cells Searched: {}".format(cells_processed))
+        print("Final Cluster Count: {}".format(len(all_clusters)))
+        
         return all_clusters
         
     def bfs_cluster(self, grid, start_x, start_y, visited):
