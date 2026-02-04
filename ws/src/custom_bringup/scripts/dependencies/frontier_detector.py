@@ -16,7 +16,9 @@ class FrontierDetector:
         self.robot_radius = 0.15 
         self.min_frontier_width = self.robot_radius * 2.0 
         
+        # Standard ROS OccupancyGrid values
         self.FREE = 0
+        self.OCCUPIED = 100
         self.UNKNOWN = -1
 
     def get_frontiers(self, x, y, map):
