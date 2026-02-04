@@ -20,7 +20,7 @@ class FrontierDetector:
         self.UNKNOWN = -1
 
     def get_frontiers(self, x, y, map):
-        unfiltered_frontiers = self.get_frontier_cell_groups_wfd(self, x, y, map)
+        unfiltered_frontiers = self.get_frontier_cell_groups_wfd(x, y, map)
         filtered_clusters = self.filter_cluster(unfiltered_frontiers)
         centroids = self.frontier_to_centroid(filtered_clusters)
 
