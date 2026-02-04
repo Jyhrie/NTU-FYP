@@ -59,6 +59,7 @@ class FrontierNode:
             self.trigger()
     
     def map_cb(self, msg):
+        print("Map Instance Received.")
         self.map_data = msg
         if self.detector is None:
             self.detector = FrontierDetector(
