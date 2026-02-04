@@ -1,5 +1,6 @@
 import heapq
 import math
+import numpy as np
 
 def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, height=800):
     # --- JETSON NANO MEMORY FIX ---
