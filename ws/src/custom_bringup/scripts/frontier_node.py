@@ -40,7 +40,7 @@ class FrontierNode:
 
         self.is_active = False
         self.last_trigger_time = rospy.Time(0)
-        self.cooldown_duration = rospy.Duration(2.0) # 2 seconds
+        self.cooldown_duration = rospy.Duration(2.5) # 2 seconds
         print("Initialization Complete, Node is Ready!")
 
 
@@ -75,6 +75,7 @@ class FrontierNode:
 
     def trigger(self):
         if self.map == None:
+            print("Early Return due to No Map")
             return
         
         x,y,_ = self.get_robot_pose()
