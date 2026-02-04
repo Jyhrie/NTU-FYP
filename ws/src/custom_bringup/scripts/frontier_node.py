@@ -59,7 +59,7 @@ class FrontierNode:
             self.trigger()
     
     def map_cb(self, msg):
-        self.map = msg.data
+        self.map_data = msg
         if self.detector is None:
             self.detector = FrontierDetector(
                 map_width=msg.info.width,
@@ -78,8 +78,8 @@ class FrontierNode:
             return
         
         x,y,_ = self.get_robot_pose()
-        frontiers = self.detector.get_frontiers(x,y, self.map)
-        start = self.pose_to_cell(x,y,self.map)
+        frontiers = self.detector.get_frontiers(x,y, self.map.data)
+        start = self.pose_to_cell(x,y,self.map.data)
         paths = []
         for frontier in frontiers:
             path = a_star_exploration(self.map, self.global_costmap, start, frontier)
@@ -109,7 +109,6 @@ class FrontierNode:
             return None
         
     def pose_to_cell(self, x, y, map):
-
         origin_x = map.info.origin.position.x
         origin_y = map.info.origin.position.y
         resolution = map.info.resolution
