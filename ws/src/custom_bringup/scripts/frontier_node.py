@@ -38,14 +38,25 @@ class FrontierNode:
         #out
         self.frontier_node_pub = rospy.Publisher("/frontier_node_message", String, queue_size=1)
 
+        self.is_active = False
+        self.last_trigger_time = rospy.Time(0)
+        self.cooldown_duration = rospy.Duration(2.0) # 2 seconds
         print("Initialization Complete, Node is Ready!")
 
 
     def controller_cb(self, msg):
-        print(msg)
+        current_time = rospy.Time.now()
+
         if msg.data == "request_frontier":
-            self.trigger()
+            if self.is_active and (current_time - self.last_trigger_time) < self.cooldown_duration:
+                rospy.loginfo("Trigger ignored: Cooldown in progress.")
+                return
+
+            # If we passed the check, trigger the logic
             print("Request Received! Fetching Frontiers")
+            self.is_active = True
+            self.last_trigger_time = current_time
+            self.trigger()
     
     def map_cb(self, msg):
         self.map = msg
