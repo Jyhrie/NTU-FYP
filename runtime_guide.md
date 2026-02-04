@@ -29,6 +29,8 @@ rostopic pub --once /controller_main std_msgs/String "process_frontiers"
 roslaunch custom_bringup custom_bringup.launch
 roslaunch rosbridge_server rosbridge_websocket.launch
 roslaunch custom_bringup gmapping.launch
+# OR
+roslaunch custom_bringup master.launch
 
 # Custom Nodes
 rosrun custom_bringup robot_controller.py

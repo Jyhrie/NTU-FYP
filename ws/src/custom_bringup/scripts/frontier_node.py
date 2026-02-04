@@ -39,14 +39,13 @@ class FrontierNode:
         self.frontier_node_pub = rospy.Publisher("/frontier_node_message", String, queue_size=1)
 
 
-
     def controller_cb(self, msg):
         print(msg)
-        if msg == "request_frontiers":
+        if msg.data == "request_frontiers":
             print("Request Received! Fetching Frontiers")
-            #self.trigger()
     
     def map_cb(self, msg):
+        self.map = msg
         if self.detector is None:
             self.detector = FrontierDetector(
                 map_width=msg.info.width,
@@ -72,7 +71,8 @@ class FrontierNode:
             paths.append(path)
 
         sel_path = self.get_shortest_path(paths)
-        self.frontier_node_pub.pub(sel_path)
+        print(sel_path)
+        self.frontier_node_pub.publish(sel_path)
         return
 
     def get_robot_pose(self):
@@ -135,20 +135,6 @@ class FrontierNode:
             # Distance between consecutive waypoints
             length += math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
         return length
-
-    def map_callback(self, msg):
-        self.map = msg
-        # if self.detector is None:
-        #     self.detector = FrontierDetector(
-        #         map_width=msg.info.width,
-        #         map_height=msg.info.height,
-        #         resolution=msg.info.resolution,
-        #         origin_x=msg.info.origin.position.x,
-        #         origin_y=msg.info.origin.position.y
-        #     )
-
-    def costmap_callback(self, msg):
-        self.global_costmap = msg
 
 
 if __name__ == "__main__":
