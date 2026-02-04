@@ -60,7 +60,7 @@ class FrontierNode:
     
     def map_cb(self, msg):
         print("Map Instance Received.")
-        self.map_data = msg
+        self.map = msg
         if self.detector is None:
             self.detector = FrontierDetector(
                 map_width=msg.info.width,
@@ -75,8 +75,6 @@ class FrontierNode:
         pass
 
     def trigger(self):
-
-        print(self.map)
         if self.map == None:
             print("Early Return due to No Map")
             return
