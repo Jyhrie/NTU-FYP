@@ -20,6 +20,7 @@ class FrontierDetector:
         self.UNKNOWN = -1
 
     def get_frontiers(self, x, y, map):
+        print(x, y, map)
         unfiltered_frontiers = self.get_frontier_cell_groups_wfd(x, y, map)
         filtered_clusters = self.filter_cluster(unfiltered_frontiers)
         centroids = self.frontier_to_centroid(filtered_clusters)
@@ -86,12 +87,6 @@ class FrontierDetector:
 
 
     def get_frontier_cell_groups_wfd(self, robot_x, robot_y, raw_data):
-        expected_size = self.height * self.width
-        actual_size = len(raw_data)
-
-        if actual_size != expected_size:
-            print("Frontier Detector: Map data size (%d) does not match expected size (%d). Skipping...", actual_size, expected_size)
-            return []
 
         grid = np.array(raw_data).reshape((self.height, self.width))
         
