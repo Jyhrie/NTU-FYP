@@ -80,9 +80,10 @@ class FrontierNode:
             return
         
         x,y,_ = self.get_robot_pose()
-        frontiers = self.detector.get_frontiers(x,y, self.map.data)
-        print(frontiers)
         start = self.pose_to_cell(x,y, self.map)
+        x_start, y_start = start
+        frontiers = self.detector.get_frontiers(x_start, y_start, self.map.data)
+        print(frontiers)
         paths = []
         if frontiers:
             for frontier in frontiers:
