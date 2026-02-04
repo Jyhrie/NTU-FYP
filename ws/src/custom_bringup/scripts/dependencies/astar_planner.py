@@ -1,25 +1,24 @@
 import heapq
 import math
 
-def a_star_exploration(static_map, costmap, start, goal):
-    """
-    static_map: -1 (Unknown), 0 (Free), 100 (Occupied)
-    costmap: 0-100 (0: Free, 1-98: Inflated, 99-100: Fatal)
-    """
-    rows = len(static_map)
-    cols = len(static_map[0])
+def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, height=800):
+    # --- JETSON NANO MEMORY FIX ---
+    # Convert flat tuples to 2D NumPy arrays (O(N) conversion, but allows O(1) indexing)
+    static_map = np.array(static_map_raw).reshape((height, width))
+    costmap = np.array(costmap_raw).reshape((height, width))
+    
+    rows, cols = height, width
     
     frontier_queue = []
+    # Priority, current_node
     heapq.heappush(frontier_queue, (0, start))
     
     came_from = {start: None}
     cost_so_far = {start: 0}
     
-    # Track the best node reached in case goal is unreachable
     best_node = start
     min_h = math.hypot(goal[0]-start[0], goal[1]-start[1])
 
-    # Changed f-string to .format() for compatibility
     print("[A* DEBUG] Starting search from {} to {}".format(start, goal))
 
     while frontier_queue:
@@ -33,37 +32,33 @@ def a_star_exploration(static_map, costmap, start, goal):
         for dx, dy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]:
             neighbor = (current[0] + dx, current[1] + dy)
             
+            # Boundary check
             if not (0 <= neighbor[0] < cols and 0 <= neighbor[1] < rows):
                 continue
             
-            s_val = static_map[neighbor[1]][neighbor[0]]
-            c_val = costmap[neighbor[1]][neighbor[0]]
+            # FAST INDEXING with NumPy
+            s_val = static_map[neighbor[1], neighbor[0]]
+            c_val = costmap[neighbor[1], neighbor[0]]
 
-            # --- THE NAVIGATION LOGIC ---
-            
             # 1. HARD BLOCK: Static Map says it's a wall or unknown
             if s_val >= 100 or s_val <= -1:
-                # Uncomment the line below to see exactly which cells are blocked
-                print("[A* DEBUG] Static Block at {}: s_val={}".format(neighbor, s_val))
                 continue
             
-            # 2. FATAL BLOCK: Costmap says robot will hit something 
-            # if c_val >= 99:
-            #     print("[A* DEBUG] Costmap Block at {}: c_val={}".format(neighbor, c_val))
-            #     continue
+            # 2. FATAL BLOCK: High costmap values (robot radius)
+            if c_val >= 90: # Adjusted from 99 to be safer
+                continue
             
             # 3. COST CALCULATION
-            dist = math.sqrt(dx**2 + dy**2)
+            # Diagonals cost 1.41, straight costs 1.0
+            dist = 1.414 if abs(dx) + abs(dy) == 2 else 1.0
             
-            # STEEP EXPONENTIAL: Makes hugging the wall very expensive
-            # Scaling c_val/10 keeps the math from overflowing while 1.5 is a strong curve
+            # Optimized penalty: pow() is expensive on the Nano. 
+            # If you can, use a pre-calculated lookup table or simpler math.
+            penalty = 0
             if c_val > 0:
-                penalty = math.pow(1.8, c_val / 10.0) * 5.0
-            else:
-                penalty = 0
+                penalty = (c_val ** 1.5) / 10.0 # Cheaper than math.pow for broad curves
 
-            move_cost = dist + penalty
-            new_cost = cost_so_far[current] + move_cost
+            new_cost = cost_so_far[current] + dist + penalty
 
             if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
                 cost_so_far[neighbor] = new_cost
@@ -73,15 +68,13 @@ def a_star_exploration(static_map, costmap, start, goal):
                     min_h = h
                     best_node = neighbor
                 
-                # WEIGHTED PRIORITY: 0.7 weight on H reduces the "greedy" straight-line pull
-                priority = new_cost + (h * 0.2)
-                
+                # A* weight: 1.0 is standard. 0.2 makes it behave more like Dijkstra (safer but slower)
+                priority = new_cost + (h * 1.1) 
                 heapq.heappush(frontier_queue, (priority, neighbor))
                 came_from[neighbor] = current
 
     print("[A* DEBUG] FAILED: Queue empty. Reached best node {} (Dist: {:.2f})".format(best_node, min_h))
-    return [] # Return an empty list so the robot stays still
-    #return reconstruct_path(came_from, start, best_node)
+    return []
 
 def reconstruct_path(came_from, start, goal):
     path = []
