@@ -164,6 +164,13 @@ class FrontierNode:
             length += math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
         return length
     
+    def grid_to_world(self, grid_point):
+        """Converts (x, y) grid indices to (x, y) meters"""
+        info = self.latest_map.info
+        wx = grid_point[0] * info.resolution + info.origin.position.x
+        wy = grid_point[1] * info.resolution + info.origin.position.y
+        return (wx, wy)
+    
     def publish_visual_path(self, grid_path):
         path_msg = Path()
         path_msg.header.frame_id = "map"
