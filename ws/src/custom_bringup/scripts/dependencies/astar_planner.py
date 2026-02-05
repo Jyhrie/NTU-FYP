@@ -20,13 +20,13 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, heig
     best_node = start
     min_h = math.hypot(goal[0]-start[0], goal[1]-start[1])
 
-    print("[A* DEBUG] Starting search from {} to {}".format(start, goal))
+    #print("[A* DEBUG] Starting search from {} to {}".format(start, goal))
 
     while frontier_queue:
         _, current = heapq.heappop(frontier_queue)
 
         if current == goal:
-            print("[A* DEBUG] SUCCESS: Goal {} reached.".format(goal))
+            #print("[A* DEBUG] SUCCESS: Goal {} reached.".format(goal))
             return reconstruct_path(came_from, start, goal)
 
         # Explore 8 neighbors
@@ -74,7 +74,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, heig
                 heapq.heappush(frontier_queue, (priority, neighbor))
                 came_from[neighbor] = current
 
-    print("[A* DEBUG] FAILED: Queue empty. Reached best node {} (Dist: {:.2f})".format(best_node, min_h))
+    #print("[A* DEBUG] FAILED: Queue empty. Reached best node {} (Dist: {:.2f})".format(best_node, min_h))
     return []
 
 def reconstruct_path(came_from, start, goal):
