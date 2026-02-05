@@ -75,7 +75,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, heig
                 came_from[neighbor] = current
 
     #print("[A* DEBUG] FAILED: Queue empty. Reached best node {} (Dist: {:.2f})".format(best_node, min_h))
-    return []
+    return None
 
 def reconstruct_path(came_from, start, goal):
     path = []

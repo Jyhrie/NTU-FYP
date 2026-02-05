@@ -90,7 +90,8 @@ class FrontierNode:
         if frontiers:
             for frontier in frontiers:
                 path = a_star_exploration(self.map.data, self.global_costmap, start, frontier)
-                paths.append(path)
+                if path:
+                    paths.append(path)
 
 
             sel_path = self.get_shortest_path(paths)
