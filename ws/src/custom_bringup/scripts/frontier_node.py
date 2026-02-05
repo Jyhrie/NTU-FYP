@@ -5,6 +5,8 @@ import rospy
 from std_msgs.msg import Empty, String
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
+from visualization_msgs.msg import Marker
+from geometry_msgs.msg import Point
 import math
 
 import tf2_ros
@@ -32,6 +34,7 @@ class FrontierNode:
 
         self.map_topic = rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
         self.costmap_global_topic = rospy.Subscriber("/move_base/global_costmap/costmap", OccupancyGrid, self.global_costmap_cb)
+        self.marker_pub = rospy.Publisher('/detected_frontiers', Marker, queue_size=10)
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
@@ -42,6 +45,8 @@ class FrontierNode:
         self.is_active = False
         self.last_trigger_time = rospy.Time(0)
         self.cooldown_duration = rospy.Duration(2.5) # 2 seconds
+
+        self.debug = 1
         print("Initialization Complete, Node is Ready!")
 
 
@@ -85,6 +90,8 @@ class FrontierNode:
         start = self.pose_to_cell(x,y, self.map)
         x_start, y_start = start
         frontiers = self.detector.get_frontiers(x_start, y_start, self.map.data)
+        if self.debug:
+            self.publish_frontier_markers(frontiers)
         print(frontiers)
         paths = []
         if frontiers:
@@ -188,6 +195,47 @@ class FrontierNode:
             path_msg.poses.append(pose)
 
         self.frontier_node_pub.publish(path_msg)
+
+    def publish_frontier_markers(self, frontiers):
+        if not frontiers:
+            return
+
+        marker = Marker()
+        # 1. Basic Header Info
+        marker.header.frame_id = "map"  # Must match your global frame
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "frontiers"
+        marker.id = 0
+        marker.type = Marker.SPHERE_LIST # Efficiently renders many points
+        marker.action = Marker.ADD
+
+        # 2. Set the Size (0.1m spheres)
+        marker.scale.x = 0.1
+        marker.scale.y = 0.1
+        marker.scale.z = 0.1
+
+        # 3. Set the Color (Electric Blue for high visibility)
+        marker.color.r = 0.0
+        marker.color.g = 0.5
+        marker.color.b = 1.0
+        marker.color.a = 1.0 # Alpha (transparency)
+
+        # 4. Map Metadata for coordinate conversion
+        res = self.map.info.resolution
+        origin_x = self.map.info.origin.position.x
+        origin_y = self.map.info.origin.position.y
+
+        # 5. Populate Points
+        for f in frontiers:
+            p = Point()
+            # Convert grid index to world coordinates
+            # We add half a resolution to center the point in the cell
+            p.x = (f[0] * res) + origin_x + (res / 2.0)
+            p.y = (f[1] * res) + origin_y + (res / 2.0)
+            p.z = 0.2  # Lift slightly above the map to prevent "z-fighting"
+            marker.points.append(p)
+
+        self.marker_pub.publish(marker)
 
 
 if __name__ == "__main__":
