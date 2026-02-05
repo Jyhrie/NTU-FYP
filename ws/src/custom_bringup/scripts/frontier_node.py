@@ -4,6 +4,7 @@ from enum import Enum
 import rospy
 from std_msgs.msg import Empty, String
 from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
 import math
 
 import tf2_ros
@@ -91,10 +92,13 @@ class FrontierNode:
                 path = a_star_exploration(self.map.data, self.global_costmap, start, frontier)
                 paths.append(path)
 
+
             sel_path = self.get_shortest_path(paths)
+
+
             #print(sel_path)
             print("Found a Selected Path")
-            self.frontier_node_pub.publish(sel_path)
+            self.publish_visual_path(sel_path)
         return
 
     def get_robot_pose(self):
@@ -156,6 +160,24 @@ class FrontierNode:
             # Distance between consecutive waypoints
             length += math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
         return length
+    
+    def publish_visual_path(self, grid_path):
+        path_msg = Path()
+        path_msg.header.frame_id = "map"
+        path_msg.header.stamp = rospy.Time.now()
+
+        for grid_point in grid_path:
+            # Convert each grid point back to meters (world coords)
+            world_x, world_y = self.grid_to_world(grid_point)
+            
+            pose = PoseStamped()
+            pose.header = path_msg.header
+            pose.pose.position.x = world_x
+            pose.pose.position.y = world_y
+            pose.pose.orientation.w = 1.0 # Default orientation
+            path_msg.poses.append(pose)
+
+        self.frontier_node_pub.publish(path_msg)
 
 
 if __name__ == "__main__":
