@@ -82,9 +82,9 @@ class Controller:
         pass
 
     def state_request_frontier_path(self):
-        print("Trying to Publish!")
-        self.global_request.publish("request_frontier")
         if not self.request_sent:
+            print("Trying to Publish: Request Frontier")
+            self.global_request.publish("request_frontier")
             self.request_sent = True
             self.start_time = rospy.get_time()
 
