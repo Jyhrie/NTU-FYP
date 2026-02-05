@@ -166,7 +166,7 @@ class FrontierNode:
     
     def grid_to_world(self, grid_point):
         """Converts (x, y) grid indices to (x, y) meters"""
-        info = self.latest_map.info
+        info = self.map.info
         wx = grid_point[0] * info.resolution + info.origin.position.x
         wy = grid_point[1] * info.resolution + info.origin.position.y
         return (wx, wy)
