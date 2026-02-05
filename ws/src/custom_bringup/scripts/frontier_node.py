@@ -98,6 +98,8 @@ class FrontierNode:
 
             #print(sel_path)
             print("Found a Selected Path")
+            print("Selected Path:")
+            print(sel_path)
             self.publish_visual_path(sel_path)
         return
 

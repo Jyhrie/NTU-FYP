@@ -26,9 +26,9 @@ class FrontierDetector:
         filtered_clusters = self.filter_cluster(unfiltered_frontiers)
         centroids = self.frontier_to_centroid(filtered_clusters)
 
-        print(unfiltered_frontiers)
-        print(filtered_clusters)
-        print(centroids)
+        #print(unfiltered_frontiers)
+        #print(filtered_clusters)
+        #print(centroids)
         
         final_targets = []
         for i in range(len(centroids)):
