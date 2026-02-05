@@ -36,7 +36,7 @@ class FrontierNode:
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
         
         #out
-        self.frontier_node_pub = rospy.Publisher("/frontier_node_message", String, queue_size=1)
+        self.frontier_node_pub = rospy.Publisher("/frontier_node_reply", String, queue_size=1)
 
         self.is_active = False
         self.last_trigger_time = rospy.Time(0)
