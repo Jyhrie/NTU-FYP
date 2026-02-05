@@ -72,6 +72,7 @@ class FrontierNode:
         pass
 
     def global_costmap_cb(self, msg):
+        self.global_costmap = msg.data
         pass
 
     def trigger(self):
