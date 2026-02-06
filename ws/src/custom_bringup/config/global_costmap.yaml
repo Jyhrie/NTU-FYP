@@ -1,19 +1,19 @@
 global_costmap:
   global_frame: map
   robot_base_frame: base_link
-
-  update_frequency: 5.0
-  publish_frequency: 2.0
-  transform_tolerance: 0.5
-
+  update_frequency: 1.0
+  publish_frequency: 0.5
   static_map: true
   rolling_window: false
+  track_unknown_space: true     # Must be true to distinguish from free space
+  unknown_cost_value: 253       # (Optional) Sets the internal raw value for unknown
 
   plugins:
-    - {name: static_layer, type: "costmap_2d::StaticLayer"}
-    - {name: obstacle_layer, type: "costmap_2d::ObstacleLayer"}
+    - {name: static_layer,    type: "costmap_2d::StaticLayer"}
+    - {name: obstacle_layer,  type: "costmap_2d::ObstacleLayer"}
     - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
 
-static_layer:
-  map_topic: /map
-  subscribe_to_updates: true
+  # Specific settings for Gmapping compatibility
+  static_layer:
+    map_topic: /map
+    subscribe_to_updates: true # Crucial: ensures costmap updates as Gmapping clears/fills cells
