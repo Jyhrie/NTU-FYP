@@ -57,7 +57,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, heig
             # If you can, use a pre-calculated lookup table or simpler math.
             penalty = 0
             if c_val > 0:
-                penalty = (c_val ** 1.5) / 10.0 # Cheaper than math.pow for broad curves
+                penalty = (c_val ** 3) / 3 # Cheaper than math.pow for broad curves
 
             new_cost = cost_so_far[current] + dist + penalty
 
