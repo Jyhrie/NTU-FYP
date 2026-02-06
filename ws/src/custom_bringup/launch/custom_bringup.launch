@@ -119,7 +119,9 @@
 
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
         <rosparam file="$(find custom_bringup)/config/costmap_common.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find custom_bringup)/config/costmap_common.yaml" command="load" ns="local_costmap" />
         <rosparam file="$(find custom_bringup)/config/global_costmap.yaml" command="load" />
+        <rosparam file="$(find custom_bringup)/config/local_costmap.yaml" command="load" />
 
         <param name="global_costmap/static_layer/map_topic" value="/map"/>
         <param name="global_costmap/static_layer/subscribe_to_updates" value="true"/>
