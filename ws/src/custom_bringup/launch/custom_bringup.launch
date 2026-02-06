@@ -105,7 +105,7 @@
           args="-0.03 0 0.13 3.1416 0 0  /base_link /laser  30"/>
 
     <node pkg="costmap_2d" type="costmap_2d_node" name="global_costmap" output="screen">
-        <rosparam command="load" file="$(find custom_bringup)/config/global_costmap.yaml"/>
+        <rosparam command="load" file="$(find custom_bringup)/config/global_costmap_params.yaml"/>
     </node>
 
     <!-- <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
