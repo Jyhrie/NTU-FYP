@@ -104,9 +104,13 @@
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser"
           args="-0.03 0 0.13 3.1416 0 0  /base_link /laser  30"/>
 
-    <node pkg="costmap_2d" type="costmap_2d_node" name="global_costmap">
+    <!-- <node pkg="costmap_2d" type="costmap_2d_node" name="global_costmap">
         <rosparam file="$(find custom_bringup)/config/global_costmap.yaml"/>
         <rosparam file="$(find custom_bringup)/config/costmap_common.yaml"/>
+    </node> -->
+
+    <node name="costmap_node" pkg="costmap_2d" type="costmap_2d_node" >
+        <rosparam file="$(find custom_bringup)/config/global_costmap.yaml" command="load" ns="costmap" />
     </node>
 
     <!-- <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
