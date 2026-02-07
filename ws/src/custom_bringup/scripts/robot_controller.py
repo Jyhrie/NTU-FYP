@@ -34,7 +34,7 @@ class Controller:
         self.recalib_pub = rospy.Publisher("/recalib_frontiers", Empty, queue_size=1)
         self.state_pub   = rospy.Publisher("/controller_state", String, queue_size=1)
         self.global_request = rospy.Publisher("/controller/global", String, queue_size=1)
-        self.global_exploration_path = rospy.Publisher("/global_exploration_path", String, queue_size=1)
+        self.global_exploration_path = rospy.Publisher("/global_exploration_path", Path, queue_size=1)
 
         self.fontier_node_sub = rospy.Subscriber("/frontier_node_reply", Path, self.frontier_node_cb)
         self.navigation_node_sub = rospy.Subscriber("/navigation_node_reply", String, self.navigation_node_cb)
@@ -44,7 +44,7 @@ class Controller:
         self.request_sent = False
         self.received = False
         self.nav_state = NavStates.NULL
-        self.request_timeout = 2
+        self.request_timeout = 10
 
         self.prev_state = None
         self.init_complete = False
@@ -68,6 +68,7 @@ class Controller:
         pass
 
     def interrupt(self, clear = False):
+        self.global_request.publish("interrupt")
         pass
 
     def transition(self, nxt_state):
@@ -89,9 +90,9 @@ class Controller:
             self.start_time = rospy.get_time()
 
         elif self.received:
+            self.goal_path = self.received
             self.request_sent = False
             self.received = False
-            self.global_exploration_path.pub(self.received)
             self.transition(States.NAVIGATE)
 
         elif (rospy.get_time() - self.start_time) > self.request_timeout:
@@ -101,12 +102,15 @@ class Controller:
 
     def state_navigate(self):
         if self.nav_state == NavStates.NULL:
+            
             self.nav_state = NavStates.MOVING
         
         elif self.nav_state == NavStates.MOVING:
+            self.global_exploration_path.publish(self.goal_path)
             pass
 
         elif self.nav_state == NavStates.COMPLETE:
+            self.nav_state = NavStates.NULL
             self.transition(States.IDLE)
         
 
