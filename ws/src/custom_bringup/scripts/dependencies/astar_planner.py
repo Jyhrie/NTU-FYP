@@ -44,22 +44,27 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, heig
             # 1. HARD BLOCK: Static Map says it's a wall or unknown
             if s_val >= 100 or s_val <= -1:
                 continue
-            
-            # 2. FATAL BLOCK: High costmap values (robot radius)
-            if c_val >= 90: # Adjusted from 99 to be safer
-                continue
-            
-            # 3. COST CALCULATION
-            # Diagonals cost 1.41, straight costs 1.0
-            dist = 1.414 if abs(dx) + abs(dy) == 2 else 1.0
-            
-            # Optimized penalty: pow() is expensive on the Nano. 
-            # If you can, use a pre-calculated lookup table or simpler math.
-            penalty = 0
-            if c_val > 0:
-                penalty = (c_val ** 3) / 3 # Cheaper than math.pow for broad curves
 
-            new_cost = cost_so_far[current] + dist + penalty
+            # 2. CALCULATE DISTANCE TO GOAL (Idea 3)
+            # We calculate this once per neighbor to use in both blocking and heuristic
+            dist_to_goal = math.hypot(goal[0]-neighbor[0], goal[1]-neighbor[1])
+
+            # 3. FATAL BLOCK: High costmap values
+            # Normally, we block if c_val >= 90. 
+            # But if we are within 10 pixels of the goal, we allow it (Deflate Inflation).
+            if c_val >= 90:
+                if dist_to_goal > 10:  # Adjust this '10' based on your inflation radius
+                    continue
+                else:
+                    # Give it a high penalty so it's a "last resort" but NOT a hard block
+                    inflation_penalty = c_val * 50 
+            else:
+                # Standard penalty: your existing formula
+                inflation_penalty = (c_val ** 3) / 3
+
+            # 4. TOTAL COST CALCULATION
+            dist_step = 1.414 if abs(dx) + abs(dy) == 2 else 1.0
+            new_cost = cost_so_far[current] + dist_step + inflation_penalty
 
             if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
                 cost_so_far[neighbor] = new_cost
