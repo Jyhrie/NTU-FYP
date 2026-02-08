@@ -61,7 +61,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, heig
                     penalty = c_val * 2 
             else:
                 # Normal space: cubic penalty for smooth avoidance
-                penalty = (c_val ** 3) / 3
+                penalty = (c_val ** 5) / 3
 
             # 4. TOTAL COST CALCULATION
             dist_step = 1.414 if abs(dx) + abs(dy) == 2 else 1.0
