@@ -39,7 +39,7 @@ class Controller:
         self.global_exploration_path = rospy.Publisher("/global_exploration_path", Path, queue_size=1)
 
         self.fontier_node_sub = rospy.Subscriber("/frontier_node_reply", String, self.frontier_node_cb)
-        self.frontier_node_path_sub = rospy.Subscriber("/frontier_node_path_reply", Path, self.frontier_node_path_cb)
+        self.frontier_node_path_sub = rospy.Subscriber("/frontier_node_path", Path, self.frontier_node_path_cb)
         self.navigation_node_sub = rospy.Subscriber("/navigation_node_reply", String, self.navigation_node_cb)
         self.pc_node_sub = rospy.Subscriber("/pc_node_reply", String, self.pc_node_cb)
         #self.pure_pursuit_sub = rospy.Subscriber("/pure_pursuit_message", String, self.pure_pursuit_cb)
