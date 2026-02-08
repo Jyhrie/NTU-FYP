@@ -190,6 +190,9 @@ class Controller:
             self.nav_state = NavStates.MOVING
         
         elif self.nav_state == NavStates.MOVING:
+            msg = String()
+            msg.data = "navigate"
+            self.global_request.publish(msg)
             self.global_exploration_path.publish(self.goal_path)
             pass
 
@@ -203,6 +206,9 @@ class Controller:
             self.nav_state = NavStates.MOVING
         
         elif self.nav_state == NavStates.MOVING:
+            msg = String()
+            msg.data = "rotate"
+            self.global_request.publish(msg)
             if self.rotate_target_msg is not None:
                 self.rotate_pose_pub.publish(self.rotate_target_msg)
             pass
