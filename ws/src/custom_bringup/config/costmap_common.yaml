@@ -1,5 +1,5 @@
 #footprint: [[-0.18, -0.18], [-0.18, 0.18], [0.18, 0.18], [0.18, -0.18]]
-robot_radius: 0.1 # Use this if your robot is circular
+robot_radius: 0.05 # Use this if your robot is circular
 
 obstacle_layer:
   enabled: true
