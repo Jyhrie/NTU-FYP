@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from enum import Enum
+import json
 import rospy
 from std_msgs.msg import Empty, String
 from nav_msgs.msg import Path
@@ -16,45 +17,57 @@ from nav_msgs.msg import OccupancyGrid
 from dependencies.frontier_detector import FrontierDetector
 from dependencies.astar_planner import a_star_exploration
 
+
 class FrontierNode:
 
     def __init__(self):
-        
+
         rospy.init_node("frontier_node")
 
-        #vars
+        # vars
         self.map = None
         self.global_costmap = None
 
-        #classes
+        # classes
         self.detector = None
 
-        #in
-        self.global_request_topic = rospy.Subscriber("/controller/global", String, self.controller_cb)
+        # in
+        self.global_request_topic = rospy.Subscriber(
+            "/controller/global", String, self.controller_cb
+        )
 
         self.map_topic = rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
-        self.costmap_global_topic = rospy.Subscriber("/move_base/global_costmap/costmap", OccupancyGrid, self.global_costmap_cb)
-        self.marker_pub = rospy.Publisher('/detected_frontiers', Marker, queue_size=10)
+        self.costmap_global_topic = rospy.Subscriber(
+            "/move_base/global_costmap/costmap", OccupancyGrid, self.global_costmap_cb
+        )
+        self.marker_pub = rospy.Publisher("/detected_frontiers", Marker, queue_size=10)
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
-        
-        #out
-        self.frontier_node_pub = rospy.Publisher("/frontier_node_reply", Path, queue_size=1)
+
+        # out
+        self.frontier_node_pub = rospy.Publisher(
+            "/frontier_node_reply", String, queue_size=1
+        )
+        self.frontier_node_path_pub = rospy.Publisher(
+            "/frontier_node_path", Path, queue_size=1
+        )
 
         self.is_active = False
         self.last_trigger_time = rospy.Time(0)
-        self.cooldown_duration = rospy.Duration(2.5) # 2 seconds
+        self.cooldown_duration = rospy.Duration(2.5)  # 2 seconds
 
         self.debug = 1
         print("Initialization Complete, Node is Ready!")
-
 
     def controller_cb(self, msg):
         current_time = rospy.Time.now()
 
         if msg.data == "request_frontier":
-            if self.is_active and (current_time - self.last_trigger_time) < self.cooldown_duration:
+            if (
+                self.is_active
+                and (current_time - self.last_trigger_time) < self.cooldown_duration
+            ):
                 rospy.loginfo("Trigger ignored: Cooldown in progress.")
                 return
 
@@ -63,7 +76,7 @@ class FrontierNode:
             self.is_active = True
             self.last_trigger_time = current_time
             self.trigger()
-    
+
     def map_cb(self, msg):
         print("Map Instance Received.")
         self.map = msg
@@ -73,7 +86,7 @@ class FrontierNode:
                 map_height=msg.info.height,
                 resolution=msg.info.resolution,
                 origin_x=msg.info.origin.position.x,
-                origin_y=msg.info.origin.position.y
+                origin_y=msg.info.origin.position.y,
             )
         pass
 
@@ -85,9 +98,9 @@ class FrontierNode:
         if self.map == None:
             print("Early Return due to No Map")
             return
-        
-        x,y,_ = self.get_robot_pose()
-        start = self.pose_to_cell(x,y, self.map)
+
+        x, y, yaw = self.get_robot_pose()
+        start = self.pose_to_cell(x, y, self.map)
         x_start, y_start = start
         frontiers = self.detector.get_frontiers(x_start, y_start, self.map.data)
         if self.debug:
@@ -96,20 +109,43 @@ class FrontierNode:
         paths = []
         if frontiers:
             for frontier in frontiers:
-                path = a_star_exploration(self.map.data, self.global_costmap, start, frontier)
+                # --- get frontier centroid in cell coords ---
+                cx = sum(p[0] for p in frontier) / len(frontier)
+                cy = sum(p[1] for p in frontier) / len(frontier)
+
+                # convert centroid cell -> world coords
+                wx, wy = self.cell_to_pose(cx, cy, self.map)
+
+                # --- angle from robot to frontier ---
+                dx = wx - x
+                dy = wy - y
+                target_angle = math.atan2(dy, dx)
+
+                # normalize angle difference to [-pi, pi]
+                angle_diff = math.atan2(
+                    math.sin(target_angle - yaw), math.cos(target_angle - yaw)
+                )
+
+                # --- check if frontier is behind robot (180° ± 15°) ---
+                behind_angle = math.pi
+                tolerance = math.radians(15)
+
+                if abs(abs(angle_diff) - behind_angle) < tolerance:
+                    print("Nearest Frontiers is Directly Behind Robot")
+
+                    self.publish_rotate_command()
+                    return
+
+                path = a_star_exploration(
+                    self.map.data, self.global_costmap, start, frontier
+                )
                 if path:
                     paths.append(path)
 
-
             sel_path = self.get_shortest_path(paths)
-
-
-            #print(sel_path)
             print("Found a Selected Path")
-            print("Selected Path:")
-            print(sel_path)
             self.publish_visual_path(sel_path)
-        return
+            return
 
     def get_robot_pose(self):
         try:
@@ -120,15 +156,13 @@ class FrontierNode:
             y = t.transform.translation.y
 
             q = t.transform.rotation
-            (_, _, yaw) = tf.transformations.euler_from_quaternion(
-                [q.x, q.y, q.z, q.w]
-            )
+            (_, _, yaw) = tf.transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
             print("Robot Pose: ", x, y, yaw)
             return x, y, yaw
 
         except:
             return None
-        
+
     def pose_to_cell(self, x, y, map):
         origin_x = map.info.origin.position.x
         origin_y = map.info.origin.position.y
@@ -150,12 +184,12 @@ class FrontierNode:
             return None
 
         best_path = None
-        min_length = float('inf')
+        min_length = float("inf")
 
         for path in paths:
             # Calculate the actual cumulative length of this specific path
             current_length = self.calculate_path_length(path)
-            
+
             if current_length < min_length:
                 min_length = current_length
                 best_path = path
@@ -166,35 +200,52 @@ class FrontierNode:
         length = 0.0
         for i in range(len(path) - 1):
             p1 = path[i]
-            p2 = path[i+1]
+            p2 = path[i + 1]
             # Distance between consecutive waypoints
-            length += math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+            length += math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
         return length
-    
+
     def grid_to_world(self, grid_point):
         """Converts (x, y) grid indices to (x, y) meters"""
         info = self.map.info
         wx = grid_point[0] * info.resolution + info.origin.position.x
         wy = grid_point[1] * info.resolution + info.origin.position.y
         return (wx, wy)
-    
+
     def publish_visual_path(self, grid_path):
         path_msg = Path()
         path_msg.header.frame_id = "map"
         path_msg.header.stamp = rospy.Time.now()
 
+        data = {
+            "cmd": "path"
+        }
+        cmd_msg = String()
+        cmd_msg.data = json.dumps(data)
+
         for grid_point in grid_path:
             # Convert each grid point back to meters (world coords)
             world_x, world_y = self.grid_to_world(grid_point)
-            
+
             pose = PoseStamped()
             pose.header = path_msg.header
             pose.pose.position.x = world_x
             pose.pose.position.y = world_y
-            pose.pose.orientation.w = 1.0 # Default orientation
+            pose.pose.orientation.w = 1.0  # Default orientation
             path_msg.poses.append(pose)
 
-        self.frontier_node_pub.publish(path_msg)
+        self.frontier_node_pub.publish(cmd_msg)
+        self.frontier_node_path_pub.publish(path_msg)
+
+    def publish_rotate_command(self):
+        data = {
+            "cmd": "rotate"
+        }
+        cmd_msg = String()
+        cmd_msg.data = json.dumps(data)
+
+        self.frontier_node_pub.publish(cmd_msg)
+
 
     def publish_frontier_markers(self, frontiers):
         if not frontiers:
@@ -206,7 +257,7 @@ class FrontierNode:
         marker.header.stamp = rospy.Time.now()
         marker.ns = "frontiers"
         marker.id = 0
-        marker.type = Marker.SPHERE_LIST # Efficiently renders many points
+        marker.type = Marker.SPHERE_LIST  # Efficiently renders many points
         marker.action = Marker.ADD
 
         # 2. Set the Size (0.1m spheres)
@@ -218,7 +269,7 @@ class FrontierNode:
         marker.color.r = 0.0
         marker.color.g = 0.5
         marker.color.b = 1.0
-        marker.color.a = 1.0 # Alpha (transparency)
+        marker.color.a = 1.0  # Alpha (transparency)
 
         # 4. Map Metadata for coordinate conversion
         res = self.map.info.resolution
