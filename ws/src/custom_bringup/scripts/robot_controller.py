@@ -4,7 +4,11 @@ import rospy
 from enum import Enum
 from std_msgs.msg import Empty, String
 from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
 import json
+import tf2_ros
+import tf
+import math
 
 class NavStates(Enum):
     NULL = 0
@@ -36,8 +40,12 @@ class Controller:
         self.recalib_pub = rospy.Publisher("/recalib_frontiers", Empty, queue_size=1)
         self.state_pub   = rospy.Publisher("/controller_state", String, queue_size=1)
         self.global_request = rospy.Publisher("/controller/global", String, queue_size=1)
+        self.rotate_pose_pub = rospy.Publisher("/rotate_target_pose", PoseStamped, queue_size=1)
         self.global_exploration_path = rospy.Publisher("/global_exploration_path", Path, queue_size=1)
 
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+        
         self.fontier_node_sub = rospy.Subscriber("/frontier_node_reply", String, self.frontier_node_cb)
         self.frontier_node_path_sub = rospy.Subscriber("/frontier_node_path", Path, self.frontier_node_path_cb)
         self.navigation_node_sub = rospy.Subscriber("/navigation_node_reply", String, self.navigation_node_cb)
@@ -49,6 +57,8 @@ class Controller:
         self.received_path = False
         self.nav_state = NavStates.NULL
         self.request_timeout = 10
+
+        self.rotate_target_yaw = None
 
         self.prev_state = None
         self.init_complete = False
@@ -74,6 +84,33 @@ class Controller:
 
     def pc_node_cb(self, msg):
         pass
+
+    # ====== UTIL ====== # 
+    def get_robot_pose(self):
+        try:
+            t = self.tf_buffer.lookup_transform(
+                "map", "base_link", rospy.Time(0), rospy.Duration(0.1)
+            )
+
+            x = t.transform.translation.x
+            y = t.transform.translation.y
+
+            q = t.transform.rotation
+            (_, _, yaw) = tf.transformations.euler_from_quaternion(
+                [q.x, q.y, q.z, q.w]
+            )
+
+            print("Robot Pose: ", x, y, yaw)
+
+            return x, y, yaw
+
+        except:
+            return None
+    
+    def wrap_angle(self, a):
+        return math.atan2(math.sin(a), math.cos(a))
+
+    # ====== FSM ====== # 
 
     def interrupt(self, clear = False):
         self.global_request.publish("interrupt")
@@ -101,6 +138,12 @@ class Controller:
 
         elif self.received:
             if self.received["cmd"] == "rotate":
+                pose = self.get_robot_pose()
+                if pose is None: 
+                    return
+                
+                _, _, yaw = pose
+                self.rotate_target_yaw = self.wrap_angle(yaw + math.pi)
                 self.transition(States.ROTATE)
                 self.request_sent = False
                 self.received = False
@@ -134,6 +177,18 @@ class Controller:
             self.transition(States.IDLE)
 
     def state_rotate(self):
+        if self.nav_state == NavStates.NULL:
+            self.nav_state = NavStates.MOVING
+        
+        elif self.nav_state == NavStates.MOVING:
+            if self.rotate_target_yaw is not None:
+                self.rotate_pose_pub.publish(self.rotate_target_yaw)
+            pass
+
+        elif self.nav_state == NavStates.COMPLETE:
+            self.nav_state = NavStates.NULL
+            self.goal_path = None
+            self.transition(States.IDLE)
         pass
         
 
