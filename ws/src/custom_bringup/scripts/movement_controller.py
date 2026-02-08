@@ -51,7 +51,6 @@ class PurePursuitController:
     # -------------------------------------------------
 
     def controller_cb(self, msg):
-        print(msg)
         if msg.data == 'move':
             pass
         elif msg.data == 'rotate':
@@ -88,7 +87,6 @@ class PurePursuitController:
                 [q.x, q.y, q.z, q.w]
             )
 
-            print("Robot Pose: ", x, y, yaw)
 
             return x, y, yaw
 
@@ -171,6 +169,7 @@ class PurePursuitController:
             return None
         
         if self.rotate_target_pose is None:
+            print("Exit Because No Target Pose")
             return None
 
         _, _, yaw = pose
