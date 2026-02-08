@@ -145,6 +145,8 @@ class Controller:
                 _, _, yaw = pose
                 rotate_target_yaw = self.wrap_angle(yaw + math.pi)
 
+                msg = PoseStamped()
+
                 msg.header.frame_id = "map"
                 msg.header.stamp = rospy.Time.now()
 
