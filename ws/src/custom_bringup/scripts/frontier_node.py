@@ -126,7 +126,7 @@ class FrontierNode:
                     math.sin(target_angle - yaw), math.cos(target_angle - yaw)
                 )
 
-                # --- check if frontier is behind robot (180° ± 15°) ---
+                # --- check if frontier is behind robot (180deg ± 15deg) ---
                 behind_angle = math.pi
                 tolerance = math.radians(15)
 
