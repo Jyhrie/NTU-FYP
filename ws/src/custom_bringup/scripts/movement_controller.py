@@ -46,7 +46,7 @@ class PurePursuitController:
         self.state = MovementState.IDLE
         self.rotate_target_pose = None
         
-        self.rate = rospy.Rate(30)
+        self.rate = rospy.Rate(15)
 
     # -------------------------------------------------
 
@@ -69,6 +69,7 @@ class PurePursuitController:
         rospy.loginfo("[PP] New path received with %d points", len(self.path))
 
     def rotate_pose_cb(self, msg):
+        print("Received Pose")
         self.rotate_target_pose == msg
 
     # -------------------------------------------------
