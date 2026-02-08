@@ -4,6 +4,7 @@ import rospy
 from enum import Enum
 from std_msgs.msg import Empty, String
 from nav_msgs.msg import Path
+import json
 
 class NavStates(Enum):
     NULL = 0
@@ -59,7 +60,7 @@ class Controller:
         pass
 
     def frontier_node_cb(self, msg):
-        self.received = msg
+        self.received = json.loads(msg.data)
         pass
 
     def frontier_node_path_cb(self, msg):
