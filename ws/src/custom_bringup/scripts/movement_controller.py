@@ -169,6 +169,9 @@ class PurePursuitController:
         pose = self.get_robot_pose()
         if pose is None:
             return None
+        
+        if self.rotate_target_pose is None:
+            return None
 
         _, _, yaw = pose
 
@@ -192,8 +195,6 @@ class PurePursuitController:
         cmd.linear.x = 0
 
         return cmd
-
-
 
 
     def get_pp(self): #its called pp because pure pursuit.
@@ -276,6 +277,7 @@ class PurePursuitController:
         while not rospy.is_shutdown():
             if self.state == MovementState.ROTATE:
                 pub_res = self.get_rot()
+                print(pub_res)
                 pass
             self.rate.sleep()
 
