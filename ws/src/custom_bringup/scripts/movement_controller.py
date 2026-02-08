@@ -39,7 +39,7 @@ class PurePursuitController:
         # ---------------- Pub/Sub ----------------
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
         
-        self.global_request_topic = rospy.Subscriber("/controller/global", String, self.controller_cb)
+        rospy.Subscriber("/controller/global", String, self.controller_cb)
         rospy.Subscriber("/rotate_target_pose", PoseStamped, self.rotate_pose_cb)
         rospy.Subscriber("/global_exploration_path", Path, self.path_cb)
 
@@ -51,6 +51,7 @@ class PurePursuitController:
     # -------------------------------------------------
 
     def controller_cb(self, msg):
+        print(msg)
         if msg.data == 'move':
             pass
         elif msg.data == 'rotate':
