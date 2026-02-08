@@ -64,6 +64,7 @@ class Controller:
         pass
 
     def frontier_node_path_cb(self, msg):
+        print("Path CAllback triggered")
         self.received_path = msg
         pass
 
