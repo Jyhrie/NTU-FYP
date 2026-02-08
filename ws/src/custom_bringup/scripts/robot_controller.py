@@ -100,12 +100,12 @@ class Controller:
             self.start_time = rospy.get_time()
 
         elif self.received:
-            if self.received.data.cmd == "rotate":
+            if self.received.cmd == "rotate":
                 self.transition(States.ROTATE)
                 self.request_sent = False
                 self.received = False
                 pass
-            elif self.received.data.cmd == "path": 
+            elif self.received.cmd == "path": 
                 if self.received_path and len(self.received_path) > 0:
                     self.goal_path = self.received_path
                     self.transition(States.NAVIGATE)
