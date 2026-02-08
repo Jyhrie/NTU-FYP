@@ -99,7 +99,13 @@ class FrontierNode:
             print("Early Return due to No Map")
             return
 
-        x, y, yaw = self.get_robot_pose()
+        pose = self.get_robot_pose()
+        if pose is None:
+            rospy.logwarn("No TF pose available")
+            return
+
+        x, y, yaw = pose
+        
         start = self.pose_to_cell(x, y, self.map)
         x_start, y_start = start
         frontiers = self.detector.get_frontiers(x_start, y_start, self.map.data)
@@ -110,11 +116,12 @@ class FrontierNode:
         if frontiers:
             for frontier in frontiers:
                 # --- get frontier centroid in cell coords ---
-                cx = sum(p[0] for p in frontier) / len(frontier)
-                cy = sum(p[1] for p in frontier) / len(frontier)
+                width = self.map.info.width
+                cx = sum(idx % width for idx in frontier) / float(len(frontier))
+                cy = sum(idx // width for idx in frontier) / float(len(frontier))
 
                 # convert centroid cell -> world coords
-                wx, wy = self.cell_to_pose(cx, cy, self.map)
+                wx, wy = self.grid_to_world((cx, cy))
 
                 # --- angle from robot to frontier ---
                 dx = wx - x
