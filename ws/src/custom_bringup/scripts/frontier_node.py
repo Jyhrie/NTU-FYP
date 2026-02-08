@@ -150,6 +150,7 @@ class FrontierNode:
                     paths.append(path)
 
                 sel_path = self.get_shortest_path(paths)
+                print(sel_path)
                 print("Found a Selected Path")
                 self.publish_visual_path(sel_path)
                 return
