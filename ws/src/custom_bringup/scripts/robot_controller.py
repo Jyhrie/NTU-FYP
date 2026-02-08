@@ -142,7 +142,7 @@ class Controller:
                 if pose is None: 
                     return
                 
-                _, _, yaw = pose
+                current_x, current_y, yaw = pose
                 rotate_target_yaw = self.wrap_angle(yaw + math.pi)
 
                 msg = PoseStamped()
@@ -151,8 +151,8 @@ class Controller:
                 msg.header.stamp = rospy.Time.now()
 
                 # keep current position  only rotation matters
-                msg.pose.position.x = self.current_x
-                msg.pose.position.y = self.current_y
+                msg.pose.position.x = current_x
+                msg.pose.position.y = current_y
                 msg.pose.position.z = 0.0
 
                 q = tf.transformations.quaternion_from_euler(
