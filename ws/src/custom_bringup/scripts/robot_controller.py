@@ -58,7 +58,7 @@ class Controller:
         self.nav_state = NavStates.NULL
         self.request_timeout = 10
 
-        self.rotate_target_yaw = None
+        self.rotate_target_msg = None
 
         self.prev_state = None
         self.init_complete = False
@@ -143,7 +143,27 @@ class Controller:
                     return
                 
                 _, _, yaw = pose
-                self.rotate_target_yaw = self.wrap_angle(yaw + math.pi)
+                rotate_target_yaw = self.wrap_angle(yaw + math.pi)
+
+                msg.header.frame_id = "map"
+                msg.header.stamp = rospy.Time.now()
+
+                # keep current position — only rotation matters
+                msg.pose.position.x = self.current_x
+                msg.pose.position.y = self.current_y
+                msg.pose.position.z = 0.0
+
+                q = tf.transformations.quaternion_from_euler(
+                    0, 0, rotate_target_yaw
+                )
+
+                msg.pose.orientation.x = q[0]
+                msg.pose.orientation.y = q[1]
+                msg.pose.orientation.z = q[2]
+                msg.pose.orientation.w = q[3]
+
+                self.rotate_target_msg = msg
+
                 self.transition(States.ROTATE)
                 self.request_sent = False
                 self.received = False
@@ -181,8 +201,8 @@ class Controller:
             self.nav_state = NavStates.MOVING
         
         elif self.nav_state == NavStates.MOVING:
-            if self.rotate_target_yaw is not None:
-                self.rotate_pose_pub.publish(self.rotate_target_yaw)
+            if self.rotate_target_msg is not None:
+                self.rotate_pose_pub.publish(self.rotate_target_msg)
             pass
 
         elif self.nav_state == NavStates.COMPLETE:
