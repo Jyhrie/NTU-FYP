@@ -8,10 +8,14 @@ from enum import Enum
 
 from nav_msgs.msg import Path
 from geometry_msgs.msg import Twist
+from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
 
 class MovementState(Enum):
-    pass
+    IDLE = 0
+    ROTATE = 1
+    MOVE = 2
+    COMPLETE = 3 
 
 class PurePursuitController:
 
@@ -36,8 +40,10 @@ class PurePursuitController:
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
         
         self.global_request_topic = rospy.Subscriber("/controller/global", String, self.controller_cb)
+        rospy.Subscriber("/rotate_target_pose", PoseStamped, self.rotate_pose_cb)
         rospy.Subscriber("/global_exploration_path", Path, self.path_cb)
 
+        self.state = MovementState.IDLE
 
         self.rotate_active = False
         self.rotate_target_yaw = None
@@ -50,16 +56,8 @@ class PurePursuitController:
         if msg.data == 'move':
             pass
         elif msg.data == 'rotate':
-            pose = self.get_robot_pose()
-            if pose is None:
-                return
-
-            _, _, yaw = pose
-
-            self.rotate_target_yaw = self.normalize_angle(yaw + math.pi)
-            self.rotate_active = True
-
-            print("[PP] Rotate 180 triggered → target yaw %.2f", self.rotate_target_yaw)
+            self.state = MovementState.ROTATE
+            pass
         elif msg.data == 'interrupt':
             pass
         pass
@@ -157,7 +155,7 @@ class PurePursuitController:
 
     def normalize_angle(self, a):
         return math.atan2(math.sin(a), math.cos(a))
-
+    
     # -------------------------------------------------
 
     def stop_robot(self):
@@ -166,35 +164,34 @@ class PurePursuitController:
     # -------------------------------------------------
 
     def get_rot(self):
-
-        if not self.rotate_active:
-            return False
-
         pose = self.get_robot_pose()
         if pose is None:
-            return True
+            return None
 
         _, _, yaw = pose
 
-        error = self.normalize_angle(self.rotate_target_yaw - yaw)
-
-        tol = 0.05   # ~3 degrees
-
-        if abs(error) < tol:
-            rospy.loginfo("[PP] Rotation complete")
-            self.stop_robot()
-            self.rotate_active = False
-            return False
+        # --- extract target yaw from PoseStamped ---
+        q = self.rotate_target_pose.pose.orientation
+        (_, _, target_yaw) = tf.transformations.euler_from_quaternion(
+            [q.x, q.y, q.z, q.w]
+        )
 
         cmd = Twist()
-        cmd.linear.x = 0.0
-
-        k = 1.2
-        cmd.angular.z = max(min(k * error, 0.5), -0.5)
-
-        self.cmd_pub.publish(cmd)
-        return True
         
+        error = self.normalize_angle(target_yaw - yaw)
+
+        if abs(error) < 0.05:
+            rospy.loginfo("[PP] Rotate target reached")
+            self.rotate_active = False
+            self.rotate_target_pose = None
+            return Twist()   # stop
+        
+        cmd.angular.z = max(min(error * 1.2, 0.4), -0.4)
+        cmd.linear.x = 0
+
+        return cmd
+
+
 
 
     def get_pp(self): #its called pp because pure pursuit.
@@ -275,9 +272,9 @@ class PurePursuitController:
     def run(self):
         rospy.loginfo("[PP] Pure Pursuit controller started")
         while not rospy.is_shutdown():
-            if self.get_rot():
-                self.rate.sleep()
-                continue
+            if self.state == MovementState.ROTATE:
+                pub_res = self.get_rot()
+                pass
             self.rate.sleep()
 
 
