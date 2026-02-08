@@ -70,7 +70,7 @@ class PurePursuitController:
 
     def rotate_pose_cb(self, msg):
         print("Received Pose")
-        self.rotate_target_pose == msg
+        self.rotate_target_pose = msg
 
     # -------------------------------------------------
 
