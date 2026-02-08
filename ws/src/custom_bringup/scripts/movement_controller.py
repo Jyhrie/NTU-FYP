@@ -277,7 +277,7 @@ class PurePursuitController:
         while not rospy.is_shutdown():
             if self.state == MovementState.ROTATE:
                 pub_res = self.get_rot()
-                print(pub_res)
+                self.cmd_pub.publish(pub_res)
                 pass
             self.rate.sleep()
 
