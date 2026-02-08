@@ -44,9 +44,7 @@ class PurePursuitController:
         rospy.Subscriber("/global_exploration_path", Path, self.path_cb)
 
         self.state = MovementState.IDLE
-
-        self.rotate_active = False
-        self.rotate_target_yaw = None
+        self.rotate_target_pose = None
         
         self.rate = rospy.Rate(30)
 
@@ -69,6 +67,9 @@ class PurePursuitController:
         self.path = msg.poses
         self.current_idx = 0
         rospy.loginfo("[PP] New path received with %d points", len(self.path))
+
+    def rotate_pose_cb(self, msg):
+        self.rotate_target_pose == msg
 
     # -------------------------------------------------
 
