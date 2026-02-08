@@ -105,7 +105,7 @@ class FrontierNode:
             return
 
         x, y, yaw = pose
-        
+
         start = self.pose_to_cell(x, y, self.map)
         x_start, y_start = start
         frontiers = self.detector.get_frontiers(x_start, y_start, self.map.data)
@@ -135,11 +135,11 @@ class FrontierNode:
 
                 # --- check if frontier is behind robot (180deg +- 15deg) ---
                 behind_angle = math.pi
-                tolerance = math.radians(15)
+                tolerance = math.radians(30)
 
                 if abs(abs(angle_diff) - behind_angle) < tolerance:
+                    print(angle_diff)
                     print("Nearest Frontiers is Directly Behind Robot")
-
                     self.publish_rotate_command()
                     return
 
@@ -149,10 +149,11 @@ class FrontierNode:
                 if path:
                     paths.append(path)
 
-            sel_path = self.get_shortest_path(paths)
-            print("Found a Selected Path")
-            self.publish_visual_path(sel_path)
-            return
+                sel_path = self.get_shortest_path(paths)
+                print("Found a Selected Path")
+                self.publish_visual_path(sel_path)
+                return
+        print("No Valid Path Detected.")
 
     def get_robot_pose(self):
         try:
