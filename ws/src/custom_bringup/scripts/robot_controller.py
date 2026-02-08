@@ -107,7 +107,7 @@ class Controller:
                 pass
             elif self.received["cmd"] == "path": 
                 print("Path Received")
-                if self.received_path and len(self.received_path) > 0:
+                if self.received_path and len(self.received_path.poses) > 0:
                     print("Transitioning")
                     self.goal_path = self.received_path
                     self.transition(States.NAVIGATE)
