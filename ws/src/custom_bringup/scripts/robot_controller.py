@@ -148,7 +148,7 @@ class Controller:
                 msg.header.frame_id = "map"
                 msg.header.stamp = rospy.Time.now()
 
-                # keep current position — only rotation matters
+                # keep current position  only rotation matters
                 msg.pose.position.x = self.current_x
                 msg.pose.position.y = self.current_y
                 msg.pose.position.z = 0.0
