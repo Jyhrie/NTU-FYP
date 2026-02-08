@@ -135,7 +135,7 @@ class FrontierNode:
 
                 # --- check if frontier is behind robot (180deg +- 15deg) ---
                 behind_angle = math.pi
-                tolerance = math.radians(30)
+                tolerance = math.radians(90)
 
                 if abs(abs(angle_diff) - behind_angle) < tolerance:
                     print(angle_diff)
