@@ -73,7 +73,8 @@ class Controller:
 
     def movement_controller_cb(self, msg):
         if msg.data == "done":
-            self.movement_complete = True
+            if self.state.state == States.NAVIGATE or self.state.state == States.ROTATE:
+                self.nav_state = NavStates.COMPLETE
         pass
 
     def frontier_node_cb(self, msg):
