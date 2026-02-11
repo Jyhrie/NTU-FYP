@@ -3,9 +3,9 @@ import math
 import numpy as np
 
 def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, height=800):
-    # --- JETSON NANO MEMORY FIX ---
-    static_map = np.array(static_map_raw).reshape((height, width))
-    costmap = np.array(costmap_raw).reshape((height, width))
+    # Convert to 2D NumPy arrays
+    static_map = np.array(static_map_raw, dtype=np.int8).reshape((height, width))
+    costmap = np.array(costmap_raw, dtype=np.uint8).reshape((height, width))
     
     rows, cols = height, width
     frontier_queue = []
@@ -21,30 +21,41 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, heig
             return reconstruct_path(came_from, start, goal)
 
         for dx, dy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]:
-            neighbor = (current[0] + dx, current[1] + dy)
+            nx, ny = current[0] + dx, current[1] + dy
             
-            if not (0 <= neighbor[0] < cols and 0 <= neighbor[1] < rows):
-                continue
-            
-            s_val = static_map[neighbor[1], neighbor[0]]
-            c_val = costmap[neighbor[1], neighbor[0]]
-
-            # 1. HARD BLOCK: Static Map walls or Unknown space
-            if s_val >= 100 or s_val <= -1:
+            # 1. Boundary Check for the center pixel
+            if not (1 <= nx < cols - 1 and 1 <= ny < rows - 1):
                 continue
 
-            penalty = c_val
+            # ---------------- 3x3 NUMPY SLICE CHECK ----------------
+            # Extract the 3x3 area centered at (ny, nx)
+            # Slicing is [row_start:row_end, col_start:col_end]
+            static_sub = static_map[ny-1:ny+2, nx-1:nx+2]
+            cost_sub = costmap[ny-1:ny+2, nx-1:nx+2]
 
-            # 4. TOTAL COST CALCULATION
+            # Check if any cell in the 3x3 footprint is a wall or high cost
+            # Static Map: 100 is wall, -1 is unknown
+            # Costmap: 90+ is the "Never Enter" zone
+            if np.any(static_sub >= 100) or np.any(static_sub <= -1):
+                continue
+            
+            # Use the maximum cost in the 3x3 area for the "Allergy" penalty
+            max_c_val = np.max(cost_sub)
+            # -------------------------------------------------------
+
+            # Penalty calculation (Allergy Logic)
+            penalty = (max_c_val / 10.0)**2 
+
             dist_step = 1.414 if abs(dx) + abs(dy) == 2 else 1.0
-            new_cost = cost_so_far[current] + dist_step * penalty
+            new_cost = cost_so_far[current] + dist_step + penalty
 
+            neighbor = (nx, ny)
             if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
                 cost_so_far[neighbor] = new_cost
-                h = math.hypot(goal[0]-neighbor[0], goal[1]-neighbor[1])
+                h = math.hypot(goal[0]-nx, goal[1]-ny)
                 
-                # A* weight 1.1 provides a slightly greedy search
-                priority = new_cost + (h * 1.1) 
+                # Priority = total cost + heuristic (weight 1.0 for safety)
+                priority = new_cost + h
                 heapq.heappush(frontier_queue, (priority, neighbor))
                 came_from[neighbor] = current
 

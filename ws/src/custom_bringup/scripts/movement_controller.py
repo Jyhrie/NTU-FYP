@@ -116,7 +116,7 @@ class PurePursuitController:
 
     # -------------------------------------------------
 
-    def find_lookahead_point(self, x, y, start_idx, lookahead_steps = 4):
+    def find_lookahead_point(self, x, y, start_idx, lookahead_steps = 6):
 
 
         target_idx = min(start_idx + lookahead_steps, len(self.path) - 1)
