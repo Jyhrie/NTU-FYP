@@ -44,7 +44,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, heig
             # -------------------------------------------------------
 
             # Penalty calculation (Allergy Logic)
-            penalty = (max_c_val)**3 
+            penalty = max_c_val
 
             dist_step = 1.414 if abs(dx) + abs(dy) == 2 else 1.0
             new_cost = cost_so_far[current] + dist_step + penalty
