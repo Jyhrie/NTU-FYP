@@ -51,7 +51,8 @@ class PurePursuitController:
     # -------------------------------------------------
 
     def controller_cb(self, msg):
-        if msg.data == 'move':
+        if msg.data == 'navigate':
+            self.state = MovementState.MOVE
             pass
         elif msg.data == 'rotate':
             self.state = MovementState.ROTATE
@@ -199,78 +200,60 @@ class PurePursuitController:
 
     def get_pp(self): #its called pp because pure pursuit.
         pose = self.get_robot_pose()
-        if pose is None:
-            self.rate.sleep()
+        if pose is None or self.path is None:
             return
 
         x, y, yaw = pose
 
-        nearest = self.find_nearest_index(x, y)
-
-        look = self.find_lookahead_point(x, y, nearest)
-        if look is None:
-            rospy.loginfo("No lookahead point found")
-            self.rate.sleep()
-            return 
-        
-        lx, ly = look
-
-        dx = lx - x
-        dy = ly - y
-        x_r = math.cos(-yaw)*dx - math.sin(-yaw)*dy
-        y_r = math.sin(-yaw)*dx + math.cos(-yaw)*dy
-
-        distance = math.hypot(x_r, y_r)
-        lookahead_angle = math.atan2(y_r, x_r)  # relative angle to lookahead
-
-                    # ---------------- Sharp turn handling ----------------
-        if abs(lookahead_angle) > 2.36:  # 135 deg
-            rospy.loginfo("[PP] Sharp turn detected, rotating in place")
-            while abs(lookahead_angle) > 0.05 and not rospy.is_shutdown():
-                cmd = Twist()
-                cmd.linear.x = 0  # stop forward motion
-                cmd.angular.z = max(min(lookahead_angle * 1.0, 0.3), -0.3)
-                self.cmd_pub.publish(cmd)
-                self.rate.sleep()
-
-                # update pose and angle
-                pose = self.get_robot_pose()
-                if pose is None:
-                    return
-                x, y, yaw = pose
-                dx = lx - x
-                dy = ly - y
-                x_r = math.cos(-yaw)*dx - math.sin(-yaw)*dy
-                y_r = math.sin(-yaw)*dx + math.cos(-yaw)*dy
-                lookahead_angle = math.atan2(y_r, x_r)
-
-            rospy.loginfo("[PP] Turn complete")
+        # 1. Check if we've reached the final goal
+        if self.goal_reached(x, y, yaw):
+            rospy.loginfo("[PP] Goal reached!")
             self.stop_robot()
-            self.path = None
-            self.pub.publish("RESCAN")
+            self.state = MovementState.COMPLETE
             return
 
-        # ---------------- Pure Pursuit motion ----------------
-        else:
-            # Pure Pursuit curvature
-            kappa = 2.0 * y_r / (self.lookahead**2)
+        # 2. Find lookahead point
+        nearest = self.find_nearest_index(x, y)
+        lx, ly = self.find_lookahead_point(x, y, nearest)
+        
+        # 3. Transform lookahead point to robot frame
+        dx = lx - x
+        dy = ly - y
+        
+        # Rotation matrix to local coordinates
+        x_r = math.cos(-yaw) * dx - math.sin(-yaw) * dy
+        y_r = math.sin(-yaw) * dx + math.cos(-yaw) * dy
 
-            # angular velocity
-            omega = max(min(kappa * self.linear_vel, 0.3), -0.3)
+        # 4. Heading Check (The Precaution)
+        # Calculate angle to the lookahead point relative to robot heading
+        lookahead_angle = math.atan2(y_r, x_r)
 
-            # scale linear speed based on angular velocity
-            max_linear = self.linear_vel
-            min_linear = 0.05
-            scaling = 1.0 - min(abs(omega) / 0.3, 1.0)
-            v = min_linear + scaling * (max_linear - min_linear)
-
-            # publish command
+        # If lookahead is more than 90 degrees away (opposite direction)
+        if abs(lookahead_angle) > (math.pi / 2.0):
+            rospy.loginfo_throttle(1, "[PP] Lookahead point behind robot - Rotating in place")
             cmd = Twist()
-            cmd.linear.x = v
-            cmd.angular.z = omega
+            cmd.linear.x = 0.0
+            # Simple proportional control to face the point
+            cmd.angular.z = max(min(lookahead_angle * 1.5, 0.5), -0.5)
             self.cmd_pub.publish(cmd)
+            return
 
-        pass
+        # 5. Normal Pure Pursuit (if lookahead is in front)
+        # Curvature formula: kappa = 2*y / L^2
+        L_sq = x_r**2 + y_r**2
+        if L_sq < 0.01: L_sq = 0.01 # Prevent division by zero
+        
+        kappa = (2.0 * y_r) / L_sq
+
+        # Calculate velocities
+        cmd = Twist()
+        cmd.angular.z = max(min(kappa * self.linear_vel, 0.4), -0.4)
+        
+        # Scale linear velocity: slow down if turning sharply
+        scaling = 1.0 - min(abs(cmd.angular.z) / 0.4, 0.8)
+        cmd.linear.x = self.linear_vel * scaling
+        
+        self.cmd_pub.publish(cmd)
 
     def run(self):
         rospy.loginfo("[PP] Pure Pursuit controller started")
@@ -280,6 +263,9 @@ class PurePursuitController:
                 if pub_res is not None:
                     self.cmd_pub.publish(pub_res)
                 pass
+            if self.state == MovementState.MOVE:
+                self.get_pp()
+
             self.rate.sleep()
 
 
