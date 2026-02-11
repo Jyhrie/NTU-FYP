@@ -20,6 +20,7 @@ class MovementState(Enum):
 class PurePursuitController:
 
     def __init__(self):
+        print("Initializing Pure Pursuit Controller...")
 
         rospy.init_node("pure_pursuit_controller")
 
