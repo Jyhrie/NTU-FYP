@@ -39,6 +39,7 @@ class PurePursuitController:
 
         # ---------------- Pub/Sub ----------------
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
+        self.node_topic = rospy.Publisher("/movement_controller_message", String, queue_size=10)
         
         rospy.Subscriber("/controller/global", String, self.controller_cb)
         rospy.Subscriber("/rotate_target_pose", PoseStamped, self.rotate_pose_cb)
@@ -115,7 +116,7 @@ class PurePursuitController:
 
     # -------------------------------------------------
 
-    def find_lookahead_point(self, x, y, start_idx, lookahead_steps = 7):
+    def find_lookahead_point(self, x, y, start_idx, lookahead_steps = 4):
 
 
         target_idx = min(start_idx + lookahead_steps, len(self.path) - 1)
@@ -172,7 +173,8 @@ class PurePursuitController:
             return None
         
         if self.rotate_target_pose is None:
-            print("Exit Because No Target Pose")
+            rospy.logwarn_throttle(2, "[PP] Rotate state active but no target pose found")
+            self.state = MovementState.IDLE # Safety fallback
             return None
 
         _, _, yaw = pose
@@ -183,20 +185,25 @@ class PurePursuitController:
             [q.x, q.y, q.z, q.w]
         )
 
-        cmd = Twist()
-        
         error = self.normalize_angle(target_yaw - yaw)
 
+        # ---------------- Check Completion ----------------
         if abs(error) < 0.05:
-            rospy.loginfo("[PP] Rotate target reached")
-            self.rotate_active = False
+            rospy.loginfo("[PP] Rotate target reached. Returning to IDLE.")
+            self.stop_robot()
+            
+            self.state = MovementState.IDLE
             self.rotate_target_pose = None
-            return Twist()   # stop
+            self.node_topic.publish("done")
+            return None
         
-        cmd.angular.z = max(min(error * 1.2, 0.4), -0.4)
+        # ---------------- Proportional Control ----------------
+        cmd = Twist()
         cmd.linear.x = 0
+        cmd.angular.z = max(min(error * 1.2, 0.4), -0.4)
 
-        return cmd
+        self.cmd_pub.publish(cmd)
+        
 
 
     def get_pp(self): #its called pp because pure pursuit.
@@ -210,6 +217,7 @@ class PurePursuitController:
         if self.goal_reached(x, y, yaw):
             rospy.loginfo("[PP] Goal reached!")
             self.stop_robot()
+            self.node_topic.publish("done")
             self.state = MovementState.COMPLETE
             return
 
@@ -260,9 +268,7 @@ class PurePursuitController:
         rospy.loginfo("[PP] Pure Pursuit controller started")
         while not rospy.is_shutdown():
             if self.state == MovementState.ROTATE:
-                pub_res = self.get_rot()
-                if pub_res is not None:
-                    self.cmd_pub.publish(pub_res)
+                self.get_rot()
                 pass
             if self.state == MovementState.MOVE:
                 self.get_pp()

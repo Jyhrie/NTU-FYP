@@ -50,7 +50,7 @@ class Controller:
         self.frontier_node_path_sub = rospy.Subscriber("/frontier_node_path", Path, self.frontier_node_path_cb)
         self.navigation_node_sub = rospy.Subscriber("/navigation_node_reply", String, self.navigation_node_cb)
         self.pc_node_sub = rospy.Subscriber("/pc_node_reply", String, self.pc_node_cb)
-        #self.pure_pursuit_sub = rospy.Subscriber("/pure_pursuit_message", String, self.pure_pursuit_cb)
+        self.movement_controller_sub = rospy.Subscriber("/movement_controller_message", String, self.movement_controller_cb)
 
         self.request_sent = False
         self.received = False
@@ -60,6 +60,8 @@ class Controller:
 
         self.rotate_target_msg = None
 
+        self.movement_complete = False
+
         self.prev_state = None
         self.init_complete = False
         
@@ -67,6 +69,11 @@ class Controller:
         self.rate = rospy.Rate(5)
 
         print("Initialization Complete, Node is Ready!")
+        pass
+
+    def movement_controller_cb(self, msg):
+        if msg.data == "done":
+            self.movement_complete = True
         pass
 
     def frontier_node_cb(self, msg):
