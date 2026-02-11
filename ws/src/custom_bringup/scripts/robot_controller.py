@@ -56,7 +56,7 @@ class Controller:
         self.received = False
         self.received_path = False
         self.nav_state = NavStates.NULL
-        self.request_timeout = 10
+        self.request_timeout = 30
 
         self.rotate_target_msg = None
 
