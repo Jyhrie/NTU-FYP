@@ -207,7 +207,7 @@ class Controller:
         elif self.nav_state == NavStates.COMPLETE:
             self.nav_state = NavStates.NULL
             self.goal_path = None
-            self.transition(States.IDLE)
+            self.transition(States.REQUEST_FRONTIER_PATH)
 
     def state_rotate(self):
         if self.nav_state == NavStates.NULL:
@@ -224,7 +224,7 @@ class Controller:
         elif self.nav_state == NavStates.COMPLETE:
             self.nav_state = NavStates.NULL
             self.goal_path = None
-            self.transition(States.IDLE)
+            self.transition(States.REQUEST_FRONTIER_PATH)
         pass
         
 
