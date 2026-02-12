@@ -57,6 +57,9 @@ class FrontierNode:
         self.last_trigger_time = rospy.Time(0)
         self.cooldown_duration = rospy.Duration(2.5)  # 2 seconds
 
+        self.blacklist = []  # List of (cx, cy) tuples
+        self.blacklist_threshold = 5.0 # Distance in pixels to consider a match
+
         self.debug = 1
         print("Initialization Complete, Node is Ready!")
 
@@ -143,19 +146,28 @@ class FrontierNode:
                     self.publish_rotate_command()
                     return
 
-                path = a_star_exploration(
+                path, success = a_star_exploration(
                     self.map.data, self.global_costmap, start, frontier
                 )
                 if path:
                     paths.append(path)
 
-                if len(paths) > 0:
+                if len(paths) > 0 and success:
                     sel_path = self.get_shortest_path(paths)
                     print("Paths: ", paths)
                     print("Sel Path:", sel_path)
                     print("Found a Selected Path")
                     self.publish_visual_path(sel_path)
                     return
+                
+                elif len(paths) > 0 and not success:
+                    sel_path = self.get_shortest_path(paths)
+                    print("Paths: ", paths)
+                    print("Sel Path:", sel_path)
+                    print("No Valid Path Detected, but sending closest attempt")
+                    self.publish_visual_path(sel_path)
+                    return
+                
         print("No Valid Path Detected.")
 
     def get_robot_pose(self):
