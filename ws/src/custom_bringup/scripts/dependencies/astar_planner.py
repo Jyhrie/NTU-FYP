@@ -1,100 +1,77 @@
 #!/usr/bin/env python3
 import heapq
 import numpy as np
-from numba import njit
 
-@njit
-def _core_astar(s_map_flat, c_map_flat, start_tuple, goal_tuple, width, height, fatal_cost):
-    """
-    JIT-compiled core logic. Operates on flattened arrays for maximum speed.
-    """
+def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, height=800, fatal_cost=90):
+    # Localize functions for micro-speed boost
+    push = heapq.heappush
+    pop = heapq.heappop
+    
+    # 1. Prepare flattened arrays (fastest access on Jetson)
     size = width * height
-    # Use float32 for costs and int32 for parents to save memory/time
-    costs = np.full(size, 1e9, dtype=np.float32)
+    costs = np.full(size, 1e8, dtype=np.float32)  # 'Infinity'
     parents = np.full(size, -1, dtype=np.int32)
     
-    start_x, start_y = start_tuple
-    goal_x, goal_y = goal_tuple
-    start_idx = start_y * width + start_x
+    # Convert raw data to NumPy once
+    s_map = np.array(static_map_raw, dtype=np.int8).ravel()
+    c_map = np.array(costmap_raw, dtype=np.uint8).ravel()
     
+    start_x, start_y = start
+    goal_x, goal_y = goal
+    start_idx = start_y * width + start_x
     costs[start_idx] = 0.0
+    
     # Priority Queue: (priority, x, y, index)
     frontier = [(0.0, start_x, start_y, start_idx)]
     
-    # Pre-calculate neighbor offsets for 8-way movement
-    # (dx, dy, cost)
-    neighbor_offsets = [
+    # Pre-calculated offsets for 8-way movement: (dx, dy, step_cost)
+    neighbors = [
         (0, 1, 1.0), (1, 0, 1.0), (0, -1, 1.0), (-1, 0, 1.0),
         (1, 1, 1.414), (1, -1, 1.414), (-1, 1, 1.414), (-1, -1, 1.414)
     ]
 
-    while len(frontier) > 0:
-        f_score, cx, cy, c_idx = heapq.heappop(frontier)
+    while frontier:
+        f_score, cx, cy, c_idx = pop(frontier)
 
-        # Distance check for success (1.5 pixel tolerance)
-        if ((cx - goal_x)**2 + (cy - goal_y)**2)**0.5 <= 1.5:
-            return parents, c_idx
+        # 2. Check success (Euclidean distance squared is faster than hypot)
+        if (cx - goal_x)**2 + (cy - goal_y)**2 <= 2.25: # 1.5^2
+            return reconstruct_path_optimized(parents, start_idx, c_idx, width)
 
-        # Standard A* check: if we found a better way to 'current' already, skip
-        if f_score > costs[c_idx] + ((cx - goal_x)**2 + (cy - goal_y)**2)**0.5 + 2.0:
+        # Skip stale nodes in the heap
+        if f_score > costs[c_idx] + ((cx - goal_x)**2 + (cy - goal_y)**2)**0.5 + 1:
             continue
 
-        for dx, dy, step_cost in neighbor_offsets:
+        for dx, dy, step_cost in neighbors:
             nx, ny = cx + dx, cy + dy
             
+            # Boundary check
             if 0 <= nx < width and 0 <= ny < height:
                 n_idx = ny * width + nx
                 
-                # Fatal/Obstacle Checks
-                s_val = s_map_flat[n_idx]
-                if s_val >= 100 or s_val <= -1:
-                    continue
-                
-                c_val = c_map_flat[n_idx]
-                if c_val >= fatal_cost:
+                # Fatal obstacles check
+                if s_map[n_idx] >= 100 or s_map[n_idx] <= -1 or c_map[n_idx] >= fatal_cost:
                     continue
 
-                # Penalty logic
-                penalty = (c_val / 5.0) ** 2
+                # Wall avoidance penalty
+                penalty = (c_map[n_idx] / 5.0) ** 2
                 new_cost = costs[c_idx] + step_cost + penalty
 
                 if new_cost < costs[n_idx]:
                     costs[n_idx] = new_cost
-                    # Tie-breaking heuristic: slight preference for nodes on the direct line
+                    # Heuristic: distance to goal + small tie-breaker
                     h = ((goal_x - nx)**2 + (goal_y - ny)**2)**0.5 * 1.001
                     parents[n_idx] = c_idx
-                    heapq.heappush(frontier, (new_cost + h, nx, ny, n_idx))
+                    push(frontier, (new_cost + h, nx, ny, n_idx))
 
-    return parents, -1
+    return None
 
-def a_star_exploration(static_map_raw, costmap_raw, start, goal, width=800, height=800, fatal_cost=90):
-    """
-    Main entry point compatible with your existing calls.
-    """
-    # Convert inputs to flat numpy arrays for the Numba core
-    s_map_flat = np.array(static_map_raw, dtype=np.int8).flatten()
-    c_map_flat = np.array(costmap_raw, dtype=np.uint8).flatten()
-    
-    # Run the compiled core
-    parents, end_idx = _core_astar(s_map_flat, c_map_flat, start, goal, width, height, fatal_cost)
-    
-    if end_idx == -1:
-        return None
-
-    # Reconstruct path
+def reconstruct_path_optimized(parents, start_idx, end_idx, width):
     path = []
     curr = end_idx
-    start_idx = start[1] * width + start[0]
-    
     while curr != -1:
         path.append((int(curr % width), int(curr // width)))
-        if curr == start_idx:
-            break
+        if curr == start_idx: break
         curr = parents[curr]
-    
     path.reverse()
-
-    # Apply your specific trimming logic
-    if len(path) > 6:
-        return path[:-3]
-    return []
+    # Your original trimming logic
+    return path[:-3] if len(path) > 6 else []
