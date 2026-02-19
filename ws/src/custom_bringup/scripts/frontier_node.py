@@ -46,12 +46,15 @@ class FrontierNode:
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
         # out
-        self.frontier_node_pub = rospy.Publisher(
-            "/frontier_node_reply", String, queue_size=1
-        )
-        self.frontier_node_path_pub = rospy.Publisher(
-            "/frontier_node_path", Path, queue_size=1
-        )
+        self.global_reply_pub = rospy.Publisher("/robot/reply", String, queue_size=1)
+        self.global_path_pub = rospy.Publisher("/robot/path_reply", Path, queue_size=1)
+
+        # self.frontier_node_pub = rospy.Publisher(
+        #     "/frontier_node_reply", String, queue_size=1
+        # )
+        # self.frontier_node_path_pub = rospy.Publisher(
+        #     "/frontier_node_path", Path, queue_size=1
+        # )
 
         self.is_active = False
         self.last_trigger_time = rospy.Time(0)
@@ -243,7 +246,8 @@ class FrontierNode:
         path_msg.header.stamp = rospy.Time.now()
 
         data = {
-            "cmd": "path"
+            "header": 'frontier',
+            "data": "path"
         }
         cmd_msg = String()
         cmd_msg.data = json.dumps(data)
@@ -259,17 +263,18 @@ class FrontierNode:
             pose.pose.orientation.w = 1.0  # Default orientation
             path_msg.poses.append(pose)
 
-        self.frontier_node_pub.publish(cmd_msg)
-        self.frontier_node_path_pub.publish(path_msg)
+        self.global_reply_pub.publish(cmd_msg)
+        self.global_path_pub.publish(path_msg)
 
     def publish_rotate_command(self):
         data = {
-            "cmd": "rotate"
+            "header": 'frontier',
+            "data": "rotate"
         }
         cmd_msg = String()
         cmd_msg.data = json.dumps(data)
 
-        self.frontier_node_pub.publish(cmd_msg)
+        self.global_reply_pub.publish(cmd_msg)
 
 
     def publish_frontier_markers(self, frontiers):

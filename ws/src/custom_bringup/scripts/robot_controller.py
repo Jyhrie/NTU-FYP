@@ -52,6 +52,10 @@ class Controller:
         self.pc_node_sub = rospy.Subscriber("/pc_node_reply", String, self.pc_node_cb)
         self.movement_controller_sub = rospy.Subscriber("/movement_controller_message", String, self.movement_controller_cb)
 
+
+        self.reply_sub = rospy.Subscriber("/robot/reply", String, self.global_reply_cb) #reply as "header (node), data (content)" in json format, ex: {"node": "frontier", "cmd": "path"}
+        self.path_sub = rospy .Subscriber("/robot/path_reply", Path, self.path_reply_cb)
+
         self.request_sent = False
         self.received = False
         self.received_path = False
@@ -69,6 +73,14 @@ class Controller:
         self.rate = rospy.Rate(5)
 
         print("Initialization Complete, Node is Ready!")
+        pass
+
+    def global_reply_cb(self, msg):
+        self.received = json.loads(msg.data)
+        pass
+
+    def path_reply_cb(self, msg):
+        self.received_path = msg
         pass
 
     def movement_controller_cb(self, msg):
@@ -91,6 +103,10 @@ class Controller:
         pass
 
     def pc_node_cb(self, msg):
+        if msg.data == "interrupt":
+            #TODO: unpack the data, perform the navigation to spot.
+            self.interrupt()
+
         pass
 
     # ====== UTIL ====== # 
@@ -135,6 +151,41 @@ class Controller:
         if self.init_complete == True:
             self.transition(States.REQUEST_FRONTIER_PATH)
         pass
+
+    def state_request_path_home(self):
+        # 1. Send the request only once
+        if not self.request_sent:
+            msg = String()
+            msg.data = "request_home"  # Assuming your backend listens for this string
+            print("🏠 Publishing: Request Path Home")
+            
+            self.global_request.publish(msg)
+            self.request_sent = True
+            self.start_time = rospy.get_time()
+
+        # 2. Check if the response has arrived
+        elif self.received:
+            if self.received["data"] == "path":
+                print("Home Path Received")
+                if self.received_path and len(self.received_path.poses) > 0:
+                    self.goal_path = self.received_path
+                    self.transition(States.NAVIGATE)
+                    
+                    # Reset flags for the next state
+                    self.request_sent = False
+                    self.received = False
+            
+            # If the backend sends a "rotate" command instead for some reason
+            elif self.received["data"] == "rotate":
+                print("Received rotate command while trying to go home.")
+                # You could handle this similarly to your frontier logic
+                self.transition(States.IDLE) 
+
+        # 3. Handle Timeout (Safe failure)
+        elif (rospy.get_time() - self.start_time) > self.request_timeout:
+            self.request_sent = False
+            self.transition(States.IDLE)
+            
 
     def state_request_frontier_path(self):
         if not self.request_sent:
