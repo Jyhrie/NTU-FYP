@@ -1,89 +1,98 @@
 import heapq
 import numpy as np
 
+def a_star_exploration(static_map_raw, costmap_raw, start, goal,
+                       width=800, height=800, fatal_cost=90):
 
-def a_star_exploration(static_map_raw,
-           costmap_raw,
-           start,
-           goal,
-           width=800,
-           height=800,
-           fatal_cost=90):
-
-    static_map = np.asarray(static_map_raw, dtype=np.int16).reshape(height, width)
-    costmap = np.asarray(costmap_raw, dtype=np.int16).reshape(height, width)
+    HEURISTIC_WEIGHT = 0.8
+    COSTMAP_WEIGHT   = 2.5
+    STATIC_WEIGHT    = 1.0
+    DIAG_COST        = 1.414
 
     sx, sy = start
     gx, gy = goal
 
-    # Bounds check
+    # -- Precompute cost grid once up front --
+    cm = np.asarray(costmap_raw,    dtype=np.float32).reshape(height, width)
+    sm = np.asarray(static_map_raw, dtype=np.float32).reshape(height, width)
+
+    # True where cell is impassable
+    blocked = (cm >= fatal_cost) | (sm >= fatal_cost)
+
+    # Traversal cost per cell (valid cells only)
+    cost_grid = 1.0 + (COSTMAP_WEIGHT * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
+    cost_grid[blocked] = 0.0  # sentinel; we check blocked separately
+
     if not (0 <= sx < width and 0 <= sy < height):
-        return np.empty((0, 2), dtype=np.int32), False
+        return None, False
     if not (0 <= gx < width and 0 <= gy < height):
-        return np.empty((0, 2), dtype=np.int32), False
+        return None, False
 
-    # Walkable = free space + not lethal in costmap
-    walkable = (static_map == 0) & (costmap < fatal_cost)
+    NEIGHBORS = [
+        ( 1,  0, 1.0),  (-1,  0, 1.0),
+        ( 0,  1, 1.0),  ( 0, -1, 1.0),
+        ( 1,  1, DIAG_COST), (-1, -1, DIAG_COST),
+        ( 1, -1, DIAG_COST), (-1,  1, DIAG_COST),
+    ]
 
-    if not walkable[gy, gx]:
-        return np.empty((0, 2), dtype=np.int32), False
-
-    # Preallocate
-    g_score = np.full((height, width), np.inf, dtype=np.float32)
-    closed = np.zeros((height, width), dtype=np.bool_)
-    parent = np.full((height, width, 2), -1, dtype=np.int32)
-
-    # Manhattan heuristic
-    def heuristic(x, y):
-        return abs(x - gx) + abs(y - gy)
-
-    open_heap = []
-
+    INF = float('inf')
+    g_score  = np.full((height, width), INF, dtype=np.float32)
     g_score[sy, sx] = 0.0
-    heapq.heappush(open_heap, (heuristic(sx, sy), sx, sy))
 
-    neighbors = ((1,0), (-1,0), (0,1), (0,-1))
+    came_from = {}
+    open_heap = []
+    heapq.heappush(open_heap, (0.0, 0.0, sx, sy))
+    closed_set = set()
+
+    best_node = (sx, sy)
+    best_h    = abs(sx - gx) + abs(sy - gy)  # cheap init, refined in loop
+
+    def heuristic(x, y):
+        dx = abs(x - gx)
+        dy = abs(y - gy)
+        return (dx + dy) + (DIAG_COST - 2) * min(dx, dy)
+
+    def reconstruct(end):
+        path = []
+        node = end
+        while node in came_from:
+            path.append(node)
+            node = came_from[node]
+        path.append((sx, sy))
+        path.reverse()
+        return path
 
     while open_heap:
-        _, x, y = heapq.heappop(open_heap)
+        f, g, cx, cy = heapq.heappop(open_heap)
 
-        if closed[y, x]:
+        if (cx, cy) in closed_set:
             continue
+        closed_set.add((cx, cy))
 
-        closed[y, x] = True
+        h = heuristic(cx, cy)
+        if h < best_h:
+            best_h = h
+            best_node = (cx, cy)
 
-        # Goal reached
-        if x == gx and y == gy:
-            path = []
-            cx, cy = x, y
-            while not (cx == sx and cy == sy):
-                path.append((cx, cy))
-                cx, cy = parent[cy, cx]
-            path.append((sx, sy))
-            path.reverse()
-            return np.array(path, dtype=np.int32), True
+        if cx == gx and cy == gy:
+            return reconstruct((cx, cy)), True
 
-        current_g = g_score[y, x]
+        g = float(g_score[cy, cx])  # use authoritative value
 
-        for dx, dy in neighbors:
-            nx = x + dx
-            ny = y + dy
-
+        for dx, dy, move_cost in NEIGHBORS:
+            nx, ny = cx + dx, cy + dy
             if not (0 <= nx < width and 0 <= ny < height):
                 continue
-            if closed[ny, nx]:
+            if (nx, ny) in closed_set:
                 continue
-            if not walkable[ny, nx]:
+            if blocked[ny, nx]:
                 continue
 
-            # Costmap-weighted movement
-            traversal_cost = 1.0 + (costmap[ny, nx] / 100.0)
-            tentative_g = current_g + traversal_cost
-
+            tentative_g = g + move_cost * float(cost_grid[ny, nx])
             if tentative_g < g_score[ny, nx]:
                 g_score[ny, nx] = tentative_g
-                parent[ny, nx] = (x, y)
-                f_score = tentative_g + heuristic(nx, ny)
-                heapq.heappush(open_heap, (f_score, nx, ny))
+                came_from[(nx, ny)] = (cx, cy)
+                f_score = tentative_g + HEURISTIC_WEIGHT * heuristic(nx, ny)
+                heapq.heappush(open_heap, (f_score, tentative_g, nx, ny))
 
-    return np.empty((0, 2), dtype=np.int32), False
+    return reconstruct(best_node), False
