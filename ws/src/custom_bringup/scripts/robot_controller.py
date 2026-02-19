@@ -157,7 +157,6 @@ class Controller:
         if not self.request_sent:
             msg = String()
             msg.data = "request_home"  # Assuming your backend listens for this string
-            print("🏠 Publishing: Request Path Home")
             
             self.global_request.publish(msg)
             self.request_sent = True
