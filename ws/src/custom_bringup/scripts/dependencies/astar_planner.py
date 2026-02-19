@@ -2,7 +2,7 @@ import heapq
 import numpy as np
 
 
-def a_star(static_map_raw,
+def a_star_exploration(static_map_raw,
            costmap_raw,
            start,
            goal,
