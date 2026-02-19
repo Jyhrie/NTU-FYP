@@ -87,8 +87,44 @@ class FrontierDetector:
 
         return best_pixel if best_pixel else (cx, cy)
 
-    def filter_cluster(self, clusters):
-        return [c for c in clusters if len(c) >= MIN_FRONTIER_SIZE]
+    def filter_cluster(self, clusters, map_data):
+            # 1. Reshape map for 2D indexing
+            grid = np.array(map_data).reshape((self.height, self.width))
+            
+            filtered = []
+            # Define the search window size (e.g., 5x5 or 6x6)
+            # A radius of 3 gives a 7x7 box; radius of 2 gives a 5x5 box.
+            radius = 3 
+            wall_threshold = 10 # Reject if 10 or more cells are occupied
+
+            for cluster in clusters:
+                # Basic size check first (efficiency)
+                if len(cluster) < MIN_FRONTIER_SIZE:
+                    continue
+
+                # 2. Calculate centroid of the cluster
+                cx = int(sum(p[0] for p in cluster) / float(len(cluster)))
+                cy = int(sum(p[1] for p in cluster) / float(len(cluster)))
+
+                # 3. Define the bounding box around the centroid
+                x_min = max(0, cx - radius)
+                x_max = min(self.width, cx + radius + 1)
+                y_min = max(0, cy - radius)
+                y_max = min(self.height, cy + radius + 1)
+
+                # 4. Extract the local patch and count occupied cells
+                # Occupied cells in ROS are typically 100
+                local_patch = grid[y_min:y_max, x_min:x_max]
+                occupied_count = np.sum(local_patch == self.OCCUPIED)
+
+                if occupied_count >= wall_threshold:
+                    # Log this for debugging if needed
+                    # print("Rejecting frontier at ({},{}): {} walls nearby".format(cx, cy, occupied_count))
+                    continue
+
+                filtered.append(cluster)
+
+            return filtered
 
 
     def get_frontier_cell_groups_wfd(self, robot_x, robot_y, raw_data):

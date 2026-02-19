@@ -161,11 +161,13 @@ class FrontierNode:
                     return
                 
                 elif len(paths) > 0 and not success:
+                    #TODO fix tmr
                     sel_path = self.get_shortest_path(paths)
-                    print("Paths: ", paths)
-                    print("Sel Path:", sel_path)
-                    print("No Valid Path Detected, but sending closest attempt")
-                    self.publish_visual_path(sel_path)
+                    if len(sel_path) > 3:
+                        print("Paths: ", paths)
+                        print("Sel Path:", sel_path)
+                        print("No Valid Path Detected, but sending closest attempt")
+                        self.publish_visual_path(sel_path)
                     return
                 
         print("No Valid Path Detected.")

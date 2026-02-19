@@ -121,6 +121,7 @@ class Controller:
     # ====== FSM ====== # 
 
     def interrupt(self, clear = False):
+        print("Interrupting Current Action")
         self.global_request.publish("interrupt")
         pass
 
