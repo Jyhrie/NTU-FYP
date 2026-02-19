@@ -197,7 +197,7 @@ class Controller:
             self.start_time = rospy.get_time()
 
         elif self.received:
-            if self.received["cmd"] == "rotate":
+            if self.received["data"] == "rotate":
                 pose = self.get_robot_pose()
                 if pose is None: 
                     return
@@ -230,7 +230,7 @@ class Controller:
                 self.request_sent = False
                 self.received = False
                 pass
-            elif self.received["cmd"] == "path": 
+            elif self.received["data"] == "path": 
                 print("Path Received")
                 if self.received_path and len(self.received_path.poses) > 0:
                     print("Transitioning")
