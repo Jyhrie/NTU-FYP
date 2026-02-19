@@ -3,7 +3,7 @@ import numpy as np
 
 def a_star_exploration(static_map_raw, costmap_raw, start, goal,
                        width=800, height=800, fatal_cost=90,
-                       approach_radius=30):
+                       approach_radius=15):
     """
     approach_radius: cells from goal where we start relaxing wall avoidance
                      and allow cutting in toward the goal.
