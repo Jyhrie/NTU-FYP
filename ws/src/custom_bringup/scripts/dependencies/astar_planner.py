@@ -9,6 +9,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     # Even a small costmap value will now outweigh a long physical distance.
     COSTMAP_WEIGHT = 1000.0  
     DIAG_COST      = 1.414
+    HEURISTIC_WEIGHT = 0.3
     
     sx, sy = start
     gx, gy = goal
@@ -61,7 +62,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
 
     heap = []
     # (f_score, g_score, x, y)
-    heapq.heappush(heap, (heuristic(sx, sy), 0.0, sx, sy))
+    heapq.heappush(heap, (HEURISTIC_WEIGHT * heuristic(sx, sy), 0.0, sx, sy))
 
     # 4. Main Loop
     while heap:
@@ -91,7 +92,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
             # We treat the costmap as an additive penalty. 
             # 1000 * cost means the robot would rather walk 50 meters in a 
             # clear hallway than 1 meter near a wall.
-            traversal_cost = move_dist + (COSTMAP_WEIGHT * (cm[ny, nx] / 255.0))
+            traversal_cost = move_dist + (COSTMAP_WEIGHT * (cm[ny, nx] / 100))
             tg = g + traversal_cost
 
             if tg < g_score[ny, nx]:
