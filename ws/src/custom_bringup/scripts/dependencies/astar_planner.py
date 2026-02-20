@@ -1,19 +1,19 @@
 import heapq
 import numpy as np
+from scipy.ndimage import binary_dilation
 
 
 def a_star_exploration(static_map_raw, costmap_raw, start, goal,
                        width=800, height=800, fatal_cost=78,
-                       approach_radius=3):
+                       approach_radius=30, min_clearance=5):
 
-    HEURISTIC_WEIGHT   = 0.3
+    HEURISTIC_WEIGHT   = 0.05   # near-Dijkstra, costmap dominates
     COSTMAP_WEIGHT     = 15.0
     STATIC_WEIGHT      = 0.5
     DIAG_COST          = 1.414
-
-    APPROACH_CM_WEIGHT = 4.0
-    APPROACH_H_WEIGHT  = 0.8
-    LENIENT_COST       = 99   # only truly lethal cells blocked near goal
+    APPROACH_CM_WEIGHT = 2.0
+    APPROACH_H_WEIGHT  = 0.05
+    LENIENT_COST       = 99
 
     sx, sy = start
     gx, gy = goal
@@ -26,20 +26,28 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     cm = np.asarray(costmap_raw,    dtype=np.float32).reshape(height, width)
     sm = np.asarray(static_map_raw, dtype=np.float32).reshape(height, width)
 
-    blocked         = (cm >= fatal_cost)  | (sm >= fatal_cost)   # strict, used in wide traversal
-    blocked_lenient = (cm >= LENIENT_COST) | (sm >= fatal_cost)  # relaxed, used in approach zone
+    # Base blocked maps
+    blocked_base         = (cm >= fatal_cost) | (sm >= fatal_cost)
+    blocked_lenient_base = (cm >= LENIENT_COST) | (sm >= fatal_cost)
+
+    # Dilate to enforce minimum clearance from walls
+    struct  = np.ones((min_clearance * 2 + 1, min_clearance * 2 + 1), dtype=np.bool_)
+    blocked         = binary_dilation(blocked_base,         structure=struct)
+    blocked_lenient = binary_dilation(blocked_lenient_base, structure=struct)
 
     if blocked[sy, sx]:
         print("Start is blocked")
         return None, False
 
-    # if blocked_lenient[gy, gx]:
-    #     print("Goal is blocked even with lenient threshold")
-    #     return None, False
+    if blocked_lenient[gy, gx]:
+        print("Goal is blocked even with lenient threshold")
+        return None, False
 
+    # Cost grids
     cost_wide     = 1.0 + (COSTMAP_WEIGHT    * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
     cost_approach = 1.0 + (APPROACH_CM_WEIGHT * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
 
+    # Proximity discount near goal — cheaper to enter inflated zone close to goal
     ys, xs = np.mgrid[0:height, 0:width]
     dist_to_goal = np.sqrt((xs - gx) ** 2 + (ys - gy) ** 2).astype(np.float32)
     proximity_discount = np.ones((height, width), dtype=np.float32)
@@ -56,14 +64,10 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     g_score[sy, sx] = 0.0
 
     NEIGHBORS = [
-        ( 1,  0, 1.0),
-        (-1,  0, 1.0),
-        ( 0,  1, 1.0),
-        ( 0, -1, 1.0),
-        ( 1,  1, DIAG_COST),
-        (-1, -1, DIAG_COST),
-        ( 1, -1, DIAG_COST),
-        (-1,  1, DIAG_COST),
+        ( 1,  0, 1.0),      (-1,  0, 1.0),
+        ( 0,  1, 1.0),      ( 0, -1, 1.0),
+        ( 1,  1, DIAG_COST), (-1, -1, DIAG_COST),
+        ( 1, -1, DIAG_COST), (-1,  1, DIAG_COST),
     ]
 
     ar2 = approach_radius * approach_radius
@@ -105,9 +109,9 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
             return reconstruct(cx, cy), True
 
         approaching = ((cx - gx) ** 2 + (cy - gy) ** 2) <= ar2
-        hw           = APPROACH_H_WEIGHT if approaching else HEURISTIC_WEIGHT
-        cg           = cost_approach     if approaching else cost_wide
-        blk          = blocked_lenient   if approaching else blocked
+        hw  = APPROACH_H_WEIGHT if approaching else HEURISTIC_WEIGHT
+        cg  = cost_approach     if approaching else cost_wide
+        blk = blocked_lenient   if approaching else blocked
 
         g = float(g_score[cy, cx])
 
