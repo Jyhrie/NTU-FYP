@@ -13,6 +13,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
 
     APPROACH_CM_WEIGHT = 4.0
     APPROACH_H_WEIGHT  = 0.8
+    LENIENT_COST       = 99   # only truly lethal cells blocked near goal
 
     sx, sy = start
     gx, gy = goal
@@ -25,17 +26,18 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     cm = np.asarray(costmap_raw,    dtype=np.float32).reshape(height, width)
     sm = np.asarray(static_map_raw, dtype=np.float32).reshape(height, width)
 
-    blocked = (cm >= fatal_cost) | (sm >= fatal_cost)
+    blocked         = (cm >= fatal_cost)  | (sm >= fatal_cost)   # strict, used in wide traversal
+    blocked_lenient = (cm >= LENIENT_COST) | (sm >= fatal_cost)  # relaxed, used in approach zone
 
-    if blocked[sy, sx] or blocked[gy, gx]:
-        print("Start or goal is blocked")
+    if blocked[sy, sx]:
+        print("Start is blocked")
         return None, False
 
-    # Simple, predictable cost: every cell costs at least 1.0,
-    # and high costmap values make cells increasingly expensive.
-    # No escape bias - just make walls expensive enough that open space
-    # is always clearly cheaper.
-    cost_wide     = 1.0 + (COSTMAP_WEIGHT * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
+    if blocked_lenient[gy, gx]:
+        print("Goal is blocked even with lenient threshold")
+        return None, False
+
+    cost_wide     = 1.0 + (COSTMAP_WEIGHT    * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
     cost_approach = 1.0 + (APPROACH_CM_WEIGHT * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
 
     INF = np.float32(1e30)
@@ -96,8 +98,9 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
             return reconstruct(cx, cy), True
 
         approaching = ((cx - gx) ** 2 + (cy - gy) ** 2) <= ar2
-        hw = APPROACH_H_WEIGHT if approaching else HEURISTIC_WEIGHT
-        cg = cost_approach     if approaching else cost_wide
+        hw           = APPROACH_H_WEIGHT if approaching else HEURISTIC_WEIGHT
+        cg           = cost_approach     if approaching else cost_wide
+        blk          = blocked_lenient   if approaching else blocked
 
         g = float(g_score[cy, cx])
 
@@ -106,7 +109,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
 
             if not (0 <= nx < width and 0 <= ny < height):
                 continue
-            if closed[ny, nx] or blocked[ny, nx]:
+            if closed[ny, nx] or blk[ny, nx]:
                 continue
 
             tg = g + move_cost * float(cg[ny, nx])
