@@ -125,17 +125,24 @@ class FrontierNode:
             )
 
             if success and path:
-                # Check if the first move requires turning around
                 if len(path) >= 2:
-                    first_dx = path[1][0] - path[0][0]
-                    first_dy = path[1][1] - path[0][1]
+                    # Look ahead several steps for a more stable angle estimate
+                    lookahead = min(5, len(path) - 1)
+                    first_dx = path[lookahead][0] - path[0][0]
+                    first_dy = path[lookahead][1] - path[0][1]
                     first_step_angle = math.atan2(first_dy, first_dx)
                     angle_diff = math.atan2(
                         math.sin(first_step_angle - yaw),
                         math.cos(first_step_angle - yaw)
                     )
+                    print("Path initial angle: {}deg, robot yaw: {}deg, diff: {}deg".format(
+                        round(math.degrees(first_step_angle), 1),
+                        round(math.degrees(yaw), 1),
+                        round(math.degrees(angle_diff), 1)
+                    ))
                     if abs(angle_diff) > math.radians(90):
-                        print("First move requires {}deg turn, rotating first.".format(round(math.degrees(angle_diff), 1)))
+                        print("First move requires {}deg turn, rotating first.".format(
+                            round(math.degrees(angle_diff), 1)))
                         self.publish_rotate_command()
                         return
 
