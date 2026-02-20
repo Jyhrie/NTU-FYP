@@ -263,12 +263,12 @@ class FrontierNode:
 
         for grid_point in grid_path:
             # Convert each grid point back to meters (world coords)
-            world_x, world_y = self.grid_to_world(grid_point)
+            #world_x, world_y = self.grid_to_world(grid_point)
 
             pose = PoseStamped()
             pose.header = path_msg.header
-            pose.pose.position.x = world_x
-            pose.pose.position.y = world_y
+            pose.pose.position.x = grid_point[0]
+            pose.pose.position.y = grid_point[1]
             pose.pose.orientation.w = 1.0  # Default orientation
             path_msg.poses.append(pose)
 
