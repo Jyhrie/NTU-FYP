@@ -4,7 +4,7 @@ import numpy as np
 
 def a_star_exploration(static_map_raw, costmap_raw, start, goal,
                        width=800, height=800, fatal_cost=70,
-                       approach_radius=5):
+                       approach_radius=2):
 
     HEURISTIC_WEIGHT   = 0.3
     COSTMAP_WEIGHT     = 15.0
