@@ -1,13 +1,12 @@
 import heapq
 import numpy as np
-from scipy.ndimage import binary_dilation
 
 
 def a_star_exploration(static_map_raw, costmap_raw, start, goal,
                        width=800, height=800, fatal_cost=90,
-                       approach_radius=30, min_clearance=5):
+                       approach_radius=30):
 
-    HEURISTIC_WEIGHT   = 0.05   # near-Dijkstra, costmap dominates
+    HEURISTIC_WEIGHT   = 0.05
     COSTMAP_WEIGHT     = 15.0
     STATIC_WEIGHT      = 0.5
     DIAG_COST          = 1.414
@@ -26,28 +25,12 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     cm = np.asarray(costmap_raw,    dtype=np.float32).reshape(height, width)
     sm = np.asarray(static_map_raw, dtype=np.float32).reshape(height, width)
 
-    # Base blocked maps
-    blocked_base         = (cm >= fatal_cost) | (sm >= fatal_cost)
-    blocked_lenient_base = (cm >= LENIENT_COST) | (sm >= fatal_cost)
+    blocked         = (cm >= fatal_cost)  | (sm >= fatal_cost)
+    blocked_lenient = (cm >= LENIENT_COST) | (sm >= fatal_cost)
 
-    # Dilate to enforce minimum clearance from walls
-    struct  = np.ones((min_clearance * 2 + 1, min_clearance * 2 + 1), dtype=np.bool_)
-    blocked         = binary_dilation(blocked_base,         structure=struct)
-    blocked_lenient = binary_dilation(blocked_lenient_base, structure=struct)
-
-    # if blocked[sy, sx]:
-    #     print("Start is blocked")
-    #     return None, False
-
-    # if blocked_lenient[gy, gx]:
-    #     print("Goal is blocked even with lenient threshold")
-    #     return None, False
-
-    # Cost grids
     cost_wide     = 1.0 + (COSTMAP_WEIGHT    * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
     cost_approach = 1.0 + (APPROACH_CM_WEIGHT * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
 
-    # Proximity discount near goal - cheaper to enter inflated zone close to goal
     ys, xs = np.mgrid[0:height, 0:width]
     dist_to_goal = np.sqrt((xs - gx) ** 2 + (ys - gy) ** 2).astype(np.float32)
     proximity_discount = np.ones((height, width), dtype=np.float32)
@@ -64,8 +47,8 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     g_score[sy, sx] = 0.0
 
     NEIGHBORS = [
-        ( 1,  0, 1.0),      (-1,  0, 1.0),
-        ( 0,  1, 1.0),      ( 0, -1, 1.0),
+        ( 1,  0, 1.0),       (-1,  0, 1.0),
+        ( 0,  1, 1.0),       ( 0, -1, 1.0),
         ( 1,  1, DIAG_COST), (-1, -1, DIAG_COST),
         ( 1, -1, DIAG_COST), (-1,  1, DIAG_COST),
     ]
