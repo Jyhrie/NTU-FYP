@@ -92,7 +92,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
             # We treat the costmap as an additive penalty. 
             # 1000 * cost means the robot would rather walk 50 meters in a 
             # clear hallway than 1 meter near a wall.
-            traversal_cost = move_dist + (COSTMAP_WEIGHT * (cm[ny, nx] / 100))
+            traversal_cost = move_dist + (COSTMAP_WEIGHT * (cm[ny, nx]))
             tg = g + traversal_cost
 
             if tg < g_score[ny, nx]:
