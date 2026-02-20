@@ -35,13 +35,13 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     blocked         = binary_dilation(blocked_base,         structure=struct)
     blocked_lenient = binary_dilation(blocked_lenient_base, structure=struct)
 
-    if blocked[sy, sx]:
-        print("Start is blocked")
-        return None, False
+    # if blocked[sy, sx]:
+    #     print("Start is blocked")
+    #     return None, False
 
-    if blocked_lenient[gy, gx]:
-        print("Goal is blocked even with lenient threshold")
-        return None, False
+    # if blocked_lenient[gy, gx]:
+    #     print("Goal is blocked even with lenient threshold")
+    #     return None, False
 
     # Cost grids
     cost_wide     = 1.0 + (COSTMAP_WEIGHT    * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
