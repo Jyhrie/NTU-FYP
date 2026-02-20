@@ -4,10 +4,10 @@ import rospy
 import math
 import cv2
 import numpy as np
+import heapq
 from std_msgs.msg import Header
 from nav_msgs.msg import GridCells, OccupancyGrid, Path
 from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped
-from priority_queue import PriorityQueue
 from tf.transformations import quaternion_from_euler
 
 
@@ -300,8 +300,8 @@ class PathPlanner:
         if not PathPlanner.is_cell_walkable(mapdata, goal):
             goal = PathPlanner.get_first_walkable_neighbor(mapdata, goal)
 
-        pq = PriorityQueue()
-        pq.put(start, 0)
+        pq = []
+        heapq.heappush(pq, (0, start))
 
         cost_so_far = {}
         distance_cost_so_far = {}
@@ -310,8 +310,8 @@ class PathPlanner:
         came_from = {}
         came_from[start] = None
 
-        while not pq.empty():
-            current = pq.get()
+        while pq:
+            priority, current = heapq.heappop(pq)
 
             if current == goal:
                 break
@@ -331,7 +331,7 @@ class PathPlanner:
                         distance_cost_so_far[current] + distance
                     )
                     priority = new_cost + PathPlanner.euclidean_distance(neighbor, goal)
-                    pq.put(neighbor, priority)
+                    heapq.heappush(pq, (priority, neighbor))
                     came_from[neighbor] = current
 
         path = []
