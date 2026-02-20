@@ -3,15 +3,15 @@ import numpy as np
 
 
 def a_star_exploration(static_map_raw, costmap_raw, start, goal,
-                       width=800, height=800, fatal_cost=85,
+                       width=800, height=800, fatal_cost=70,
                        approach_radius=15):
 
-    HEURISTIC_WEIGHT   = 0.2    # low = less greedy, wider arcs
-    COSTMAP_WEIGHT     = 20.0   # high = strongly avoids walls
+    HEURISTIC_WEIGHT   = 0.3
+    COSTMAP_WEIGHT     = 15.0
     STATIC_WEIGHT      = 0.5
     DIAG_COST          = 1.414
 
-    APPROACH_CM_WEIGHT = 3.0
+    APPROACH_CM_WEIGHT = 4.0
     APPROACH_H_WEIGHT  = 0.8
 
     sx, sy = start
@@ -28,23 +28,15 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     blocked = (cm >= fatal_cost) | (sm >= fatal_cost)
 
     if blocked[sy, sx] or blocked[gy, gx]:
+        print("Start or goal is blocked")
         return None, False
 
-    # --- Core fix: cost is relative to destination cell only, floored at 1.0 ---
-    # This prevents the planner from treating lateral moves through high-cost
-    # zones as "free" just because the start is already expensive.
-    cost_wide     = np.maximum(1.0 + (COSTMAP_WEIGHT * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0), 1.0)
-    cost_approach = np.maximum(1.0 + (APPROACH_CM_WEIGHT * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0), 1.0)
-
-    # Escape bias: add a one-time penalty for staying in high-cost zones.
-    # Computed from the start cell so the planner always wants to move to
-    # cheaper space rather than laterally through expensive space.
-    start_cm_cost = float(cm[sy, sx])
-    escape_bias = np.maximum(start_cm_cost - cm, 0.0) * (-2.0)  # reward moving away from start cost
-    cost_wide     = cost_wide     + escape_bias
-    cost_approach = cost_approach + escape_bias
-    cost_wide     = np.maximum(cost_wide,     1.0)
-    cost_approach = np.maximum(cost_approach, 1.0)
+    # Simple, predictable cost: every cell costs at least 1.0,
+    # and high costmap values make cells increasingly expensive.
+    # No escape bias - just make walls expensive enough that open space
+    # is always clearly cheaper.
+    cost_wide     = 1.0 + (COSTMAP_WEIGHT * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
+    cost_approach = 1.0 + (APPROACH_CM_WEIGHT * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
 
     INF = np.float32(1e30)
     g_score = np.full((height, width), INF,  dtype=np.float32)
