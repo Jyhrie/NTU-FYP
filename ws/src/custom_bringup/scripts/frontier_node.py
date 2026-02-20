@@ -131,7 +131,10 @@ class FrontierNode:
             )
 
             if path_result is not None:
+                print(path_result)
                 self.publish_visual_path(path_result)
+            else:
+                print("No valid path to frontier: ", frontier)
 
         # for frontier in frontiers:
         #     path, success = a_star_exploration(
