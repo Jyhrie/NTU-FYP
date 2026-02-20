@@ -138,8 +138,6 @@ class FrontierNode:
                 self.map.data, self.global_costmap, start, frontier
             )
 
-            
-
             if len(path) < 12:
                 print("Discarding path to frontier {} due to insufficient length: {}".format(frontier, len(path)))
                 continue
