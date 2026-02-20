@@ -33,9 +33,9 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
         print("Start is blocked")
         return None, False
 
-    if blocked_lenient[gy, gx]:
-        print("Goal is blocked even with lenient threshold")
-        return None, False
+    # if blocked_lenient[gy, gx]:
+    #     print("Goal is blocked even with lenient threshold")
+    #     return None, False
 
     cost_wide     = 1.0 + (COSTMAP_WEIGHT    * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
     cost_approach = 1.0 + (APPROACH_CM_WEIGHT * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
