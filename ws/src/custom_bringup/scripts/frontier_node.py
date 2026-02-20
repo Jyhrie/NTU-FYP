@@ -144,6 +144,7 @@ class FrontierNode:
                 return
 
             if path:
+                print("appending path")
                 paths.append(path)
 
         # No successful path, fall back to best partial
