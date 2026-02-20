@@ -148,7 +148,8 @@ class FrontierNode:
                 paths.append(path)
 
         # No successful path, fall back to best partial
-        if paths:
+        print(paths)
+        if len(paths) > 0:
             sel_path = self.get_shortest_path(paths)
             if len(sel_path) > 3:
                 print("No complete path, sending closest attempt.")
