@@ -40,7 +40,7 @@ class FrontierDetector:
             final_targets.append(target)
 
         final_targets.sort(key=lambda goal: math.sqrt((x - goal[0])**2 + (y - goal[1])**2))
-    
+        
         return final_targets
     
     def frontier_to_centroid(self, clusters): 

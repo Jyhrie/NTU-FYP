@@ -117,62 +117,43 @@ class FrontierNode:
         frontiers = self.detector.get_frontiers(x_start, y_start, self.map.data)
         if self.debug:
             self.publish_frontier_markers(frontiers)
-        print(frontiers)
+
         paths = []
-        if frontiers:
-            for frontier in frontiers:
-                # --- get frontier centroid in cell coords ---
-                width = self.map.info.width
-                cx = sum(idx % width for idx in frontier) / float(len(frontier))
-                cy = sum(idx // width for idx in frontier) / float(len(frontier))
+        for frontier in frontiers:
+            path, success = a_star_exploration(
+                self.map.data, self.global_costmap, start, frontier
+            )
 
-                # convert centroid cell -> world coords
-                wx, wy = self.grid_to_world((cx, cy))
+            if success and path:
+                # Check if the first move requires turning around
+                if len(path) >= 2:
+                    first_dx = path[1][0] - path[0][0]
+                    first_dy = path[1][1] - path[0][1]
+                    first_step_angle = math.atan2(first_dy, first_dx)
+                    angle_diff = math.atan2(
+                        math.sin(first_step_angle - yaw),
+                        math.cos(first_step_angle - yaw)
+                    )
+                    if abs(angle_diff) > math.radians(90):
+                        print(f"First move requires {math.degrees(angle_diff):.1f}° turn, rotating first.")
+                        self.publish_rotate_command()
+                        return
 
-                # --- angle from robot to frontier ---
-                dx = wx - x
-                dy = wy - y
-                target_angle = math.atan2(dy, dx)
+                print("Found a valid path, publishing.")
+                self.publish_visual_path(path)
+                return
 
-                # normalize angle difference to [-pi, pi]
-                angle_diff = math.atan2(
-                    math.sin(target_angle - yaw), math.cos(target_angle - yaw)
-                )
+            if path:
+                paths.append(path)
 
-                # --- check if frontier is behind robot (180deg +- 15deg) ---
-                behind_angle = math.pi
-                tolerance = math.radians(90)
+        # No successful path, fall back to best partial
+        if paths:
+            sel_path = self.get_shortest_path(paths)
+            if len(sel_path) > 3:
+                print("No complete path, sending closest attempt.")
+                self.publish_visual_path(sel_path)
+                return
 
-                if abs(abs(angle_diff) - behind_angle) < tolerance:
-                    print(angle_diff)
-                    print("Nearest Frontiers is Directly Behind Robot")
-                    self.publish_rotate_command()
-                    return
-
-                path, success = a_star_exploration(
-                    self.map.data, self.global_costmap, start, frontier
-                )
-                if path:
-                    paths.append(path)
-
-                if len(paths) > 0 and success:
-                    sel_path = self.get_shortest_path(paths)
-                    print("Paths: ", paths)
-                    print("Sel Path:", sel_path)
-                    print("Found a Selected Path")
-                    self.publish_visual_path(sel_path)
-                    return
-                
-                elif len(paths) > 0 and not success:
-                    #TODO fix tmr
-                    sel_path = self.get_shortest_path(paths)
-                    if len(sel_path) > 3:
-                        print("Paths: ", paths)
-                        print("Sel Path:", sel_path)
-                        print("No Valid Path Detected, but sending closest attempt")
-                        self.publish_visual_path(sel_path)
-                    return
-                
         print("No Valid Path Detected.")
 
     def get_robot_pose(self):
