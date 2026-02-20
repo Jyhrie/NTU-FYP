@@ -16,6 +16,7 @@ import numpy as np
 from nav_msgs.msg import OccupancyGrid
 from dependencies.frontier_detector import FrontierDetector
 from dependencies.astar_planner import a_star_exploration
+from dependencies.astar import PathPlanner
 
 
 class FrontierNode:
@@ -119,6 +120,15 @@ class FrontierNode:
             self.publish_frontier_markers(frontiers)
 
         paths = []
+
+        for frontier in frontiers:
+            # CHANGE THIS LINE:
+            path_result = PathPlanner.a_star(
+                self.map,              # Pass the OccupancyGrid object
+                self.global_costmap,   # Pass the numpy array of costs
+                start,                 # (sx, sy)
+                frontier               # (gx, gy)
+            )
 
         for frontier in frontiers:
             path, success = a_star_exploration(
