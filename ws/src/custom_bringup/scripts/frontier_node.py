@@ -98,7 +98,7 @@ class FrontierNode:
         pass
 
     def global_costmap_cb(self, msg):
-        self.global_costmap = msg.data
+        self.global_costmap = np.array(msg.data).reshape((msg.info.height, msg.info.width))
         pass
 
     def trigger(self):
