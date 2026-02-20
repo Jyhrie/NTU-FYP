@@ -135,7 +135,7 @@ class FrontierNode:
                         math.cos(first_step_angle - yaw)
                     )
                     if abs(angle_diff) > math.radians(90):
-                        print(f"First move requires {math.degrees(angle_diff):.1f}° turn, rotating first.")
+                        print(f"First move requires {math.degrees(angle_diff):.1f}deg turn, rotating first.")
                         self.publish_rotate_command()
                         return
 
