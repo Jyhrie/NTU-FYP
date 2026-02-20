@@ -18,10 +18,13 @@ from dependencies.frontier_detector import FrontierDetector
 from dependencies.astar_planner import a_star_exploration
 from dependencies.astar import PathPlanner
 
+TRUNCATION_SIZE = 7
 
 class FrontierNode:
+    
 
     def __init__(self):
+        
 
         rospy.init_node("frontier_node")
 
@@ -135,9 +138,13 @@ class FrontierNode:
                 self.map.data, self.global_costmap, start, frontier
             )
 
-            if len(path) < 5:
+            
+
+            if len(path) < 7:
                 print("Discarding path to frontier {} due to insufficient length: {}".format(frontier, len(path)))
                 continue
+
+            path = path[:-TRUNCATION_SIZE]
 
             if success and path:
                 if len(path) >= 3:
