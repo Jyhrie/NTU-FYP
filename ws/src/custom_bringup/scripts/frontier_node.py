@@ -130,7 +130,6 @@ class FrontierNode:
                 frontier               # (gx, gy)
             )
 
-            print(path_result)
             if path_result is not None:
                 self.publish_visual_path(path_result)
 
