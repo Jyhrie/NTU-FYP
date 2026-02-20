@@ -11,7 +11,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     #COSTMAP_WEIGHT = 1000.0 
     COSTMAP_EXPONENT = 5 # You can adjust this to make it more or less sensitive to costmap values 
     DIAG_COST      = 1.414
-    HEURISTIC_WEIGHT = 0
+    HEURISTIC_WEIGHT = 0.05
     
     sx, sy = start
     gx, gy = goal
