@@ -6,7 +6,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
                        width=800, height=800, fatal_cost=90,
                        approach_radius=30):
 
-    HEURISTIC_WEIGHT   = 0.05
+    HEURISTIC_WEIGHT   = 0.00
     COSTMAP_WEIGHT     = 15.0
     STATIC_WEIGHT      = 0.5
     DIAG_COST          = 1.414
