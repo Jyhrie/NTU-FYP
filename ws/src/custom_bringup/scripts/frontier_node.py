@@ -135,8 +135,12 @@ class FrontierNode:
                 self.map.data, self.global_costmap, start, frontier
             )
 
+            if len(path) < 5:
+                print("Discarding path to frontier {} due to insufficient length: {}".format(frontier, len(path)))
+                continue
+
             if success and path:
-                if len(path) >= 2:
+                if len(path) >= 3:
                     # Look ahead several steps for a more stable angle estimate
                     lookahead = min(5, len(path) - 1)
                     first_dx = path[lookahead][0] - path[0][0]
