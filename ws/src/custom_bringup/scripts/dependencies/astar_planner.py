@@ -4,7 +4,7 @@ from scipy.ndimage import binary_dilation
 
 
 def a_star_exploration(static_map_raw, costmap_raw, start, goal,
-                       width=800, height=800, fatal_cost=78,
+                       width=800, height=800, fatal_cost=90,
                        approach_radius=30, min_clearance=5):
 
     HEURISTIC_WEIGHT   = 0.05   # near-Dijkstra, costmap dominates
