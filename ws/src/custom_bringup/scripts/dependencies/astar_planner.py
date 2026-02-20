@@ -8,7 +8,8 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
 
     # HIS LOGIC: Massive weight to force hallway centering
     # Even a small costmap value will now outweigh a long physical distance.
-    COSTMAP_WEIGHT = 1000.0  
+    #COSTMAP_WEIGHT = 1000.0 
+    COSTMAP_EXPONENT = 5 # You can adjust this to make it more or less sensitive to costmap values 
     DIAG_COST      = 1.414
     HEURISTIC_WEIGHT = 0
     
@@ -93,7 +94,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
             # We treat the costmap as an additive penalty. 
             # 1000 * cost means the robot would rather walk 50 meters in a 
             # clear hallway than 1 meter near a wall.
-            traversal_cost = move_dist + (COSTMAP_WEIGHT * (cm[ny, nx]))
+            traversal_cost = move_dist + ((cm[ny, nx]) ** COSTMAP_EXPONENT)
             print((cm[ny, nx]))
             tg = g + traversal_cost
 
