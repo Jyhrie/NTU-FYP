@@ -40,6 +40,13 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     cost_wide     = 1.0 + (COSTMAP_WEIGHT    * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
     cost_approach = 1.0 + (APPROACH_CM_WEIGHT * cm / 100.0) + (STATIC_WEIGHT * sm / 100.0)
 
+    ys, xs = np.mgrid[0:height, 0:width]
+    dist_to_goal = np.sqrt((xs - gx) ** 2 + (ys - gy) ** 2).astype(np.float32)
+    proximity_discount = np.ones((height, width), dtype=np.float32)
+    within_approach = dist_to_goal <= approach_radius
+    proximity_discount[within_approach] = 0.1 + 0.9 * (dist_to_goal[within_approach] / approach_radius)
+    cost_approach = cost_approach * proximity_discount
+
     INF = np.float32(1e30)
     g_score = np.full((height, width), INF,  dtype=np.float32)
     closed  = np.zeros((height, width),       dtype=np.bool_)
