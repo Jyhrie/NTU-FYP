@@ -6,8 +6,8 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
                        width=800, height=800, fatal_cost=85,
                        approach_radius=15):
 
-    HEURISTIC_WEIGHT   = 0.4    # low = less greedy, wider arcs
-    COSTMAP_WEIGHT     = 10.0   # high = strongly avoids walls
+    HEURISTIC_WEIGHT   = 0.2    # low = less greedy, wider arcs
+    COSTMAP_WEIGHT     = 20.0   # high = strongly avoids walls
     STATIC_WEIGHT      = 0.5
     DIAG_COST          = 1.414
 
@@ -40,7 +40,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     # Computed from the start cell so the planner always wants to move to
     # cheaper space rather than laterally through expensive space.
     start_cm_cost = float(cm[sy, sx])
-    escape_bias = np.maximum(start_cm_cost - cm, 0.0) * (-0.5)  # reward moving away from start cost
+    escape_bias = np.maximum(start_cm_cost - cm, 0.0) * (-2.0)  # reward moving away from start cost
     cost_wide     = cost_wide     + escape_bias
     cost_approach = cost_approach + escape_bias
     cost_wide     = np.maximum(cost_wide,     1.0)
