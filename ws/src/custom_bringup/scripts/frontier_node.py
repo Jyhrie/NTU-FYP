@@ -121,68 +121,60 @@ class FrontierNode:
 
         paths = []
 
-        for frontier in frontiers:
-            # CHANGE THIS LINE:
-            path_result = PathPlanner.a_star(
-                self.map,              # Pass the OccupancyGrid object
-                self.global_costmap,   # Pass the numpy array of costs
-                start,                 # (sx, sy)
-                frontier               # (gx, gy)
-            )
-
-            path, distance, s_cell, g_cell = path_result
-
-            if path is not None:
-                print(path_result)
-                self.publish_visual_path(path_result)
-            else:
-                print("No valid path to frontier: ", frontier)
-
         # for frontier in frontiers:
-        #     path, success = a_star_exploration(
-        #         self.map.data, self.global_costmap, start, frontier
+        #     # CHANGE THIS LINE:
+        #     path_result = PathPlanner.a_star(
+        #         self.map,              # Pass the OccupancyGrid object
+        #         self.global_costmap,   # Pass the numpy array of costs
+        #         start,                 # (sx, sy)
+        #         frontier               # (gx, gy)
         #     )
 
-        #     if success and path:
-        #         if len(path) >= 2:
-        #             # Look ahead several steps for a more stable angle estimate
-        #             lookahead = min(5, len(path) - 1)
-        #             first_dx = path[lookahead][0] - path[0][0]
-        #             first_dy = path[lookahead][1] - path[0][1]
-        #             first_step_angle = math.atan2(first_dy, first_dx)
-        #             angle_diff = math.atan2(
-        #                 math.sin(first_step_angle - yaw),
-        #                 math.cos(first_step_angle - yaw)
-        #             )
-        #             print("Path initial angle: {}deg, robot yaw: {}deg, diff: {}deg".format(
-        #                 round(math.degrees(first_step_angle), 1),
-        #                 round(math.degrees(yaw), 1),
-        #                 round(math.degrees(angle_diff), 1)
-        #             ))
-        #             if abs(angle_diff) > math.radians(90):
-        #                 print("First move requires {}deg turn, rotating first.".format(
-        #                     round(math.degrees(angle_diff), 1)))
-        #                 self.publish_rotate_command()
-        #                 return
+        for frontier in frontiers:
+            path, success = a_star_exploration(
+                self.map.data, self.global_costmap, start, frontier
+            )
 
-        #         print("Found a valid path, publishing.")
-        #         self.publish_visual_path(path)
-        #         return
+            if success and path:
+                if len(path) >= 2:
+                    # Look ahead several steps for a more stable angle estimate
+                    lookahead = min(5, len(path) - 1)
+                    first_dx = path[lookahead][0] - path[0][0]
+                    first_dy = path[lookahead][1] - path[0][1]
+                    first_step_angle = math.atan2(first_dy, first_dx)
+                    angle_diff = math.atan2(
+                        math.sin(first_step_angle - yaw),
+                        math.cos(first_step_angle - yaw)
+                    )
+                    print("Path initial angle: {}deg, robot yaw: {}deg, diff: {}deg".format(
+                        round(math.degrees(first_step_angle), 1),
+                        round(math.degrees(yaw), 1),
+                        round(math.degrees(angle_diff), 1)
+                    ))
+                    if abs(angle_diff) > math.radians(90):
+                        print("First move requires {}deg turn, rotating first.".format(
+                            round(math.degrees(angle_diff), 1)))
+                        self.publish_rotate_command()
+                        return
 
-        #     if path:
-        #         print("appending path")
-        #         paths.append(path)
+                print("Found a valid path, publishing.")
+                self.publish_visual_path(path)
+                return
 
-        # # No successful path, fall back to best partial
-        # print(paths)
-        # if len(paths) > 0:
-        #     sel_path = self.get_shortest_path(paths)
-        #     if len(sel_path) > 3:
-        #         print("No complete path, sending closest attempt.")
-        #         self.publish_visual_path(sel_path)
-        #         return
+            if path:
+                print("appending path")
+                paths.append(path)
 
-        # print("No Valid Path Detected.")
+        # No successful path, fall back to best partial
+        print(paths)
+        if len(paths) > 0:
+            sel_path = self.get_shortest_path(paths)
+            if len(sel_path) > 3:
+                print("No complete path, sending closest attempt.")
+                self.publish_visual_path(sel_path)
+                return
+
+        print("No Valid Path Detected.")
 
     def get_robot_pose(self):
         try:
@@ -263,12 +255,12 @@ class FrontierNode:
 
         for grid_point in grid_path:
             # Convert each grid point back to meters (world coords)
-            #world_x, world_y = self.grid_to_world(grid_point)
+            world_x, world_y = self.grid_to_world(grid_point)
 
             pose = PoseStamped()
             pose.header = path_msg.header
-            pose.pose.position.x = grid_point[0]
-            pose.pose.position.y = grid_point[1]
+            pose.pose.position.x = world_x
+            pose.pose.position.y = world_y
             pose.pose.orientation.w = 1.0  # Default orientation
             path_msg.poses.append(pose)
 
