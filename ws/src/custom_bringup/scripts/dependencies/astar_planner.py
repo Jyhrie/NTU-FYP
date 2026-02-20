@@ -2,12 +2,13 @@ import heapq
 import numpy as np
 
 
+
 def a_star_exploration(static_map_raw, costmap_raw, start, goal,
                        width=800, height=800, fatal_cost=90,
-                       approach_radius=3):
+                       approach_radius=-0):
 
     HEURISTIC_WEIGHT   = 0.00
-    COSTMAP_WEIGHT     = 100.0
+    COSTMAP_WEIGHT     = 1000.0
     STATIC_WEIGHT      = 0.5
     DIAG_COST          = 1.414
     APPROACH_CM_WEIGHT = 2.0
