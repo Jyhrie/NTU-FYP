@@ -3,7 +3,7 @@ import numpy as np
 
 
 def a_star_exploration(static_map_raw, costmap_raw, start, goal,
-                       width=800, height=800, fatal_cost=90,
+                       width=800, height=800, fatal_cost=85,
                        approach_radius=15):
 
     HEURISTIC_WEIGHT   = 0.4    # low = less greedy, wider arcs
