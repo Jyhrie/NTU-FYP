@@ -130,7 +130,9 @@ class FrontierNode:
                 frontier               # (gx, gy)
             )
 
-            if path_result is not None:
+            path, distance, s_cell, g_cell = path_result
+
+            if path is not None:
                 print(path_result)
                 self.publish_visual_path(path_result)
             else:
