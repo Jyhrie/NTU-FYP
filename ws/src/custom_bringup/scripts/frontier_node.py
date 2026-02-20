@@ -140,7 +140,7 @@ class FrontierNode:
 
             
 
-            if len(path) < 7:
+            if len(path) < 12:
                 print("Discarding path to frontier {} due to insufficient length: {}".format(frontier, len(path)))
                 continue
 
