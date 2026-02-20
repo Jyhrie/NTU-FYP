@@ -130,51 +130,55 @@ class FrontierNode:
                 frontier               # (gx, gy)
             )
 
-        for frontier in frontiers:
-            path, success = a_star_exploration(
-                self.map.data, self.global_costmap, start, frontier
-            )
+            print(path_result)
+            if path_result is not None:
+                self.publish_visual_path(path_result)
 
-            if success and path:
-                if len(path) >= 2:
-                    # Look ahead several steps for a more stable angle estimate
-                    lookahead = min(5, len(path) - 1)
-                    first_dx = path[lookahead][0] - path[0][0]
-                    first_dy = path[lookahead][1] - path[0][1]
-                    first_step_angle = math.atan2(first_dy, first_dx)
-                    angle_diff = math.atan2(
-                        math.sin(first_step_angle - yaw),
-                        math.cos(first_step_angle - yaw)
-                    )
-                    print("Path initial angle: {}deg, robot yaw: {}deg, diff: {}deg".format(
-                        round(math.degrees(first_step_angle), 1),
-                        round(math.degrees(yaw), 1),
-                        round(math.degrees(angle_diff), 1)
-                    ))
-                    if abs(angle_diff) > math.radians(90):
-                        print("First move requires {}deg turn, rotating first.".format(
-                            round(math.degrees(angle_diff), 1)))
-                        self.publish_rotate_command()
-                        return
+        # for frontier in frontiers:
+        #     path, success = a_star_exploration(
+        #         self.map.data, self.global_costmap, start, frontier
+        #     )
 
-                print("Found a valid path, publishing.")
-                self.publish_visual_path(path)
-                return
+        #     if success and path:
+        #         if len(path) >= 2:
+        #             # Look ahead several steps for a more stable angle estimate
+        #             lookahead = min(5, len(path) - 1)
+        #             first_dx = path[lookahead][0] - path[0][0]
+        #             first_dy = path[lookahead][1] - path[0][1]
+        #             first_step_angle = math.atan2(first_dy, first_dx)
+        #             angle_diff = math.atan2(
+        #                 math.sin(first_step_angle - yaw),
+        #                 math.cos(first_step_angle - yaw)
+        #             )
+        #             print("Path initial angle: {}deg, robot yaw: {}deg, diff: {}deg".format(
+        #                 round(math.degrees(first_step_angle), 1),
+        #                 round(math.degrees(yaw), 1),
+        #                 round(math.degrees(angle_diff), 1)
+        #             ))
+        #             if abs(angle_diff) > math.radians(90):
+        #                 print("First move requires {}deg turn, rotating first.".format(
+        #                     round(math.degrees(angle_diff), 1)))
+        #                 self.publish_rotate_command()
+        #                 return
 
-            if path:
-                print("appending path")
-                paths.append(path)
+        #         print("Found a valid path, publishing.")
+        #         self.publish_visual_path(path)
+        #         return
 
-        # No successful path, fall back to best partial
-        print(paths)
-        if len(paths) > 0:
-            sel_path = self.get_shortest_path(paths)
-            if len(sel_path) > 3:
-                print("No complete path, sending closest attempt.")
-                self.publish_visual_path(sel_path)
-                return
+        #     if path:
+        #         print("appending path")
+        #         paths.append(path)
 
-        print("No Valid Path Detected.")
+        # # No successful path, fall back to best partial
+        # print(paths)
+        # if len(paths) > 0:
+        #     sel_path = self.get_shortest_path(paths)
+        #     if len(sel_path) > 3:
+        #         print("No complete path, sending closest attempt.")
+        #         self.publish_visual_path(sel_path)
+        #         return
+
+        # print("No Valid Path Detected.")
 
     def get_robot_pose(self):
         try:
