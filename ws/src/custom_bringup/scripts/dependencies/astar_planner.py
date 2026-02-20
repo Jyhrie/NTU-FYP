@@ -2,6 +2,7 @@ import heapq
 import numpy as np
 import math
 
+
 def a_star_exploration(static_map_raw, costmap_raw, start, goal,
                        width=800, height=800, fatal_cost=70):
 
