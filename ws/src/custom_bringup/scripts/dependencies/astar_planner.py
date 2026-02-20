@@ -9,7 +9,7 @@ def a_star_exploration(static_map_raw, costmap_raw, start, goal,
     # Even a small costmap value will now outweigh a long physical distance.
     COSTMAP_WEIGHT = 1000.0  
     DIAG_COST      = 1.414
-    HEURISTIC_WEIGHT = 0.3
+    HEURISTIC_WEIGHT = 0
     
     sx, sy = start
     gx, gy = goal
