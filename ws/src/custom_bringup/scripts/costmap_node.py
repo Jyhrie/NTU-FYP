@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 import json
 from nav_msgs.msg import OccupancyGrid
+from geometry_msgs.msg import Twist
 
 class CostmapNode:
     def __init__(self):
@@ -17,12 +18,6 @@ class CostmapNode:
         self.costmap_pub = rospy.Publisher("/map/costmap_global", OccupancyGrid, queue_size=1)
 
         rospy.loginfo("Waiting for the very first map message...")
-        try:
-            initial_map = rospy.wait_for_message("/map", OccupancyGrid, timeout=10.0)
-            rospy.loginfo("Initial map captured! Bootstrapping costmap...")
-            self.map_callback(initial_map)
-        except rospy.ROSException:
-            rospy.logwarn("No map received after 10s. Waiting for SLAM to start...")
 
         # Subscriber to the raw SLAM map
         rospy.Subscriber("/map", OccupancyGrid, self.map_callback)
@@ -113,6 +108,23 @@ class CostmapNode:
 
         final_cost_map[final_cost_map > 0] -= 1
         return final_cost_map
+
+    def nudge_robot(self):
+        rospy.loginfo("Nudging robot to wake up SLAM...")
+        pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        rospy.sleep(1) # Wait for publisher to connect
+        
+        move_msg = Twist()
+        move_msg.linear.x = 0.1  # Move at 0.1 m/s
+        
+        # Publish for 0.5 seconds to move ~5cm
+        start_time = rospy.Time.now()
+        while (rospy.Time.now() - start_time) < rospy.Duration(0.5):
+            pub.publish(move_msg)
+            rospy.sleep(0.1)
+            
+        # Stop
+        pub.publish(Twist())
 
 if __name__ == "__main__":
     try:
