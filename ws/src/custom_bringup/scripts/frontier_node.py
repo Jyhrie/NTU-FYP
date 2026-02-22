@@ -138,7 +138,7 @@ class FrontierNode:
                 self.map.data, self.global_costmap, start, frontier
             )
 
-            if len(path) < TRUNCATION_SIZE+1:
+            if len(path) < TRUNCATION_SIZE+5:
                 print("Discarding path to frontier {} due to insufficient length: {}".format(frontier, len(path)))
                 continue
 
