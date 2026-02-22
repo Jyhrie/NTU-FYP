@@ -74,6 +74,7 @@ class Controller:
         self.goal_path = None
         self.rotate_target_msg = None
         self.pickup_target = None 
+        self.pickup_target_angle_relative_to_forward = None
         
         self.request_sent = False
         self.request_timeout = 30
@@ -124,9 +125,10 @@ class Controller:
         #load data in
         if self.state != States.FETCHING:
             self.interrupt() # Stop current action immediately
-            
             self.pickup_target = (get_x, get_y)
             self.transition(States.FETCHING, SubStates.READY)
+        else:
+            self.pickup_target_angle_relative_to_forward = angle_to_target
         
     # ====== UTILS (Original methods) ====== #
     def get_robot_pose(self):
@@ -328,37 +330,26 @@ class Controller:
                     self.request_sent = True
 
                 if self.received_path: # Once path_reply_cb gets the path
-                    self.goal_path = self.received_path
+                    self.goal_path = self.received_path[:-6] #truncate by 6 to avoid last few points
                     self.request_sent = False
                     print("path received")
                     self.sub_state = SubStates.MOVING_TO_ITEM
-                    
             # --- 3. MOVE TO ITEM ---
 
             elif self.sub_state == SubStates.MOVING_TO_ITEM:
-                # Execute the active task
                 if self.goal_path:
                     self.global_request.publish("navigate")
                     self.global_exploration_path.publish(self.goal_path)
-                elif self.rotate_target_msg:
-                    self.global_request.publish("rotate")
-                    self.rotate_pose_pub.publish(self.rotate_target_msg)
                     
-            # elif self.sub_state == SubStates.MOVING_TO_ITEM:
-            #     if self.movement_complete:
-            #         self.movement_complete = False
-            #         self.sub_state = SubStates.ALIGNING
-            #     else:
-            #         self.global_request.publish("navigate")
-            #         self.global_exploration_path.publish(self.goal_path)
-
             # --- 4. ALIGN WITH ITEM ---
             elif self.sub_state == SubStates.ALIGNING:
-                if self.movement_complete:
-                    self.movement_complete = False
-                    self.sub_state = SubStates.PICKING_UP
-                else:
-                    self.global_request.publish("align_with_item")
+                align_msg = {
+                    "header": "align_with_item",
+                    "data": {
+                        "relative_angle": self.pickup_target_angle_relative_to_forward
+                    }
+                }
+                self.global_request.publish(json.dumps(align_msg))
 
             # --- 5. PICK UP (With Failure Handling) ---
             elif self.sub_state == SubStates.PICKING_UP:

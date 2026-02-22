@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import json
+
 import rospy
 import math
 import tf
@@ -16,6 +18,7 @@ class MovementState(Enum):
     ROTATE = 1
     MOVE = 2
     COMPLETE = 3 
+    ALIGN = 4
 
 class PurePursuitController:
 
@@ -48,20 +51,36 @@ class PurePursuitController:
         self.state = MovementState.IDLE
         self.rotate_target_pose = None
         
+        self.align_error = None
+        
         self.rate = rospy.Rate(15)
 
     # -------------------------------------------------
 
     def controller_cb(self, msg):
-        if msg.data == 'navigate':
-            self.state = MovementState.MOVE
-            pass
-        elif msg.data == 'rotate':
-            self.state = MovementState.ROTATE
-            pass
-        elif msg.data == 'interrupt':
-            pass
-        pass
+        try:
+            # Try to parse as JSON first
+            data = json.loads(msg.data)
+            header = data.get("header")
+            
+            if header == 'align_with_item':
+                self.state = MovementState.ALIGN
+                # Store the relative error in degrees
+                self.align_error = data.get("data", {}).get("relative_angle", 0.0)
+                rospy.loginfo("[PP] Aligning with error: %.2f", self.align_error)
+            
+            # Handle other JSON headers here if needed
+            elif header == 'navigate':
+                self.state = MovementState.MOVE
+
+        except ValueError:
+            # If not JSON, handle as a plain string
+            if msg.data == 'navigate':
+                self.state = MovementState.MOVE
+            elif msg.data == 'rotate':
+                self.state = MovementState.ROTATE
+            elif msg.data == 'interrupt':
+                pass
 
     def path_cb(self, msg):
         if len(msg.poses) == 0:
@@ -204,7 +223,37 @@ class PurePursuitController:
 
         self.cmd_pub.publish(cmd)
         
+    def get_align(self):
+        # 0.5 degrees in radians
+        TOLERANCE = math.radians(0.5)
+        
+        # Current error from the JSON message
+        error_rad = math.radians(self.align_error)
 
+        # 1. Check if we are close enough
+        if abs(error_rad) < TOLERANCE:
+            rospy.loginfo("[PP] Alignment Precise (< 0.5 deg). Done.")
+            self.stop_robot()
+            self.state = MovementState.IDLE
+            self.node_topic.publish("done")
+            return
+
+        # 2. Proportional Control
+        cmd = Twist()
+        p_gain = 1.2
+        angular_z = error_rad * p_gain
+
+        # 3. Handle Deadband (Transbot friction)
+        # If the speed is too low, the motors just whine. 
+        # We ensure a minimum speed of 0.12 to keep it moving.
+        MIN_VEL = 0.12
+        if abs(angular_z) < MIN_VEL:
+            angular_z = MIN_VEL if angular_z > 0 else -MIN_VEL
+
+        # 4. Cap the speed for safety
+        cmd.angular.z = max(min(angular_z, 0.4), -0.4)
+        
+        self.cmd_pub.publish(cmd)
 
     def get_pp(self): #its called pp because pure pursuit.
         pose = self.get_robot_pose()
@@ -272,6 +321,9 @@ class PurePursuitController:
                 pass
             if self.state == MovementState.MOVE:
                 self.get_pp()
+            elif self.state == MovementState.ALIGN:
+                self.get_align() # Process the alignment P-loop
+            
 
             self.rate.sleep()
 
