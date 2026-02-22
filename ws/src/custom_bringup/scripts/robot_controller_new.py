@@ -332,7 +332,7 @@ class Controller:
                     msg.data = json.dumps({
                         "cmd": "request_waypoint", 
                         "x": self.pickup_target[0], 
-                        "y": self.pickup_target[1]
+                        "y": self.pickup_target[1],
                     })
                     self.global_request.publish(msg)
                     self.request_sent = True
@@ -345,8 +345,8 @@ class Controller:
 
                     # 2. Slice the list of poses from the received path
                     # Check length first to avoid empty paths
-                    if len(self.received_path.poses) > 10:
-                        path_msg.poses = self.received_path.poses[:-10]
+                    if len(self.received_path.poses) > 14:
+                        path_msg.poses = self.received_path.poses[:-14]
                     else:
                         self.sub_state = SubStates.ALIGNING
 
