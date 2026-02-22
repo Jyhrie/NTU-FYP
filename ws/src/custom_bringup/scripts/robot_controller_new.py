@@ -52,7 +52,7 @@ class Controller:
         self.marker_pub = rospy.Publisher('/detected_object_marker', Marker, queue_size=10)
 
         # --- TF Setup ---
-        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_buffer = tf2_ros.Buffer(rospy.Duration(5.0))
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
         
         # --- Original Subscribers ---
