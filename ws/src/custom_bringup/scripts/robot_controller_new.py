@@ -107,8 +107,8 @@ class Controller:
         
         # Unpack nested dictionary for dimensions
         bbox = data.get('dims', {})
-        width = bbox.get('w')                    # e.g., 59.6
-        height = bbox.get('h')                   # e.g., 125.1
+        width = data.get('w')                    # e.g., 59.6
+        height = data.get('h')                   # e.g., 125.1
 
         dist_m = self.calculate_distance(width)
         print("Distance = ", dist_m)
