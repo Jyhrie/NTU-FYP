@@ -387,7 +387,7 @@ class Controller:
                     "header": "approach",
                     "data": {
                         "relative_angle": self.pickup_target_angle_relative_to_forward,
-                        "linear_speed": 0.08 # Slow and steady for the final approach
+                        "linear_speed": 0.04 # Slow and steady for the final approach
                     }
                 }
                 self.global_request.publish(json.dumps(approach_msg))
