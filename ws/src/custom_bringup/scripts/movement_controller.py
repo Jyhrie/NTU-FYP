@@ -205,7 +205,7 @@ class PurePursuitController:
         # (You can also trigger this exit from your main state machine)
         
         # 1. Steering Logic (Same as ALIGN)
-        error_rad = -math.radians(self.align_error)
+        error_rad = math.radians(self.align_error)
         p_gain = 1.2
         
         cmd = Twist()
