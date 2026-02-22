@@ -94,6 +94,22 @@ class Controller:
 
     def pc_node_cb(self, msg):
         data = json.loads(msg.data)
+
+        # 3. Unpack the specific fields from your log
+        target_label = data.get('target')        # e.g., "object_name" or "can"
+        angle_to_target = data.get('angle')      # e.g., 23.85
+        confidence = data.get('conf')            # e.g., 0.913
+        
+        # Unpack nested dictionary for dimensions
+        bbox = data.get('dims', {})
+        width = bbox.get('w')                    # e.g., 59.6
+        height = bbox.get('h')                   # e.g., 125.1
+
+        # 4. Use the data (Example: Print and set target)
+        print(f"Robot received target: {target_label} at {angle_to_target} degrees")
+        self.interrupt() # Stop current action immediately
+
+        return 
         if data.get("header") == "interrupt":
             timestamp = data.get("timestamp")
             angle = data.get("angle")
@@ -140,10 +156,15 @@ class Controller:
 
     def wrap_angle(self, a): return math.atan2(math.sin(a), math.cos(a))
 
-    def interrupt(self):
+    def interrupt(self, clear=False):
         print("Interrupting Current Action")
+        if clear == True:
+            self.goal_path = None
+            self.rotate_target_msg = None
+            self.pickup_target = None
+
         self.global_request.publish("interrupt")
-        self.nav_state = NavStates.NULL
+        self.substate = SubStates.READY
 
     def transition(self, nxt_state, nxt_sub=SubStates.READY):
         print("Transitioning %s -> %s (%s)" % (self.state.name, nxt_state.name, nxt_sub.name))
