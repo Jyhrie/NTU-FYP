@@ -120,8 +120,9 @@ class Controller:
         self.interrupt() # Stop current action immediately
 
         #load data in
-        self.pickup_target = (get_x, get_y)
-        self.transition(States.FETCHING, SubStates.READY)
+        if self.state != States.FETCHING:
+            self.pickup_target = (get_x, get_y)
+            self.transition(States.FETCHING, SubStates.READY)
         
     # ====== UTILS (Original methods) ====== #
     def get_robot_pose(self):
