@@ -92,7 +92,8 @@ class Controller:
     
     def movement_controller_cb(self, msg):
         if msg.data == "done":
-            if self.state == States.FETCHING and self.sub_state in [SubStates.MOVING_TO_ITEM]:
+            print("Movement Controller reports: Movement Complete")
+            if self.state == States.FETCHING and self.sub_state == SubStates.MOVING_TO_ITEM:
                 self.substate = SubStates.ALIGNING
                 return
             self.sub_state = SubStates.COMPLETE
