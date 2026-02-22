@@ -142,7 +142,7 @@ class Controller:
 
     def calculate_distance(self, pixel_width):
         # Constants for Starbucks Can Diameter + Astra Pro @ 640px
-        FOCAL_LENGTH = 554.0  # Constant for 60 deg HFOV at 640px resolution
+        FOCAL_LENGTH = 572.5  # Constant for 60 deg HFOV at 640px resolution
         REAL_WIDTH = 0.065    # ~6.5 cm (diameter of the can) in meters
         
         if pixel_width <= 0:
