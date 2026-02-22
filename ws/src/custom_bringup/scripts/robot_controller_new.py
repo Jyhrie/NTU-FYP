@@ -108,13 +108,15 @@ class Controller:
         width = data.get('w')                    # e.g., 59.6
         height = data.get('h')                   # e.g., 125.1
 
+        # 4. Use the data (Example: Print and set target)
+        print("Robot received target time:", timestamp, " at", angle_to_target, "degrees")
+
         dist_m = self.calculate_distance(width)
         print("Distance = ", dist_m)
 
-        self.get_relative_pickup_target(timestamp, angle_to_target, dist_m) # Assuming a fixed distance of 1.0m for now
+        get_x, get_y = self.get_relative_pickup_target(timestamp, angle_to_target, dist_m) # Assuming a fixed distance of 1.0m for now
 
-        # 4. Use the data (Example: Print and set target)
-        print("Robot received target time:", timestamp, " at", angle_to_target, "degrees")
+        self.global_request.publish(msg)
         self.interrupt() # Stop current action immediately
 
         return 
@@ -262,8 +264,7 @@ class Controller:
             self.rate.sleep()
 
     def manage_idle(self):
-        pass
-        #self.transition(States.MAPPING)
+        self.transition(States.MAPPING)
 
     def manage_mapping(self):
             # Initial entry: move to requesting data
