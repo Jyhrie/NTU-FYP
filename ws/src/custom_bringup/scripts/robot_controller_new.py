@@ -330,7 +330,20 @@ class Controller:
                     self.request_sent = True
 
                 if self.received_path: # Once path_reply_cb gets the path
-                    self.goal_path = self.received_path[:-6] #truncate by 6 to avoid last few points
+                    # 1. Create a new Path message container
+                    path_msg = Path()
+                    path_msg.header = self.received_path.header
+                    path_msg.header.stamp = rospy.Time.now()
+
+                    # 2. Slice the list of poses from the received path
+                    # Check length first to avoid empty paths
+                    if len(self.received_path.poses) > 6:
+                        path_msg.poses = self.received_path.poses[:-6]
+                    else:
+                        self.sub_state = SubStates.ALIGNING
+
+                    # 3. Store the reformed message
+                    self.goal_path = path_msg
                     self.request_sent = False
                     print("path received")
                     self.sub_state = SubStates.MOVING_TO_ITEM
