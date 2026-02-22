@@ -244,6 +244,7 @@ class Controller:
             self.pickup_target = None
 
         self.global_request.publish("interrupt")
+        self.transition(States.IDLE, SubStates.READY) # Reset to IDLE and clear sub-state to READY for a fresh start
         self.substate = SubStates.READY
 
     def transition(self, nxt_state, nxt_sub=SubStates.READY):
@@ -263,7 +264,8 @@ class Controller:
             self.rate.sleep()
 
     def manage_idle(self):
-        self.transition(States.MAPPING)
+        pass
+        #self.transition(States.MAPPING)
 
     def manage_mapping(self):
             # Initial entry: move to requesting data
