@@ -4,7 +4,7 @@ import math
 
 
 def a_star_exploration(static_map_raw, costmap_raw, start, goal,
-                       width=800, height=800, fatal_cost=70):
+                       width=800, height=800, fatal_cost=90):
 
     # HIS LOGIC: Massive weight to force hallway centering
     # Even a small costmap value will now outweigh a long physical distance.
