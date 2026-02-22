@@ -350,8 +350,8 @@ class Controller:
 
                     # 2. Slice the list of poses from the received path
                     # Check length first to avoid empty paths
-                    if len(self.received_path.poses) > 14:
-                        path_msg.poses = self.received_path.poses[:-14]
+                    if len(self.received_path.poses) > 10:
+                        path_msg.poses = self.received_path.poses[:-10]
                     else:
                         self.sub_state = SubStates.ALIGNING
 
