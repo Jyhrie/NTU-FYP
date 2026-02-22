@@ -53,6 +53,7 @@ class PurePursuitController:
         
         self.align_error = None
         self.end_facing_target = None
+        self.align_target_reached_time = None
         
         self.rate = rospy.Rate(15)
 
@@ -226,26 +227,42 @@ class PurePursuitController:
     def get_align(self):
         # 0.5 degrees in radians
         TOLERANCE = math.radians(0.5)
+        HOLD_TIME = 1.0  # seconds
         
         # Current error from the JSON message
         error_rad = -math.radians(self.align_error)
 
-        # 1. Check if we are close enough
+        # 1. Check if we are within the center zone
         if abs(error_rad) < TOLERANCE:
-            rospy.loginfo("[PP] Alignment Precise (< 0.5 deg). Done.")
+            if self.align_target_reached_time is None:
+                # Start the clock!
+                self.align_target_reached_time = rospy.get_time()
+                rospy.loginfo("[PP] Centered. Holding for 1s...")
+
+            # Check if we have held the position long enough
+            elapsed = rospy.get_time() - self.align_target_reached_time
+            if elapsed >= HOLD_TIME:
+                rospy.loginfo("[PP] Alignment Stable. Done.")
+                self.stop_robot()
+                self.state = MovementState.IDLE
+                self.align_target_reached_time = None # Reset for next use
+                self.node_topic.publish("done")
+                return
+            
+            # While holding, we stop the motors or apply very small braking
             self.stop_robot()
-            self.state = MovementState.IDLE
-            self.node_topic.publish("done")
             return
 
-        # 2. Proportional Control
+        else:
+            # We are outside the tolerance, reset the timer
+            self.align_target_reached_time = None
+
+        # 2. Proportional Control (Only runs if not in the "Hold" phase)
         cmd = Twist()
         p_gain = 1.2
         angular_z = error_rad * p_gain
 
         # 3. Handle Deadband (Transbot friction)
-        # If the speed is too low, the motors just whine. 
-        # We ensure a minimum speed of 0.12 to keep it moving.
         MIN_VEL = 0.12
         if abs(angular_z) < MIN_VEL:
             angular_z = MIN_VEL if angular_z > 0 else -MIN_VEL

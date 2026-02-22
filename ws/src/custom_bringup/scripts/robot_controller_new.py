@@ -95,8 +95,9 @@ class Controller:
             print("Movement Controller reports: Movement Complete")
             if self.state == States.FETCHING:
                 if self.sub_state == SubStates.MOVING_TO_ITEM:
-                    pass
-                    #self.sub_state = SubStates.ALIGNING
+                    self.sub_state = SubStates.ALIGNING
+                elif self.sub_state == SubStates.ALIGNING:
+                    self.sub_state = SubStates.PICKING_UP
                 return
             self.sub_state = SubStates.COMPLETE
 
@@ -380,6 +381,7 @@ class Controller:
 
             # --- 5. PICK UP (With Failure Handling) ---
             elif self.sub_state == SubStates.PICKING_UP:
+                return
                 if self.received: # Wait for a reply from the hardware node
                     if self.received.get("data") == "success":
                         print("Pick up successful!")
