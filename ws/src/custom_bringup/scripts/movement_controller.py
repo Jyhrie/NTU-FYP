@@ -230,7 +230,7 @@ class PurePursuitController:
         HOLD_TIME = 1.0  # seconds
         
         # Current error from the JSON message
-        error_rad = -math.radians(self.align_error)
+        error_rad = math.radians(self.align_error)
 
         # 1. Check if we are within the center zone
         if abs(error_rad) < TOLERANCE:
