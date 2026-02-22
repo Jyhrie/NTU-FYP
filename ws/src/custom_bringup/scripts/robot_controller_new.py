@@ -105,8 +105,6 @@ class Controller:
         angle_to_target = data.get('angle')      # e.g., 23.85
         confidence = data.get('conf')            # e.g., 0.913
         
-        # Unpack nested dictionary for dimensions
-        bbox = data.get('dims', {})
         width = data.get('w')                    # e.g., 59.6
         height = data.get('h')                   # e.g., 125.1
 
@@ -156,6 +154,7 @@ class Controller:
         return distance
 
     def get_relative_pickup_target(self, timestamp, angle, distance):
+            angle = -angle
             angle_rad = math.radians(angle)
             
             # Setup the points for the target
