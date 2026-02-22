@@ -52,6 +52,7 @@ class PurePursuitController:
         self.rotate_target_pose = None
         
         self.align_error = None
+        self.end_facing_target = None
         
         self.rate = rospy.Rate(15)
 
@@ -68,11 +69,10 @@ class PurePursuitController:
                 # Store the relative error in degrees
                 self.align_error = data.get("data", {}).get("relative_angle", 0.0)
                 rospy.loginfo("[PP] Aligning with error: %.2f", self.align_error)
-            
-            # Handle other JSON headers here if needed
             elif header == 'navigate':
                 self.state = MovementState.MOVE
-
+                self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))
+                
         except ValueError:
             # If not JSON, handle as a plain string
             if msg.data == 'navigate':
@@ -228,7 +228,7 @@ class PurePursuitController:
         TOLERANCE = math.radians(0.5)
         
         # Current error from the JSON message
-        error_rad = math.radians(self.align_error)
+        error_rad = -math.radians(self.align_error)
 
         # 1. Check if we are close enough
         if abs(error_rad) < TOLERANCE:
@@ -262,12 +262,31 @@ class PurePursuitController:
 
         x, y, yaw = pose
 
-        # 1. Check if we've reached the final goal
         if self.goal_reached(x, y, yaw):
-            rospy.loginfo("[PP] Goal reached!")
-            self.stop_robot()
-            self.node_topic.publish("done")
-            self.state = MovementState.COMPLETE
+            rospy.loginfo("[PP] Goal location reached!")
+            # Check if we have a specific point to face
+            if self.end_facing_target and all(v is not None for v in self.end_facing_target):
+                tx, ty = self.end_facing_target
+                
+                # Calculate the angle to face the target point from current position
+                angle_to_target = math.atan2(ty - y, tx - x)
+                
+                # Create a temporary PoseStamped to reuse get_rot() logic
+                target_pose = PoseStamped()
+                target_pose.header.frame_id = "map"
+                q = tf.transformations.quaternion_from_euler(0, 0, angle_to_target)
+                target_pose.pose.orientation.x = q[0]
+                target_pose.pose.orientation.y = q[1]
+                target_pose.pose.orientation.z = q[2]
+                target_pose.pose.orientation.w = q[3]
+                
+                self.rotate_target_pose = target_pose
+                self.state = MovementState.ROTATE
+                rospy.loginfo("[PP] Transitioning to ROTATE to face target point")
+            else:
+                self.stop_robot()
+                self.node_topic.publish("done")
+                self.state = MovementState.COMPLETE
             return
 
         # 2. Find lookahead point

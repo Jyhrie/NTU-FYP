@@ -359,7 +359,12 @@ class Controller:
 
             elif self.sub_state == SubStates.MOVING_TO_ITEM:
                 if self.goal_path:
-                    self.global_request.publish("navigate")
+                    nav_msg = {
+                    "header": "navigate",
+                    "end_face_pt_x": self.pickup_target[0],
+                    "end_face_pt_y": self.pickup_target[1]
+                    }
+                    self.global_request.publish(json.dumps(nav_msg))
                     self.global_exploration_path.publish(self.goal_path)
                     
             # --- 4. ALIGN WITH ITEM ---
