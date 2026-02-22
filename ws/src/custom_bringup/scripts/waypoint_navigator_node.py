@@ -84,7 +84,7 @@ class WaypointNavigatorNode:
         # 3. Use A* to find path (Note: goal must be wrapped in a list for your planner)
         # Assuming a_star_exploration(map_data, costmap, start, goal_list)
         path, success = a_star_exploration(
-            self.map.data, self.global_costmap, start_cell, [goal_cell]
+            self.map.data, self.global_costmap, start_cell, goal_cell
         )
 
         if path and len(path) > 0:
