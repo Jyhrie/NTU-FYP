@@ -32,3 +32,4 @@ roslaunch custom_bringup master.launch
 rosrun custom_bringup robot_controller.py
 rosrun custom_bringup frontier_node.py
 rosrun custom_bringup movement_controller.py
+rosrun custom_bringup waypoint_navigator_node.py

@@ -316,7 +316,7 @@ class Controller:
                 if not self.request_sent:
                     msg = String()
                     msg.data = json.dumps({
-                        "cmd": "request_path", 
+                        "cmd": "request_waypoint", 
                         "x": self.pickup_target[0], 
                         "y": self.pickup_target[1]
                     })
