@@ -63,7 +63,7 @@ class WaypointNavigatorNode:
                 if data.get("cmd") == "request_waypoint":
                     target_x = data["x"]
                     target_y = data["y"]
-                    rospy.loginfo(f"📍 Navigating to Waypoint: ({target_x}, {target_y})")
+                    rospy.loginfo("Navigating to Waypoint: ({}, {})".format(target_x, target_y))
             except ValueError:
                 return # Not a JSON command for this node
 

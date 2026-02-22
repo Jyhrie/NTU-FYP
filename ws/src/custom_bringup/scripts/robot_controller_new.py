@@ -109,10 +109,10 @@ class Controller:
         height = data.get('h')                   # e.g., 125.1
 
         # 4. Use the data (Example: Print and set target)
-        print("Robot received target time:", timestamp, " at", angle_to_target, "degrees")
+        #print("Robot received target time:", timestamp, " at", angle_to_target, "degrees")
 
         dist_m = self.calculate_distance(width)
-        print("Distance = ", dist_m)
+        #print("Distance = ", dist_m)
 
         get_x, get_y = self.get_relative_pickup_target(timestamp, angle_to_target, dist_m) # Assuming a fixed distance of 1.0m for now
 
