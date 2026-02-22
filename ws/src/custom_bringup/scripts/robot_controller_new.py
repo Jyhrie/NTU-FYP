@@ -111,6 +111,7 @@ class Controller:
         height = bbox.get('h')                   # e.g., 125.1
 
         dist_m = self.calculate_distance(width)
+        print("Distance = ", dist_m)
 
         self.get_relative_pickup_target(timestamp, angle_to_target, dist_m) # Assuming a fixed distance of 1.0m for now
 
