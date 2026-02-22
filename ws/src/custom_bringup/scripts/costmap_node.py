@@ -16,6 +16,14 @@ class CostmapNode:
         # Publisher for the processed hallway costmap
         self.costmap_pub = rospy.Publisher("/map/costmap_global", OccupancyGrid, queue_size=1)
 
+        rospy.loginfo("Waiting for the very first map message...")
+        try:
+            initial_map = rospy.wait_for_message("/map", OccupancyGrid, timeout=10.0)
+            rospy.loginfo("Initial map captured! Bootstrapping costmap...")
+            self.map_callback(initial_map)
+        except rospy.ROSException:
+            rospy.logwarn("No map received after 10s. Waiting for SLAM to start...")
+
         # Subscriber to the raw SLAM map
         rospy.Subscriber("/map", OccupancyGrid, self.map_callback)
 

@@ -14,10 +14,6 @@ rosrun teleop_twist_keyboard teleop_twist_keyboard.py
 
 python3 ~/fyp/ws/src/custom_bringup/scripts/flaskapp.py
 
-
-
-
-
 rosrun custom_bringup frontier_node.py
 
 rosrun custom_bringup pure_pursuit.py
