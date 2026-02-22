@@ -19,6 +19,7 @@ class MovementState(Enum):
     MOVE = 2
     COMPLETE = 3 
     ALIGN = 4
+    APPROACH = 5
 
 class PurePursuitController:
 
@@ -73,6 +74,9 @@ class PurePursuitController:
             elif header == 'navigate':
                 self.state = MovementState.MOVE
                 self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))
+            elif header == 'stop_movement':
+                self.state = MovementState.IDLE
+                self.stop_robot()
                 
         except ValueError:
             # If not JSON, handle as a plain string
@@ -166,7 +170,7 @@ class PurePursuitController:
 
         # thresholds
         dist_tol_far = 0.07    # within 0.2 m -> goal reached regardless of heading
-        dist_tol_near = 0.1   # within 0.5 m AND aligned
+        dist_tol_near = 0.07   # within 0.5 m AND aligned
         yaw_tol = 0.1         # radians (~11 degrees)
 
         # goal conditions
@@ -186,6 +190,30 @@ class PurePursuitController:
         self.cmd_pub.publish(Twist())
 
     # -------------------------------------------------
+
+    def get_approach(self):
+        # We stop when the object is large enough or close enough 
+        # (You can also trigger this exit from your main state machine)
+        
+        # 1. Steering Logic (Same as ALIGN)
+        error_rad = -math.radians(self.align_error)
+        p_gain = 1.2
+        
+        cmd = Twist()
+        # 2. Linear Movement
+        # We use a fixed slow speed to ensure the camera can keep up
+        cmd.linear.x = 0.12 
+        
+        # 3. Angular Correction (to keep it centered)
+        angular_z = error_rad * p_gain
+        
+        # Deadband handling for the Transbot motors
+        MIN_ROT_VEL = 0.1
+        if abs(angular_z) < MIN_ROT_VEL and abs(error_rad) > math.radians(1.0):
+            angular_z = MIN_ROT_VEL if angular_z > 0 else -MIN_ROT_VEL
+            
+        cmd.angular.z = max(min(angular_z, 0.4), -0.4)
+        self.cmd_pub.publish(cmd)
 
     def get_rot(self):
         pose = self.get_robot_pose()

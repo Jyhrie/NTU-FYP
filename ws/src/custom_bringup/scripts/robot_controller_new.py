@@ -32,6 +32,7 @@ class SubStates(Enum):
     REVERSING = 9        # For retry logic
     REQUESTING_HOME_PATH = 10
     COMPLETE = 11
+    APPROACHING = 12
 
 class NavStates(Enum):
     NULL = 0
@@ -76,6 +77,7 @@ class Controller:
         self.rotate_target_msg = None
         self.pickup_target = None 
         self.pickup_target_angle_relative_to_forward = None
+        self.object_box = None
         
         self.request_sent = False
         self.request_timeout = 30
@@ -97,7 +99,7 @@ class Controller:
                 if self.sub_state == SubStates.MOVING_TO_ITEM:
                     self.sub_state = SubStates.ALIGNING
                 elif self.sub_state == SubStates.ALIGNING:
-                    self.sub_state = SubStates.PICKING_UP
+                    self.sub_state = SubStates.APPROACHING
                 return
             self.sub_state = SubStates.COMPLETE
 
@@ -134,6 +136,7 @@ class Controller:
             self.transition(States.FETCHING, SubStates.READY)
         else:
             self.pickup_target_angle_relative_to_forward = angle_to_target
+            self.object_box = (width, height)
         
     # ====== UTILS (Original methods) ====== #
     def get_robot_pose(self):
@@ -379,6 +382,27 @@ class Controller:
                 }
                 self.global_request.publish(json.dumps(align_msg))
 
+            elif self.sub_state == SubStates.APPROACHING:
+                approach_msg = {
+                    "header": "approach",
+                    "data": {
+                        "relative_angle": self.pickup_target_angle_relative_to_forward,
+                        "linear_speed": 0.12 # Slow and steady for the final approach
+                    }
+                }
+                self.global_request.publish(json.dumps(approach_msg))
+
+                #perform a check to see if we are close enough to the target to attempt pickup
+                TARGET_W = 95
+                
+                if self.object_box and self.object_box[0] >= TARGET_W:
+                    print("Close enough to attempt pickup!")
+                    self.sub_state = SubStates.PICKING_UP
+                    msg = {
+                        "header": "stop_movement",
+                    }
+                    self.global_request.publish(json.dumps(msg))
+                
             # --- 5. PICK UP (With Failure Handling) ---
             elif self.sub_state == SubStates.PICKING_UP:
                 return
