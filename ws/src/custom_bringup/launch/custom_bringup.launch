@@ -74,7 +74,7 @@
 
     <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" />
 
-    <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid pcl_manager" output="screen">
+    <!-- <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid pcl_manager" output="screen">
         <remap from="~input" to="/camera/depth/points" />
         <remap from="~output" to="/camera/depth/points_downsampled" />
         
@@ -84,7 +84,7 @@
             filter_limit_max: 5.0
             leaf_size: 0.05
         </rosparam>
-    </node>
+    </node> -->
 
 
     <!-- add physical offset to camera-->
@@ -117,7 +117,7 @@
         <param name="global_costmap/static_layer/subscribe_to_updates" value="true"/>
     </node> -->
 
-    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <!-- <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
         <rosparam file="$(find custom_bringup)/config/costmap_common.yaml" command="load" ns="global_costmap" />
         <rosparam file="$(find custom_bringup)/config/costmap_common.yaml" command="load" ns="local_costmap" />
         <rosparam file="$(find custom_bringup)/config/global_costmap.yaml" command="load" />
@@ -125,7 +125,7 @@
 
         <param name="global_costmap/static_layer/map_topic" value="/map"/>
         <param name="global_costmap/static_layer/subscribe_to_updates" value="true"/>
-    </node>
+    </node> -->
 
 
 
