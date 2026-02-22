@@ -131,7 +131,7 @@ class WaypointNavigatorNode:
             pose.pose.orientation.w = 1.0
             path_msg.poses.append(pose)
 
-        self.path_pub.publish(path_msg)
+        self.global_path_pub.publish(path_msg)
 
 if __name__ == "__main__":
     node = WaypointNavigatorNode()
