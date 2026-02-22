@@ -100,7 +100,7 @@ class Controller:
         data = json.loads(msg.data)
 
         # 3. Unpack the specific fields from your log
-        timestamp = data.get('timestamp')
+        timestamp = float(data.get('timestamp'))
         target_label = data.get('target')        # e.g., "object_name" or "can"
         angle_to_target = data.get('angle')      # e.g., 23.85
         confidence = data.get('conf')            # e.g., 0.913
@@ -154,40 +154,47 @@ class Controller:
         return distance
 
     def get_relative_pickup_target(self, timestamp, angle, distance):
-        # 1. ROS math functions (sin/cos) require radians
-        angle_rad = math.radians(angle)
-        local_pt = PointStamped()
-        
-        # 2. Fix: Ensure timestamp is a proper rospy.Time object for the TF buffer
-        try:
-            if isinstance(timestamp, (str, float, int)):
-                local_pt.header.stamp = rospy.Time.from_sec(float(timestamp))
-            else:
-                local_pt.header.stamp = timestamp
-        except Exception as e:
-            rospy.logwarn("Timestamp conversion failed, using current time: %s", e)
-            local_pt.header.stamp = rospy.Time.now()
+            # 1. ROS math requires radians
+            angle_rad = math.radians(angle)
+            
+            local_pt = PointStamped()
+            
+            # --- ROBUST TIMESTAMP FIX ---
+            try:
+                if timestamp is None:
+                    local_pt.header.stamp = rospy.Time.now()
+                elif isinstance(timestamp, (str, unicode, float, int)):
+                    # Convert anything from the JSON string into a proper rospy.Time object
+                    local_pt.header.stamp = rospy.Time.from_sec(float(timestamp))
+                else:
+                    # If it's already a rospy.Time object, use it directly
+                    local_pt.header.stamp = timestamp
+            except Exception as e:
+                rospy.logwarn("Timestamp conversion failed: %s. Using Time.now()", e)
+                local_pt.header.stamp = rospy.Time.now()
+            # --- END FIX ---
 
-        # 3. Use the camera's frame to account for its mounting position
-        # Common names: 'camera_link' or 'camera_rgb_optical_frame'
-        local_pt.header.frame_id = "camera_link" 
-        
-        # 4. Project the point relative to the camera (X=Front, Y=Left)
-        local_pt.point.x = distance * math.cos(angle_rad)
-        local_pt.point.y = distance * math.sin(angle_rad)
-        local_pt.point.z = 0.0 # Assuming object is on the floor
-        
-        try:
-            # 5. The "Magic": TF looks back in time to find where the robot was
-            map_pt = self.tf_buffer.transform(local_pt, "map", timeout=rospy.Duration(1.0))
+            # 2. Frame Setup
+            # Use 'camera_link' to account for the physical mounting offset on your Transbot
+            local_pt.header.frame_id = "camera_link" 
             
-            # Publish the green sphere in Rviz
-            self.publish_marker(map_pt.point.x, map_pt.point.y)
+            # 3. Local Projection (X=Forward, Y=Left)
+            local_pt.point.x = distance * math.cos(angle_rad)
+            local_pt.point.y = distance * math.sin(angle_rad)
+            local_pt.point.z = 0.0 
             
-            return (map_pt.point.x, map_pt.point.y)
-        except Exception as e:
-            rospy.logwarn("TF Transform failed (Check if 'map' and 'camera_link' are connected): %s", str(e))
-            return (None, None)
+            try:
+                # 4. Transform look-back
+                # timeout=Duration(1.0) gives the TF buffer time to receive the latest map transforms
+                map_pt = self.tf_buffer.transform(local_pt, "map", timeout=rospy.Duration(1.0))
+                
+                # 5. Visualize in Rviz
+                self.publish_marker(map_pt.point.x, map_pt.point.y)
+                
+                return (map_pt.point.x, map_pt.point.y)
+            except Exception as e:
+                rospy.logwarn("TF Transform failed (Check if 'map' and 'camera_link' are connected): %s", str(e))
+                return (None, None)
 
     def publish_marker(self, x, y):
         marker = Marker()
