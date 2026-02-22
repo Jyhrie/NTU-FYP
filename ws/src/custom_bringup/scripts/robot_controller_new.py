@@ -106,7 +106,7 @@ class Controller:
         height = bbox.get('h')                   # e.g., 125.1
 
         # 4. Use the data (Example: Print and set target)
-        print(f"Robot received target: {target_label} at {angle_to_target} degrees")
+        print(f"Robot received target:", target_label, " at", angle_to_target, "degrees")
         self.interrupt() # Stop current action immediately
 
         return 
