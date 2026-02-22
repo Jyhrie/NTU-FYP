@@ -94,6 +94,7 @@ class FrontierNode:
         # out
         self.global_reply_pub = rospy.Publisher("/robot/reply", String, queue_size=1)
         self.global_path_pub = rospy.Publisher("/robot/path_reply", Path, queue_size=1)
+        self.global_costmap_pub = rospy.Publisher("/frontier_node_costmap", OccupancyGrid, queue_size=1)
 
         self.is_active = False
         self.last_trigger_time = rospy.Time(0)
