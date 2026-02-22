@@ -15,7 +15,7 @@ class CostmapNode:
         self.hallway_threshold_div = 4  
 
         # Publisher for the processed hallway costmap
-        self.costmap_pub = rospy.Publisher("/map/costmap_global", OccupancyGrid, queue_size=1)
+        self.costmap_pub = rospy.Publisher("/map/costmap_global", OccupancyGrid, queue_size=1, latch=True)
 
         rospy.loginfo("Waiting for the very first map message...")
 
