@@ -5,6 +5,7 @@ from enum import Enum
 from std_msgs.msg import Empty, String
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, PointStamped
+from visualization_msgs.msg import Marker
 import json
 import tf2_ros
 import tf2_geometry_msgs
@@ -46,6 +47,9 @@ class Controller:
         self.global_request = rospy.Publisher("/controller/global", String, queue_size=1)
         self.rotate_pose_pub = rospy.Publisher("/rotate_target_pose", PoseStamped, queue_size=1)
         self.global_exploration_path = rospy.Publisher("/global_exploration_path", Path, queue_size=1)
+
+        #TO REMOVE
+        self.marker_pub = rospy.Publisher('/detected_object_marker', Marker, queue_size=10)
 
         # --- TF Setup ---
         self.tf_buffer = tf2_ros.Buffer()
@@ -105,6 +109,10 @@ class Controller:
         width = bbox.get('w')                    # e.g., 59.6
         height = bbox.get('h')                   # e.g., 125.1
 
+        dist_m = self.calculate_distance(width)
+
+        self.get_relative_pickup_target(data.get('timestamp'), angle_to_target, dist_m) # Assuming a fixed distance of 1.0m for now
+
         # 4. Use the data (Example: Print and set target)
         print("Robot received target:", target_label, " at", angle_to_target, "degrees")
         self.interrupt() # Stop current action immediately
@@ -131,19 +139,70 @@ class Controller:
             (_, _, yaw) = tf.transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
             return x, y, yaw
         except: return None
+
+    def calculate_distance(self, pixel_width):
+        # Constants for Starbucks Can Diameter + Astra Pro @ 640px
+        FOCAL_LENGTH = 554.0  # Constant for 60 deg HFOV at 640px resolution
+        REAL_WIDTH = 0.065    # ~6.5 cm (diameter of the can) in meters
         
+        if pixel_width <= 0:
+            return 0.0
+            
+        # Formula: distance = (FocalLength * RealWidth) / PixelWidth
+        distance = (FOCAL_LENGTH * REAL_WIDTH) / pixel_width
+        return distance
+
     def get_relative_pickup_target(self, timestamp, angle, distance):
+        # Convert angle to radians if it is currently in degrees
+        angle_rad = math.radians(angle)
+        
         local_pt = PointStamped()
-        local_pt.header.stamp = rospy.Time.from_sec(timestamp) if isinstance(timestamp, (int, float)) else timestamp
+        local_pt.header.stamp = rospy.Time.from_sec(float(timestamp)) if isinstance(timestamp, (int, float, str)) else timestamp
         local_pt.header.frame_id = "base_link" 
-        local_pt.point.x = distance * math.cos(angle)
-        local_pt.point.y = distance * math.sin(angle)
+        
+        # ROS Convention: X is forward, Y is left
+        local_pt.point.x = distance * math.cos(angle_rad)
+        local_pt.point.y = distance * math.sin(angle_rad)
+        
         try:
             map_pt = self.tf_buffer.transform(local_pt, "map", timeout=rospy.Duration(1.0))
+            
+            # Display the point in Rviz
+            self.publish_marker(map_pt.point.x, map_pt.point.y)
+            
             return (map_pt.point.x, map_pt.point.y)
-        except: return (None, None)
+        except Exception as e:
+            rospy.logwarn("TF Transform failed: %s", str(e))
+            return (None, None)
 
-    def prepare_rotation(self):
+    def publish_marker(self, x, y):
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "object_detection"
+        marker.id = 0
+        marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
+        
+        # Position on the map
+        marker.pose.position.x = x
+        marker.pose.position.y = y
+        marker.pose.position.z = 0.1  # Slightly above ground
+        
+        # Marker size (0.1m sphere)
+        marker.scale.x = 0.1
+        marker.scale.y = 0.1
+        marker.scale.z = 0.1
+        
+        # Color (Bright Green)
+        marker.color.a = 1.0 # Transparency
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        
+        self.marker_pub.publish(marker)
+
+    def prepare_flip(self):
         pose = self.get_robot_pose()
         if pose:
             curr_x, curr_y, yaw = pose
@@ -206,7 +265,7 @@ class Controller:
                         self.sub_state = SubStates.MOVING
                     # Handle rotation command
                     elif self.received.get("data") == "rotate":
-                        self.rotate_target_msg = self.prepare_rotation()
+                        self.rotate_target_msg = self.prepare_flip()
                         self.sub_state = SubStates.MOVING
                     
                     # Reset communication flags
