@@ -6,7 +6,6 @@ import math
 def a_star_exploration(static_map_raw, costmap_raw, start, goal,
                        width=800, height=800, fatal_cost=90):
 
-    # HIS LOGIC: Massive weight to force hallway centering
     # Even a small costmap value will now outweigh a long physical distance.
     #COSTMAP_WEIGHT = 1000.0 
     COSTMAP_EXPONENT = 5 # You can adjust this to make it more or less sensitive to costmap values 

@@ -29,6 +29,7 @@ class SubStates(Enum):
     RETURNING = 8
     REVERSING = 9        # For retry logic
     REQUESTING_HOME_PATH = 10
+    COMPLETE = 11
 
 class NavStates(Enum):
     NULL = 0
@@ -85,11 +86,11 @@ class Controller:
     
     def movement_controller_cb(self, msg):
         if msg.data == "done":
-            self.nav_state = NavStates.COMPLETE
+            self.sub_state = SubStates.COMPLETE
 
     def navigation_node_cb(self, msg):
         if msg.data == "COMPLETE":
-            self.nav_state = NavStates.COMPLETE
+            self.sub_state = SubStates.COMPLETE
 
     def pc_node_cb(self, msg):
         data = json.loads(msg.data)
@@ -192,21 +193,20 @@ class Controller:
                     self.request_sent = False
 
             # Logic while the robot is physically in motion
+            elif self.sub_state == SubStates.COMPLETE:
+                self.goal_path = None
+                self.rotate_target_msg = None
+                self.transition(States.MAPPING, SubStates.READY)
             elif self.sub_state == SubStates.MOVING:
-                # Check for completion (set by your callbacks)
-                if self.movement_complete: 
-                    self.movement_complete = False # Reset flag for next move
-                    self.goal_path = None
-                    self.rotate_target_msg = None
-                    self.transition(States.MAPPING, SubStates.READY)
-                else:
-                    # Execute the active task
-                    if self.goal_path:
-                        self.global_request.publish("navigate")
-                        self.global_exploration_path.publish(self.goal_path)
-                    elif self.rotate_target_msg:
-                        self.global_request.publish("rotate")
-                        self.rotate_pose_pub.publish(self.rotate_target_msg)
+                # Execute the active task
+                if self.goal_path:
+                    self.global_request.publish("navigate")
+                    self.global_exploration_path.publish(self.goal_path)
+                elif self.rotate_target_msg:
+                    self.global_request.publish("rotate")
+                    self.rotate_pose_pub.publish(self.rotate_target_msg)
+            else:
+                print("Unknown sub-state in MAPPING: {}".format(self.sub_state))
 
     def manage_fetching(self):
             # --- 1. READY: Initial Entry ---
