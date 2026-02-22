@@ -100,6 +100,7 @@ class Controller:
         data = json.loads(msg.data)
 
         # 3. Unpack the specific fields from your log
+        timestamp = data.get('timestamp')
         target_label = data.get('target')        # e.g., "object_name" or "can"
         angle_to_target = data.get('angle')      # e.g., 23.85
         confidence = data.get('conf')            # e.g., 0.913
@@ -111,10 +112,10 @@ class Controller:
 
         dist_m = self.calculate_distance(width)
 
-        self.get_relative_pickup_target(data.get('timestamp'), angle_to_target, dist_m) # Assuming a fixed distance of 1.0m for now
+        self.get_relative_pickup_target(timestamp, angle_to_target, dist_m) # Assuming a fixed distance of 1.0m for now
 
         # 4. Use the data (Example: Print and set target)
-        print("Robot received target:", target_label, " at", angle_to_target, "degrees")
+        print("Robot received target time:", timestamp, " at", angle_to_target, "degrees")
         self.interrupt() # Stop current action immediately
 
         return 
@@ -153,26 +154,39 @@ class Controller:
         return distance
 
     def get_relative_pickup_target(self, timestamp, angle, distance):
-        # Convert angle to radians if it is currently in degrees
+        # 1. ROS math functions (sin/cos) require radians
         angle_rad = math.radians(angle)
-        
         local_pt = PointStamped()
-        local_pt.header.stamp = rospy.Time.from_sec(float(timestamp)) if isinstance(timestamp, (int, float, str)) else timestamp
-        local_pt.header.frame_id = "base_link" 
         
-        # ROS Convention: X is forward, Y is left
+        # 2. Fix: Ensure timestamp is a proper rospy.Time object for the TF buffer
+        try:
+            if isinstance(timestamp, (str, float, int)):
+                local_pt.header.stamp = rospy.Time.from_sec(float(timestamp))
+            else:
+                local_pt.header.stamp = timestamp
+        except Exception as e:
+            rospy.logwarn("Timestamp conversion failed, using current time: %s", e)
+            local_pt.header.stamp = rospy.Time.now()
+
+        # 3. Use the camera's frame to account for its mounting position
+        # Common names: 'camera_link' or 'camera_rgb_optical_frame'
+        local_pt.header.frame_id = "camera_link" 
+        
+        # 4. Project the point relative to the camera (X=Front, Y=Left)
         local_pt.point.x = distance * math.cos(angle_rad)
         local_pt.point.y = distance * math.sin(angle_rad)
+        local_pt.point.z = 0.0 # Assuming object is on the floor
         
         try:
+            # 5. The "Magic": TF looks back in time to find where the robot was
             map_pt = self.tf_buffer.transform(local_pt, "map", timeout=rospy.Duration(1.0))
             
-            # Display the point in Rviz
+            # Publish the green sphere in Rviz
             self.publish_marker(map_pt.point.x, map_pt.point.y)
             
             return (map_pt.point.x, map_pt.point.y)
         except Exception as e:
-            rospy.logwarn("TF Transform failed: %s", str(e))
+            rospy.logwarn("TF Transform failed (Check if 'map' and 'camera_link' are connected): %s", str(e))
             return (None, None)
 
     def publish_marker(self, x, y):
