@@ -151,6 +151,7 @@ class Controller:
             
         # Formula: distance = (FocalLength * RealWidth) / PixelWidth
         distance = (FOCAL_LENGTH * REAL_WIDTH) / pixel_width
+        print("Distance calculated:", distance)
         return distance
 
     def get_relative_pickup_target(self, timestamp, angle, distance):
