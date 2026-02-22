@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from enum import Enum
 import json
@@ -9,6 +9,7 @@ from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point
 import math
+import cv2
 
 import tf2_ros
 import tf
@@ -19,13 +20,54 @@ from dependencies.astar_planner import a_star_exploration
 from dependencies.astar import PathPlanner
 
 TRUNCATION_SIZE = 7
+USE_DILATION = True
+
+def calc_cost_map(mapdata):
+    rospy.loginfo("Calculating cost map")
+    width = mapdata.info.width
+    height = mapdata.info.height
+    map_arr = np.array(mapdata.data).reshape(height, width).astype(np.uint8)
+    map_arr[map_arr == 255] = 100
+
+    cost_map = np.zeros_like(map_arr)
+    dilated_map = map_arr.copy()
+    iterations = 0
+    kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], np.uint8)
+    while np.any(dilated_map == 0):
+        iterations += 1
+        next_dilated_map = cv2.dilate(dilated_map, kernel, iterations=1)
+        difference = next_dilated_map - dilated_map
+        difference[difference > 0] = iterations
+        cost_map = cv2.bitwise_or(cost_map, difference)
+        dilated_map = next_dilated_map
+
+    cost_map = PathPlanner.create_hallway_mask(mapdata, cost_map, iterations // 4)
+
+    dilated_map = cost_map.copy()
+    cost = 1
+    for i in range(iterations):
+        cost += 1
+        next_dilated_map = cv2.dilate(dilated_map, kernel, iterations=1)
+        difference = next_dilated_map - dilated_map
+        difference[difference > 0] = cost
+        cost_map = cv2.bitwise_or(cost_map, difference)
+        dilated_map = next_dilated_map
+
+    cost_map[cost_map > 0] -= 1
+    return cost_map
+
+@staticmethod
+def create_hallway_mask(mapdata, cost_map, threshold):
+    mask = np.zeros_like(cost_map, dtype=bool)
+    non_zero_indices = np.nonzero(cost_map)
+    for y, x in zip(*non_zero_indices):
+        if PathPlanner.is_hallway_cell(mapdata, cost_map, (x, y), threshold):
+            mask[y][x] = 1
+    return mask.astype(np.uint8)
+
 
 class FrontierNode:
-    
-
     def __init__(self):
-        
-
         rospy.init_node("frontier_node")
 
         # vars
@@ -52,13 +94,6 @@ class FrontierNode:
         # out
         self.global_reply_pub = rospy.Publisher("/robot/reply", String, queue_size=1)
         self.global_path_pub = rospy.Publisher("/robot/path_reply", Path, queue_size=1)
-
-        # self.frontier_node_pub = rospy.Publisher(
-        #     "/frontier_node_reply", String, queue_size=1
-        # )
-        # self.frontier_node_path_pub = rospy.Publisher(
-        #     "/frontier_node_path", Path, queue_size=1
-        # )
 
         self.is_active = False
         self.last_trigger_time = rospy.Time(0)
@@ -90,6 +125,7 @@ class FrontierNode:
     def map_cb(self, msg):
         print("Map Instance Received.")
         self.map = msg
+        self.global_costmap = calc_cost_map(msg)
         if self.detector is None:
             self.detector = FrontierDetector(
                 map_width=msg.info.width,
@@ -101,7 +137,7 @@ class FrontierNode:
         pass
 
     def global_costmap_cb(self, msg):
-        self.global_costmap = np.array(msg.data).reshape((msg.info.height, msg.info.width))
+        #self.global_costmap = np.array(msg.data).reshape((msg.info.height, msg.info.width))
         pass
 
     def trigger(self):
