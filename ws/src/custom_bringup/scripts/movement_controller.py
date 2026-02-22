@@ -263,12 +263,12 @@ class PurePursuitController:
         angular_z = error_rad * p_gain
 
         # 3. Handle Deadband (Transbot friction)
-        MIN_VEL = 0.12
+        MIN_VEL = 0.08
         if abs(angular_z) < MIN_VEL:
             angular_z = MIN_VEL if angular_z > 0 else -MIN_VEL
 
         # 4. Cap the speed for safety
-        cmd.angular.z = max(min(angular_z, 0.4), -0.4)
+        cmd.angular.z = max(min(angular_z, 0.25), -0.25)
         
         self.cmd_pub.publish(cmd)
 
