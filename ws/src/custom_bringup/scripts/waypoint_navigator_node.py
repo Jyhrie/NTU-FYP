@@ -90,7 +90,7 @@ class WaypointNavigatorNode:
         if path and len(path) > 0:
             self.publish_path(path)
             # Notify controller that we found a path
-            self.reply_pub.publish(json.dumps({"cmd": "path"}))
+            self.global_reply_pub.publish(json.dumps({"cmd": "path"}))
         else:
             rospy.logerr("Navigator: Pathfinding failed!")
 
