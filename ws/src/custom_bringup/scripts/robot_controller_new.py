@@ -119,19 +119,10 @@ class Controller:
         self.global_request.publish(msg)
         self.interrupt() # Stop current action immediately
 
-        return 
-        if data.get("header") == "interrupt":
-            timestamp = data.get("timestamp")
-            angle = data.get("angle")
-            distance = data.get("distance")
-
-            if None not in (timestamp, angle, distance):
-                coords = self.get_relative_pickup_target(timestamp, angle, distance)
-                if coords[0] is not None:
-                    self.pickup_target = coords
-                    self.interrupt() # Stops current motion
-                    self.transition(States.FETCHING, SubStates.READY)
-
+        #load data in
+        self.pickup_target = (get_x, get_y)
+        self.transition(States.FETCHING, SubStates.READY)
+        
     # ====== UTILS (Original methods) ====== #
     def get_robot_pose(self):
         try:
@@ -245,7 +236,6 @@ class Controller:
 
         self.global_request.publish("interrupt")
         self.transition(States.IDLE, SubStates.READY) # Reset to IDLE and clear sub-state to READY for a fresh start
-        self.substate = SubStates.READY
 
     def transition(self, nxt_state, nxt_sub=SubStates.READY):
         print("Transitioning %s -> %s (%s)" % (self.state.name, nxt_state.name, nxt_sub.name))
@@ -264,7 +254,8 @@ class Controller:
             self.rate.sleep()
 
     def manage_idle(self):
-        self.transition(States.MAPPING)
+        #self.transition(States.MAPPING)
+        return
 
     def manage_mapping(self):
             # Initial entry: move to requesting data
@@ -333,6 +324,7 @@ class Controller:
                 if self.received_path: # Once path_reply_cb gets the path
                     self.goal_path = self.received_path
                     self.request_sent = False
+                    print("path received")
                     self.sub_state = SubStates.MOVING_TO_ITEM
 
             # --- 3. MOVE TO ITEM ---

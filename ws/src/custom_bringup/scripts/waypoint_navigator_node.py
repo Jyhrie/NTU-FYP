@@ -26,7 +26,7 @@ class WaypointNavigatorNode:
         )
         self.map_sub = rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
         self.costmap_sub = rospy.Subscriber(
-            "/move_base/global_costmap/costmap", OccupancyGrid, self.global_costmap_cb
+            "/map/costmap_global", OccupancyGrid, self.global_costmap_cb
         )
 
         # --- TF Buffer for Localization ---
@@ -34,8 +34,8 @@ class WaypointNavigatorNode:
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
         # --- Publishers ---
-        self.reply_pub = rospy.Publisher("/frontier_node_reply", String, queue_size=1)
-        self.path_pub = rospy.Publisher("/frontier_node_path", Path, queue_size=1)
+        self.global_reply_pub = rospy.Publisher("/robot/reply", String, queue_size=1)
+        self.global_path_pub = rospy.Publisher("/robot/path_reply", Path, queue_size=1)
 
         rospy.loginfo("Waypoint Navigator Node Initialized")
 
@@ -54,7 +54,6 @@ class WaypointNavigatorNode:
 
         # 1. Handle "Home" Request
         if msg.data == "request_home":
-            rospy.loginfo("🏠 Navigating to Home...")
             target_x, target_y = self.home_pose
 
         # 2. Handle JSON Waypoint Request
