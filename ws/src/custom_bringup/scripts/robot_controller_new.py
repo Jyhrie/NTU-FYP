@@ -11,6 +11,7 @@ import tf2_ros
 import tf2_geometry_msgs
 import tf
 import math
+import sys
 
 # --- State Definitions ---
 class States(Enum):
@@ -150,7 +151,6 @@ class Controller:
             
         # Formula: distance = (FocalLength * RealWidth) / PixelWidth
         distance = (FOCAL_LENGTH * REAL_WIDTH) / pixel_width
-        print("Distance calculated:", distance)
         return distance
 
     def get_relative_pickup_target(self, timestamp, angle, distance):
@@ -253,8 +253,15 @@ class Controller:
 
     # ====== MAIN STATE LOGIC ====== #
     def run(self):
+
+
         rospy.sleep(1.0)
         while not rospy.is_shutdown():
+            #debug
+            status = "\rMain State: %-10s | Sub-State: %-10s\033[K" % (self.state.name, self.sub_state.name)
+            sys.stdout.write(status)
+            sys.stdout.flush()
+
             if self.state == States.IDLE:    self.manage_idle()
             elif self.state == States.MAPPING:  self.manage_mapping()
             elif self.state == States.FETCHING: self.manage_fetching()
