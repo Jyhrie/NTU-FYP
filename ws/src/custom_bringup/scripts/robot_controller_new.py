@@ -109,7 +109,7 @@ class Controller:
         # 3. Unpack the specific fields from your log
         timestamp = float(data.get('timestamp'))
         target_label = data.get('target')        # e.g., "object_name" or "can"
-        angle_to_target = data.get('angle')      # e.g., 23.85
+        angle_to_target = -float(data.get('angle'))     # e.g., 23.85
         confidence = data.get('conf')            # e.g., 0.913
         
         width = data.get('w')                    # e.g., 59.6
@@ -156,7 +156,6 @@ class Controller:
         return distance
 
     def get_relative_pickup_target(self, timestamp, angle, distance):
-            angle = -angle
             angle_rad = math.radians(angle)
             
             # Setup the points for the target
