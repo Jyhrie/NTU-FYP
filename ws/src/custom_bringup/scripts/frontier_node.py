@@ -20,51 +20,6 @@ from dependencies.astar_planner import a_star_exploration
 from dependencies.astar import PathPlanner
 
 TRUNCATION_SIZE = 7
-USE_DILATION = True
-
-def calc_cost_map(mapdata):
-    rospy.loginfo("Calculating cost map")
-    width = mapdata.info.width
-    height = mapdata.info.height
-    map_arr = np.array(mapdata.data).reshape(height, width).astype(np.uint8)
-    map_arr[map_arr == 255] = 100
-
-    cost_map = np.zeros_like(map_arr)
-    dilated_map = map_arr.copy()
-    iterations = 0
-    kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], np.uint8)
-    while np.any(dilated_map == 0):
-        iterations += 1
-        next_dilated_map = cv2.dilate(dilated_map, kernel, iterations=1)
-        difference = next_dilated_map - dilated_map
-        difference[difference > 0] = iterations
-        cost_map = cv2.bitwise_or(cost_map, difference)
-        dilated_map = next_dilated_map
-
-    cost_map = PathPlanner.create_hallway_mask(mapdata, cost_map, iterations // 4)
-
-    dilated_map = cost_map.copy()
-    cost = 1
-    for i in range(iterations):
-        cost += 1
-        next_dilated_map = cv2.dilate(dilated_map, kernel, iterations=1)
-        difference = next_dilated_map - dilated_map
-        difference[difference > 0] = cost
-        cost_map = cv2.bitwise_or(cost_map, difference)
-        dilated_map = next_dilated_map
-
-    cost_map[cost_map > 0] -= 1
-    return cost_map
-
-@staticmethod
-def create_hallway_mask(mapdata, cost_map, threshold):
-    mask = np.zeros_like(cost_map, dtype=bool)
-    non_zero_indices = np.nonzero(cost_map)
-    for y, x in zip(*non_zero_indices):
-        if PathPlanner.is_hallway_cell(mapdata, cost_map, (x, y), threshold):
-            mask[y][x] = 1
-    return mask.astype(np.uint8)
-
 
 class FrontierNode:
     def __init__(self):
@@ -83,9 +38,8 @@ class FrontierNode:
         )
 
         self.map_topic = rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
-        self.costmap_global_topic = rospy.Subscriber(
-            "/move_base/global_costmap/costmap", OccupancyGrid, self.global_costmap_cb
-        )
+        self.costmap_global = rospy.Subscriber("/map/costmap_global", OccupancyGrid, self.global_costmap_cb)
+
         self.marker_pub = rospy.Publisher("/detected_frontiers", Marker, queue_size=10)
 
         self.tf_buffer = tf2_ros.Buffer()
@@ -123,33 +77,9 @@ class FrontierNode:
             self.last_trigger_time = current_time
             self.trigger()
 
-    def publish_costmap(self, original_map, cost_array):
-        """Converts and publishes the hallway costmap to /frontier_node_costmap"""
-        cost_msg = OccupancyGrid()
-        cost_msg.header = original_map.header
-        cost_msg.header.stamp = rospy.Time.now()
-        cost_msg.info = original_map.info
-
-        # Normalize 0-100 for ROS OccupancyGrid standards
-        # We want the "safe" hallway centers to be 0 (dark) 
-        # and the "dangerous" wall areas to be 100 (bright/purple)
-        max_val = np.max(cost_array)
-        if max_val > 0:
-            # Cast to float for math, then back to int8 for the message
-            normalized = (cost_array.astype(float) / max_val) * 100
-            cost_msg.data = normalized.flatten().astype(np.int8).tolist()
-        else:
-            cost_msg.data = cost_array.flatten().astype(np.int8).tolist()
-
-        self.global_costmap_pub.publish(cost_msg)
-
     def map_cb(self, msg):
         print("Map Instance Received.")
         self.map = msg
-        cost_array = PathPlanner.calc_cost_map(msg)
-        self.global_costmap = cost_array
-
-        self.publish_costmap(msg, cost_array)
         if self.detector is None:
             self.detector = FrontierDetector(
                 map_width=msg.info.width,
@@ -161,7 +91,7 @@ class FrontierNode:
         pass
 
     def global_costmap_cb(self, msg):
-        #self.global_costmap = np.array(msg.data).reshape((msg.info.height, msg.info.width))
+        self.global_costmap = np.array(msg.data).reshape((msg.info.height, msg.info.width))
         pass
 
     def trigger(self):
