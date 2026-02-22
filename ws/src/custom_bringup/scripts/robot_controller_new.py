@@ -116,7 +116,7 @@ class Controller:
 
         get_x, get_y = self.get_relative_pickup_target(timestamp, angle_to_target, dist_m) # Assuming a fixed distance of 1.0m for now
 
-        self.global_request.publish(msg)
+        #self.global_request.publish(msg)
     
         #load data in
         if self.state != States.FETCHING:
