@@ -77,6 +77,15 @@ class PurePursuitController:
             elif header == 'stop_movement':
                 self.state = MovementState.IDLE
                 self.stop_robot()
+            elif header == 'approach':
+                # --- APPROACH LOGIC ---
+                self.state = MovementState.APPROACH
+                # We reuse align_error for steering during the approach
+                self.align_error = data.get("data", {}).get("relative_angle", 0.0)
+                # Store the speed sent by the high-level controller
+                self.approach_speed = data.get("data", {}).get("linear_speed", 0.1)
+                rospy.loginfo("[PP] Approaching: Angle %.2f | Speed %.2f", 
+                               self.align_error, self.approach_speed)
                 
         except ValueError:
             # If not JSON, handle as a plain string
@@ -387,7 +396,8 @@ class PurePursuitController:
                 self.get_pp()
             elif self.state == MovementState.ALIGN:
                 self.get_align() # Process the alignment P-loop
-            
+            elif self.state == MovementState.APPROACH:
+                self.get_approach() # Process the approach logic
 
             self.rate.sleep()
 
