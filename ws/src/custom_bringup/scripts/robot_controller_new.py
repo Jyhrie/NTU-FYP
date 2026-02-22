@@ -154,74 +154,71 @@ class Controller:
         return distance
 
     def get_relative_pickup_target(self, timestamp, angle, distance):
-            # 1. ROS math requires radians
             angle_rad = math.radians(angle)
             
+            # Setup the points for the target
             local_pt = PointStamped()
-            
-            # --- ROBUST TIMESTAMP FIX ---
             try:
-                if timestamp is None:
-                    local_pt.header.stamp = rospy.Time.now()
-                elif isinstance(timestamp, (str, unicode, float, int)):
-                    # Convert anything from the JSON string into a proper rospy.Time object
+                if isinstance(timestamp, (str, unicode, float, int)):
                     local_pt.header.stamp = rospy.Time.from_sec(float(timestamp))
                 else:
-                    # If it's already a rospy.Time object, use it directly
                     local_pt.header.stamp = timestamp
-            except Exception as e:
-                rospy.logwarn("Timestamp conversion failed: %s. Using Time.now()", e)
+            except:
                 local_pt.header.stamp = rospy.Time.now()
-            # --- END FIX ---
 
-            # 2. Frame Setup
-            # Use 'camera_link' to account for the physical mounting offset on your Transbot
+            # --- NEW: Get Robot's Global Position at that time ---
+            try:
+                # Transform the center of the robot (0,0,0) at the timestamp to the map
+                robot_origin = PointStamped()
+                robot_origin.header.stamp = local_pt.header.stamp
+                robot_origin.header.frame_id = "base_link"
+                robot_pos = self.tf_buffer.transform(robot_origin, "map", timeout=rospy.Duration(1.0))
+                
+                # Publish Blue Marker for Robot Position
+                self.publish_marker(robot_pos.point.x, robot_pos.point.y, marker_id=1, color="blue")
+            except Exception as e:
+                rospy.logwarn("Could not find robot past position: %s", e)
+
+            # --- Existing Target Logic ---
             local_pt.header.frame_id = "camera_link" 
-            
-            # 3. Local Projection (X=Forward, Y=Left)
             local_pt.point.x = distance * math.cos(angle_rad)
             local_pt.point.y = distance * math.sin(angle_rad)
-            local_pt.point.z = 0.0 
             
             try:
-                # 4. Transform look-back
-                # timeout=Duration(1.0) gives the TF buffer time to receive the latest map transforms
                 map_pt = self.tf_buffer.transform(local_pt, "map", timeout=rospy.Duration(1.0))
                 
-                # 5. Visualize in Rviz
-                self.publish_marker(map_pt.point.x, map_pt.point.y)
+                # Publish Green Marker for Target Can
+                self.publish_marker(map_pt.point.x, map_pt.point.y, marker_id=0, color="green")
                 
                 return (map_pt.point.x, map_pt.point.y)
             except Exception as e:
-                rospy.logwarn("TF Transform failed (Check if 'map' and 'camera_link' are connected): %s", str(e))
+                rospy.logwarn("TF Transform failed: %s", str(e))
                 return (None, None)
 
-    def publish_marker(self, x, y):
-        marker = Marker()
-        marker.header.frame_id = "map"
-        marker.header.stamp = rospy.Time.now()
-        marker.ns = "object_detection"
-        marker.id = 0
-        marker.type = Marker.SPHERE
-        marker.action = Marker.ADD
-        
-        # Position on the map
-        marker.pose.position.x = x
-        marker.pose.position.y = y
-        marker.pose.position.z = 0.1  # Slightly above ground
-        
-        # Marker size (0.1m sphere)
-        marker.scale.x = 0.1
-        marker.scale.y = 0.1
-        marker.scale.z = 0.1
-        
-        # Color (Bright Green)
-        marker.color.a = 1.0 # Transparency
-        marker.color.r = 0.0
-        marker.color.g = 1.0
-        marker.color.b = 0.0
-        
-        self.marker_pub.publish(marker)
+    def publish_marker(self, x, y, marker_id=0, color="green"):
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = rospy.Time.now()
+            marker.ns = "localization_debug"
+            marker.id = marker_id
+            marker.type = Marker.SPHERE
+            marker.action = Marker.ADD
+            
+            marker.pose.position.x = x
+            marker.pose.position.y = y
+            marker.pose.position.z = 0.05 
+            
+            marker.scale.x = 0.1
+            marker.scale.y = 0.1
+            marker.scale.z = 0.1
+            
+            marker.color.a = 1.0
+            if color == "green": # Target
+                marker.color.g = 1.0
+            elif color == "blue": # Robot Position
+                marker.color.b = 1.0
+                
+            self.marker_pub.publish(marker)
 
     def prepare_flip(self):
         pose = self.get_robot_pose()
