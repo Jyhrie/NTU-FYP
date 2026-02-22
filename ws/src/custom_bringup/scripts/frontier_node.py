@@ -123,10 +123,33 @@ class FrontierNode:
             self.last_trigger_time = current_time
             self.trigger()
 
+    def publish_costmap(self, original_map, cost_array):
+        """Converts and publishes the hallway costmap to /frontier_node_costmap"""
+        cost_msg = OccupancyGrid()
+        cost_msg.header = original_map.header
+        cost_msg.header.stamp = rospy.Time.now()
+        cost_msg.info = original_map.info
+
+        # Normalize 0-100 for ROS OccupancyGrid standards
+        # We want the "safe" hallway centers to be 0 (dark) 
+        # and the "dangerous" wall areas to be 100 (bright/purple)
+        max_val = np.max(cost_array)
+        if max_val > 0:
+            # Cast to float for math, then back to int8 for the message
+            normalized = (cost_array.astype(float) / max_val) * 100
+            cost_msg.data = normalized.flatten().astype(np.int8).tolist()
+        else:
+            cost_msg.data = cost_array.flatten().astype(np.int8).tolist()
+
+        self.global_costmap_pub.publish(cost_msg)
+
     def map_cb(self, msg):
         print("Map Instance Received.")
         self.map = msg
-        self.global_costmap = calc_cost_map(msg)
+        cost_array = PathPlanner.calc_cost_map(msg)
+        self.global_costmap = cost_array
+
+        self.publish_costmap(msg, cost_array)
         if self.detector is None:
             self.detector = FrontierDetector(
                 map_width=msg.info.width,
