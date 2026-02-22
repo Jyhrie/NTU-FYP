@@ -5,8 +5,10 @@ from enum import Enum
 from std_msgs.msg import Empty, String
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PointStamped
 import json
 import tf2_ros
+import tf2_geometry_msgs
 import tf
 import math
 
@@ -17,7 +19,6 @@ class NavStates(Enum):
     COMPLETE = 3
     FAILED = 4
 
-
 class States(Enum):
     NULL = 0
     INIT = 1
@@ -25,6 +26,7 @@ class States(Enum):
     REQUEST_FRONTIER_PATH = 3
     NAVIGATE = 4
     ROTATE = 5
+    FETCH_OBJECT = 6
 
 
 class State:
@@ -63,8 +65,9 @@ class Controller:
         self.request_timeout = 30
 
         self.rotate_target_msg = None
-
         self.movement_complete = False
+
+        self.pickup_target = None # (x, y) in map frame, set by PC node when it sends an interrupt command with the target location for pickup.
 
         self.prev_state = None
         self.init_complete = False
@@ -103,10 +106,15 @@ class Controller:
         pass
 
     def pc_node_cb(self, msg):
-        if msg.data == "interrupt":
-            #TODO: unpack the data, perform the navigation to spot.
-            self.interrupt()
+        data = json.loads(msg.data)
+        if data.get("header") == "interrupt":
+            timestamp = data.get("timestamp", None)
+            angle = data.get("angle", None)
+            distance = data.get("distance", None)
 
+            if timestamp is not None and angle is not None and distance is not None:
+                self.pickup_target = self.get_relative_pickup_target(timestamp, angle, distance)
+                self.interrupt(next_state=States.FETCH_OBJECT, clear=True)
         pass
 
     # ====== UTIL ====== # 
@@ -130,15 +138,50 @@ class Controller:
 
         except:
             return None
+        
+    def get_relative_pickup_target(self, timestamp, angle, distance):
+        """
+        Returns a tuple (x, y) in the 'map' frame at the specific timestamp.
+        """
+        # 1. Prepare the point in the robot's local frame (e.g., 'base_link')
+        local_pt = PointStamped()
+        
+        # Handle timestamp: Ensure it's a rospy.Time object
+        if isinstance(timestamp, (int, float)):
+            local_pt.header.stamp = rospy.Time.from_sec(timestamp)
+        else:
+            local_pt.header.stamp = timestamp
+            
+        local_pt.header.frame_id = "base_link" 
+
+        # 2. Polar to Cartesian (standard math: x=forward, y=left)
+        local_pt.point.x = distance * math.cos(angle)
+        local_pt.point.y = distance * math.sin(angle)
+        local_pt.point.z = 0.0
+
+        try:
+            # 3. Transform to 'map' frame using the historical timestamp
+            # timeout allows the buffer to catch up if the data is very recent
+            map_pt = self.tf_buffer.transform(local_pt, "map", timeout=rospy.Duration(1.0))
+            
+            # 4. Return as a simple tuple
+            return (map_pt.point.x, map_pt.point.y)
+
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+            rospy.logwarn("TF2 Conversion Failed: %s", str(e))
+            return (None, None)
+
     
     def wrap_angle(self, a):
         return math.atan2(math.sin(a), math.cos(a))
 
     # ====== FSM ====== # 
 
-    def interrupt(self, clear = False):
+    def interrupt(self, next_state=None, clear=False):
         print("Interrupting Current Action")
         self.global_request.publish("interrupt")
+        if next_state is not None:
+            self.transition(next_state)
         pass
 
     def transition(self, nxt_state):
