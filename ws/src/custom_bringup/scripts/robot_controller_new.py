@@ -90,6 +90,9 @@ class Controller:
     
     def movement_controller_cb(self, msg):
         if msg.data == "done":
+            if self.state == States.FETCHING and self.sub_state in [SubStates.MOVING_TO_ITEM]:
+                self.substate = SubStates.ALIGNING
+                return
             self.sub_state = SubStates.COMPLETE
 
     def navigation_node_cb(self, msg):
@@ -292,6 +295,7 @@ class Controller:
                 self.goal_path = None
                 self.rotate_target_msg = None
                 self.transition(States.MAPPING, SubStates.READY)
+
             elif self.sub_state == SubStates.MOVING:
                 # Execute the active task
                 if self.goal_path:
@@ -328,15 +332,25 @@ class Controller:
                     self.request_sent = False
                     print("path received")
                     self.sub_state = SubStates.MOVING_TO_ITEM
-
+                    
             # --- 3. MOVE TO ITEM ---
+
             elif self.sub_state == SubStates.MOVING_TO_ITEM:
-                if self.movement_complete:
-                    self.movement_complete = False
-                    self.sub_state = SubStates.ALIGNING
-                else:
+                # Execute the active task
+                if self.goal_path:
                     self.global_request.publish("navigate")
                     self.global_exploration_path.publish(self.goal_path)
+                elif self.rotate_target_msg:
+                    self.global_request.publish("rotate")
+                    self.rotate_pose_pub.publish(self.rotate_target_msg)
+                    
+            # elif self.sub_state == SubStates.MOVING_TO_ITEM:
+            #     if self.movement_complete:
+            #         self.movement_complete = False
+            #         self.sub_state = SubStates.ALIGNING
+            #     else:
+            #         self.global_request.publish("navigate")
+            #         self.global_exploration_path.publish(self.goal_path)
 
             # --- 4. ALIGN WITH ITEM ---
             elif self.sub_state == SubStates.ALIGNING:
