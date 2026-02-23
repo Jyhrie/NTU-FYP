@@ -98,11 +98,11 @@ class Controller:
             print("Movement Controller reports: Movement Complete")
             if self.state == States.FETCHING:
                 if self.sub_state == SubStates.MOVING_TO_ITEM:
-                    self.sub_state = SubStates.APPROACHING
-                elif self.sub_state == SubStates.APPROACHING:
                     self.sub_state = SubStates.ALIGNING
-                elif self.sub_state == SubStates.ALIGNING:
+                elif self.sub_state == SubStates.APPROACHING:
                     self.sub_state = SubStates.PICKING_UP
+                elif self.sub_state == SubStates.ALIGNING:
+                    self.sub_state = SubStates.APPROACHING
                 elif self.sub_state == SubStates.RETURNING:
                     print("Back at origin. Fetch complete.")
                     self.transition(States.NULL)
@@ -402,7 +402,8 @@ class Controller:
                     "data": {
                         "timestamp": self.last_pickup_target_time,
                         "relative_angle": self.pickup_target_angle_relative_to_forward,
-                        "linear_speed": 0.04 # Slow and steady for the final approach
+                        "max_distance": self.calculate_distance(self.object_box[0]),
+                        "linear_speed": 0.07
                     }
                 }
                 self.global_request.publish(json.dumps(approach_msg))
