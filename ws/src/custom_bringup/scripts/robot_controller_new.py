@@ -274,7 +274,7 @@ class Controller:
             self.rate.sleep()
 
     def manage_idle(self):
-        self.transition(States.MAPPING)
+        #self.transition(States.MAPPING)
         return
 
     def manage_mapping(self):

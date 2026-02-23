@@ -226,41 +226,46 @@ class PurePursuitController:
 
     def get_rot(self):
         pose = self.get_robot_pose()
-        if pose is None:
-            return None
-        
-        if self.rotate_target_pose is None:
-            rospy.logwarn_throttle(2, "[PP] Rotate state active but no target pose found")
-            self.state = MovementState.IDLE # Safety fallback
+        if pose is None or self.rotate_target_pose is None:
             return None
 
-        _, _, yaw = pose
+        _, _, current_yaw = pose
 
-        # --- extract target yaw from PoseStamped ---
-        q = self.rotate_target_pose.pose.orientation
-        (_, _, target_yaw) = tf.transformations.euler_from_quaternion(
-            [q.x, q.y, q.z, q.w]
-        )
+        # 1. LATCHING THE TARGET (The "Cache")
+        # Only calculate the target_yaw once when the command first arrives
+        if not hasattr(self, 'latched_target_yaw') or self.latched_target_yaw is None:
+            q = self.rotate_target_pose.pose.orientation
+            (_, _, relative_target) = tf.transformations.euler_from_quaternion(
+                [q.x, q.y, q.z, q.w]
+            )
+            # Store this as a fixed goal in the world/odom frame
+            self.latched_target_yaw = relative_target 
+            rospy.loginfo(f"[PP] Latched target: {self.latched_target_yaw:.2f}")
 
-        error = self.normalize_angle(target_yaw - yaw)
+        # 2. CALCULATE ERROR BASED ON REAL-TIME ODOM (No delay)
+        error = self.normalize_angle(self.latched_target_yaw - current_yaw)
 
         # ---------------- Check Completion ----------------
-        if abs(error) < 0.05:
-            rospy.loginfo("[PP] Rotate target reached. Returning to IDLE.")
+        if abs(error) < 0.03: # Tightened tolerance
+            rospy.loginfo("[PP] Rotation complete. Waiting for next camera input.")
             self.stop_robot()
             
+            # Reset everything to wait for the next command
             self.state = MovementState.IDLE
             self.rotate_target_pose = None
+            self.latched_target_yaw = None # Clear the latch
+            
             self.node_topic.publish("done")
             return None
         
-        # ---------------- Proportional Control ----------------
+        # ---------------- Control ----------------
         cmd = Twist()
-        cmd.linear.x = 0
-        cmd.angular.z = max(min(error * 1.2, 0.4), -0.4)
+        # Lower the gain (1.2 -> 0.6) to prevent aggressive starts/stops with the delay
+        speed = error * 0.8 
+        cmd.angular.z = max(min(speed, 0.3), -0.3) # Capped speed for stability
 
         self.cmd_pub.publish(cmd)
-        
+            
     def get_align(self):
         # 0.5 degrees in radians
         TOLERANCE = math.radians(0.5)
