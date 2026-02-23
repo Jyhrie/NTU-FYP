@@ -397,7 +397,7 @@ class Controller:
                 
                 if self.object_box and self.object_box[0] >= TARGET_W:
                     print("Close enough to attempt pickup!")
-                    self.sub_state = SubStates.PICKING_UP
+                    self.sub_state = SubStates.ALIGNING
                     msg = {
                         "header": "stop_movement",
                     }
