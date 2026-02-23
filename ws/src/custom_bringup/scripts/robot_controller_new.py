@@ -100,6 +100,8 @@ class Controller:
                     self.sub_state = SubStates.APPROACHING
                 elif self.sub_state == SubStates.APPROACHING:
                     self.sub_state = SubStates.ALIGNING
+                elif self.sub_state == SubStates.ALIGNING:
+                    self.sub_state = SubStates.PICKING_UP
                 return
             self.sub_state = SubStates.COMPLETE
 
