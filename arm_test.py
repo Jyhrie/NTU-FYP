@@ -46,7 +46,7 @@ def move_arm():
         # Joint 1: Lift the main arm (ID 7)
         j7 = Joint()
         j7.id = 7
-        j7.angle = 229 # Middle position
+        j7.angle = 185 # Middle position
         j7.run_time = 1000 
 
         #220 is TUCKED
@@ -58,11 +58,11 @@ def move_arm():
         j8.angle = 30 # Middle position
         j8.run_time = 1000 
         
-        # # Joint 2: Close the claw (ID 9)
-        # j9 = Joint()
-        # j9.id = 9
-        # j9.angle = 180 # 180 degrees (Closed tight)
-        # j9.run_time = 1000
+        # Joint 2: Close the claw (ID 9)
+        j9 = Joint()
+        j9.id = 9
+        j9.angle = 180 # 180 degrees (Closed tight)
+        j9.run_time = 1000
 
         multi_msg.joint = [j7, j8] # Add both to the list
 
