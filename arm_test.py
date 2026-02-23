@@ -41,7 +41,7 @@ def move_arm():
 
         # --- SCENARIO 2: Move Arm Up and Close Claw ---
         # We can send multiple joints at once
-        multi_msg = Arm()
+        arm_msg = Arm()
         
         # Joint 1: Lift the main arm (ID 7)
         j7 = Joint()
@@ -51,11 +51,13 @@ def move_arm():
 
         arm_msg.joint.append(j7)
         rospy.sleep(2) # Wait for motion to finish
+        pub.publish(arm_msg)
 
         #220 is TUCKED
         #35 is LIFT
 
         # Joint 1: Lift the main arm (ID 7)
+        arm_msg = Arm()
         j8 = Joint()
         j8.id = 8
         j8.angle = 150 # Middle position #30 is TUCKED, 180 is MAX
@@ -63,8 +65,11 @@ def move_arm():
 
         arm_msg.joint.append(j8)
         rospy.sleep(2) # Wait for motion to finish
+        pub.publish(arm_msg)
         
         # Joint 2: Close the claw (ID 9)
+        arm_msg = Arm()
+
         j9 = Joint()
         j9.id = 9
         j9.angle = 180 # 180 degrees (Closed tight)
@@ -72,11 +77,12 @@ def move_arm():
 
         arm_msg.joint.append(j9)
         rospy.sleep(2) # Wait for motion to finish
+        pub.publish(arm_msg)
 
         #multi_msg.joint = [j7, j8, j9] # Add both to the list
 
         rospy.loginfo("Moving Arm Up and Closing Claw...")
-        pub.publish(multi_msg)
+        #pub.publish(multi_msg)
         rospy.sleep(2)
 
     except rospy.ROSInterruptException:
