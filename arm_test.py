@@ -47,7 +47,7 @@ def move_arm():
         
         rospy.loginfo("Action: Gripping (70 degrees)...")
         pub.publish(arm_msg)
-        rospy.sleep(1.5)
+        rospy.sleep(3)
 
         # --- SCENARIO 3: RETURN TO TUCKED ---
         # Holding the item (J9 stays at 70)
