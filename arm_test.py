@@ -2,95 +2,76 @@
 # encoding: utf-8
 
 import rospy
-import time
-import sys
-# We must import the specific message types your driver checks for
 from transbot_msgs.msg import Arm, Joint 
 
-NODE_NAME = 'arm_commander'
-TOPIC_NAME = '/TargetAngle' # Must match the subscriber in your driver
+NODE_NAME = 'arm_commander_test'
+TOPIC_NAME = '/TargetAngle'
 
 def move_arm():
-    
     rospy.init_node(NODE_NAME, anonymous=False)
-    
-    # Publisher for the Arm message
     pub = rospy.Publisher(TOPIC_NAME, Arm, queue_size=1)
     
-    # Wait for the driver to connect
-    rospy.loginfo("Waiting for driver to connect...")
+    rospy.loginfo("Waiting for driver...")
     while pub.get_num_connections() == 0 and not rospy.is_shutdown():
         rospy.sleep(0.1)
-    rospy.loginfo("Driver connected. Moving arm...")
-    
+    rospy.loginfo("Connected. Starting Sequence.")
+
     try:
-        # --- SCENARIO 1: Open the Claw (ID 9) ---
-        arm_msg = Arm() # Create the container message
-        
-        joint_claw = Joint() 
-        joint_claw.id = 9       # ID 9 is usually the claw
-        joint_claw.angle = 30   # 30 degrees (Open)
-        joint_claw.run_time = 1000 # Take 1000ms (1 second) to move
-        
-        # Add the joint to the message list
-        arm_msg.joint.append(joint_claw)
-        
-        rospy.loginfo("Opening Claw...")
-        pub.publish(arm_msg)
-        rospy.sleep(2) # Wait for motion to finish
-
-        # --- SCENARIO 2: Move Arm Up and Close Claw ---
-        # We can send multiple joints at once
+        # --- SCENARIO 1: GO TO EXTENDED ---
+        # TUCKED: J7: 225, J8: 30, J9: 30
+        # EXTENDED: J7: 100, J8: 180, J9: 30
         arm_msg = Arm()
-
-        #TUCKED: J7: 225, J8: 30, J9: 30
         
-        # Joint 1: Lift the main arm (ID 7)
         j7 = Joint()
-        j7.id = 7
-        j7.angle = 100 # Middle position
-        j7.run_time = 1000 
-
-        arm_msg.joint.append(j7)
-        rospy.sleep(1) # Wait for motion to finish
-        pub.publish(arm_msg)
-
-        #220 is TUCKED
-        #35 is LIFT
-
-        # Joint 1: Lift the main arm (ID 7)
-        arm_msg = Arm()
-        j8 = Joint()
-        j8.id = 8
-        j8.angle = 180 # Middle position #30 is TUCKED, 180 is MAX
-        j8.run_time = 1000 
-
-        arm_msg.joint.append(j8)
-        rospy.sleep(1) # Wait for motion to finish
-        pub.publish(arm_msg)
+        j7.id = 7; j7.angle = 100; j7.run_time = 1500
         
-        # # Joint 2: Close the claw (ID 9)
-        # arm_msg = Arm()
+        j8 = Joint()
+        j8.id = 8; j8.angle = 180; j8.run_time = 1500
+        
+        j9 = Joint()
+        j9.id = 9; j9.angle = 30; j9.run_time = 1000
 
-        # j9 = Joint()
-        # j9.id = 9
-        # j9.angle = 180 # 180 degrees (Closed tight)
-        # j9.run_time = 1000
+        arm_msg.joint = [j7, j8, j9]
+        
+        rospy.loginfo("Action: Extending Arm...")
+        pub.publish(arm_msg)
+        rospy.sleep(2.5) # Allow time to reach extension
 
-        # arm_msg.joint.append(j9)
-        # rospy.sleep(1) # Wait for motion to finish
-        # pub.publish(arm_msg)
+        # --- SCENARIO 2: GRIP (J9 to 70) ---
+        arm_msg = Arm()
+        
+        j9_grip = Joint()
+        j9_grip.id = 9; j9_grip.angle = 70; j9_grip.run_time = 800
+        
+        arm_msg.joint.append(j9_grip)
+        
+        rospy.loginfo("Action: Gripping (70 degrees)...")
+        pub.publish(arm_msg)
+        rospy.sleep(1.5)
 
-        #multi_msg.joint = [j7, j8, j9] # Add both to the list
+        # --- SCENARIO 3: RETURN TO TUCKED ---
+        # Holding the item (J9 stays at 70)
+        arm_msg = Arm()
+        
+        j7_tuck = Joint()
+        j7_tuck.id = 7; j7_tuck.angle = 225; j7_tuck.run_time = 2000
+        
+        j8_tuck = Joint()
+        j8_tuck.id = 8; j8_tuck.angle = 30; j8_tuck.run_time = 2000
+        
+        j9_hold = Joint()
+        j9_hold.id = 9; j9_hold.angle = 70; j9_hold.run_time = 1000
 
-        rospy.loginfo("Moving Arm Up and Closing Claw...")
-        #pub.publish(multi_msg)
-        rospy.sleep(2)
+        arm_msg.joint = [j7_tuck, j8_tuck, j9_hold]
+        
+        rospy.loginfo("Action: Tucking Arm...")
+        pub.publish(arm_msg)
+        rospy.sleep(3.0)
 
     except rospy.ROSInterruptException:
         pass
     finally:
-        rospy.loginfo("Arm test complete.")
+        rospy.loginfo("Test sequence finished.")
 
 if __name__ == '__main__':
     move_arm()
