@@ -102,6 +102,9 @@ class Controller:
                     self.sub_state = SubStates.ALIGNING
                 elif self.sub_state == SubStates.ALIGNING:
                     self.sub_state = SubStates.PICKING_UP
+                elif self.sub_state == SubStates.RETURNING:
+                    print("Back at origin. Fetch complete.")
+                    self.transition(States.IDLE)
                 return
             self.sub_state = SubStates.COMPLETE
 
@@ -442,13 +445,9 @@ class Controller:
 
             # --- 8. MOVE TO ORIGIN ---
             elif self.sub_state == SubStates.RETURNING:
-                if self.movement_complete:
-                    self.movement_complete = False
-                    print("Back at origin. Fetch complete.")
-                    self.transition(States.IDLE)
-                else:
-                    self.global_request.publish("navigate")
-                    self.global_exploration_path.publish(self.goal_path)
+                self.global_request.publish("navigate")
+                self.global_exploration_path.publish(self.goal_path)
+                #will get kicked out of this state by the movement controller callback once navigation is complete
 
 if __name__ == "__main__":
     ctrl = Controller()
