@@ -46,7 +46,7 @@ def move_arm():
         # Joint 1: Lift the main arm (ID 7)
         j7 = Joint()
         j7.id = 7
-        j7.angle = 220 # Middle position
+        j7.angle = 35 # Middle position
         j7.run_time = 1000 
 
         #220 is TUCKED
@@ -64,7 +64,7 @@ def move_arm():
         j9.angle = 50 # 180 degrees (Closed tight)
         j9.run_time = 1000
 
-        multi_msg.joint = [j7, j8] # Add both to the list
+        multi_msg.joint = [j7, j8, j9] # Add both to the list
 
         rospy.loginfo("Moving Arm Up and Closing Claw...")
         pub.publish(multi_msg)
