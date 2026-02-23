@@ -62,7 +62,7 @@ def move_arm():
         arm_msg = Arm()
         j8 = Joint()
         j8.id = 8
-        j8.angle = 140 # Middle position #30 is TUCKED, 180 is MAX
+        j8.angle = 180 # Middle position #30 is TUCKED, 180 is MAX
         j8.run_time = 1000 
 
         arm_msg.joint.append(j8)
