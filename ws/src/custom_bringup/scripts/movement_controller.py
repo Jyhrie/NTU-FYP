@@ -283,7 +283,6 @@ class PurePursuitController:
             # We 'latch' this so we stop listening to the laggy camera feed
             self.latched_align_target = self.normalize_angle(current_yaw + error_rad)
             self.align_target_reached_time = None 
-            rospy.loginfo(f"[PP] Latched Align Target: {self.latched_align_target:.2f}")
 
         # 3. CALCULATE ERROR BASED ON LATCH (Fixed Goal vs. Real-time IMU)
         # This error is now updated at the speed of your IMU, ignoring camera lag.
