@@ -395,7 +395,7 @@ class Controller:
                 self.global_request.publish(json.dumps(approach_msg))
 
                 #perform a check to see if we are close enough to the target to attempt pickup
-                TARGET_W = 95
+                TARGET_W = 115
                 
                 if self.object_box and self.object_box[0] >= TARGET_W:
                     print("Close enough to attempt pickup!")
