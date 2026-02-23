@@ -54,7 +54,7 @@ def move_arm():
         arm_msg = Arm()
         
         j7_tuck = Joint()
-        j7_tuck.id = 7; j7_tuck.angle = 225; j7_tuck.run_time = 2000
+        j7_tuck.id = 7; j7_tuck.angle = 220; j7_tuck.run_time = 2000
         
         j8_tuck = Joint()
         j8_tuck.id = 8; j8_tuck.angle = 30; j8_tuck.run_time = 2000
