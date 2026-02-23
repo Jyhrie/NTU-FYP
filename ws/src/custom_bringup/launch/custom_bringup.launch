@@ -67,12 +67,13 @@
         <arg name="depth_align" value="true"/>
         <arg name="depth_format" value="Y16"/>
     </include>
-    <include file="$(find custom_bringup)/launch/moveit_bridge.launch" />
+    
+    <!-- <include file="$(find custom_bringup)/launch/moveit_bridge.launch" /> -->
 
     <!-- republish raw image to compressed image topic -->
     <node name="image_compressor" pkg="image_transport" type="republish" args="raw in:=/camera/rgb/image_raw compressed out:=/camera/rgb/image_compressed" output="screen" />
 
-    <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" />
+    <!-- <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" /> -->
 
     <!-- <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid pcl_manager" output="screen">
         <remap from="~input" to="/camera/depth/points" />
