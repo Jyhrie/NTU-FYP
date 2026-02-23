@@ -291,45 +291,46 @@ class PurePursuitController:
         self.cmd_pub.publish(cmd)
 
     def get_approach(self):
-            # 1. Get current real-time pose (IMU/Odom)
             pose = self.get_robot_pose()
             if pose is None:
                 return
 
-            curr_x, curr_y, _ = pose
+            curr_x, curr_y, curr_yaw = pose
 
-            # 2. Initialize Starting Pose (Capture the "zero" point)
+            # 1. INITIALIZE: Record start position AND starting heading
             if self.approach_start_pose is None:
                 self.approach_start_pose = (curr_x, curr_y)
-                rospy.loginfo("[PP] Approach start recorded at: x=%.2f, y=%.2f", curr_x, curr_y)
+                # This is the "Lock" - we want to stay at this angle
+                self.locked_heading = curr_yaw 
+                rospy.loginfo("[PP] Approach Lock: Heading %.2f | Dist %.2f", 
+                            self.locked_heading, self.max_dist)
                 return
 
-            # 3. Calculate distance traveled using Euclidean distance
+            # 2. TRACK DISTANCE
             start_x, start_y = self.approach_start_pose
             dist_traveled = math.hypot(curr_x - start_x, curr_y - start_y)
 
-            # 4. Check if we have exhausted our budget
-            # We use a small offset (e.g. 0.01) to ensure we don't undershoot
+            # 3. CHECK COMPLETION
             if dist_traveled >= self.max_dist:
-                rospy.loginfo("[PP] Cached distance reached (Traveled: %.2f). Stopping.", dist_traveled)
+                rospy.loginfo("[PP] Distance reached. Final Heading Error: %.2f", 
+                            self.normalize_angle(self.locked_heading - curr_yaw))
                 self.stop_robot()
-                
-                # Reset state for next command
                 self.state = MovementState.IDLE
                 self.approach_start_pose = None 
-                
-                # Tell the high-level controller we are done
                 self.node_topic.publish("done")
                 return
 
-            # 5. Execute Linear Move
+            # 4. HEADING LOCK (Correction Logic)
+            # Calculate how much we have drifted from our starting heading
+            yaw_error = self.normalize_angle(self.locked_heading - curr_yaw)
+            
             cmd = Twist()
             cmd.linear.x = self.approach_speed
             
-            # Since you want to ignore relative angle, we keep angular.z at 0
-            # If the robot drifts, it's better to stay straight than to use laggy camera data
-            cmd.angular.z = 0.0 
-            
+            # High gain for the gyro-lock because IMU data has zero delay
+            # This will keep the robot's "nose" pointed exactly where it started
+            cmd.angular.z = yaw_error * 2.0 
+
             self.cmd_pub.publish(cmd)
 
     def reset_align_vars(self):

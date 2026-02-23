@@ -453,6 +453,7 @@ class Controller:
                     }
                     self.global_request.publish(json.dumps(msg))
                     self.request_sent = True
+                    self.received_path = None # Clear any old paths just in case
 
                 if self.received_path:
                     self.goal_path = self.received_path
