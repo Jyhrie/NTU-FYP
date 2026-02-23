@@ -46,7 +46,7 @@ def move_arm():
         # Joint 1: Lift the main arm (ID 7)
         j7 = Joint()
         j7.id = 7
-        j7.angle = 210 # Middle position
+        j7.angle = 220 # Middle position
         j7.run_time = 1000 
 
         arm_msg.joint.append(j7)
