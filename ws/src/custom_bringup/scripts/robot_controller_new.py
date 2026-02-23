@@ -18,6 +18,7 @@ class States(Enum):
     IDLE = 0
     MAPPING = 1
     FETCHING = 2
+    NULL = 3
 
 class SubStates(Enum):
     READY = 0       # Initial entry into a state
@@ -104,7 +105,7 @@ class Controller:
                     self.sub_state = SubStates.PICKING_UP
                 elif self.sub_state == SubStates.RETURNING:
                     print("Back at origin. Fetch complete.")
-                    self.transition(States.IDLE)
+                    self.transition(States.NULL)
                 return
             self.sub_state = SubStates.COMPLETE
 
