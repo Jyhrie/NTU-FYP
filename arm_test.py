@@ -55,7 +55,7 @@ def move_arm():
         # Joint 1: Lift the main arm (ID 7)
         j8 = Joint()
         j8.id = 8
-        j8.angle = 85 # Middle position #30 is TUCKED, 180 is MAX
+        j8.angle = 180 # Middle position #30 is TUCKED, 180 is MAX
         j8.run_time = 1000 
         
         # Joint 2: Close the claw (ID 9)
