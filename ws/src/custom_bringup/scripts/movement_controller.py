@@ -55,6 +55,7 @@ class PurePursuitController:
         self.align_error = None
         self.end_facing_target = None
         self.align_target_reached_time = None
+        self.approach_start_pose = None
         
         self.rate = rospy.Rate(15)
 
@@ -84,9 +85,7 @@ class PurePursuitController:
                     
                     # Extract the distance budget
                     self.max_dist = data.get("data", {}).get("cached_distance", 0.0)
-                    
                     # Reset tracking so get_approach knows to grab a new starting pose
-                    self.approach_start_pose = None 
                     rospy.loginfo("[PP] Approaching blindly for %.2f meters", self.max_dist)
                 
         except ValueError:
