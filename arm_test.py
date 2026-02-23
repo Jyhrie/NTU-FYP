@@ -42,11 +42,13 @@ def move_arm():
         # --- SCENARIO 2: Move Arm Up and Close Claw ---
         # We can send multiple joints at once
         arm_msg = Arm()
+
+        #TUCKED: J7: 225, J8: 30, J9: 30
         
         # Joint 1: Lift the main arm (ID 7)
         j7 = Joint()
         j7.id = 7
-        j7.angle = 228 # Middle position
+        j7.angle = 180 # Middle position
         j7.run_time = 1000 
 
         arm_msg.joint.append(j7)
@@ -60,24 +62,24 @@ def move_arm():
         arm_msg = Arm()
         j8 = Joint()
         j8.id = 8
-        j8.angle = 30 # Middle position #30 is TUCKED, 180 is MAX
+        j8.angle = 100 # Middle position #30 is TUCKED, 180 is MAX
         j8.run_time = 1000 
 
         arm_msg.joint.append(j8)
         rospy.sleep(1) # Wait for motion to finish
         pub.publish(arm_msg)
         
-        # Joint 2: Close the claw (ID 9)
-        arm_msg = Arm()
+        # # Joint 2: Close the claw (ID 9)
+        # arm_msg = Arm()
 
-        j9 = Joint()
-        j9.id = 9
-        j9.angle = 180 # 180 degrees (Closed tight)
-        j9.run_time = 1000
+        # j9 = Joint()
+        # j9.id = 9
+        # j9.angle = 180 # 180 degrees (Closed tight)
+        # j9.run_time = 1000
 
-        arm_msg.joint.append(j9)
-        rospy.sleep(1) # Wait for motion to finish
-        pub.publish(arm_msg)
+        # arm_msg.joint.append(j9)
+        # rospy.sleep(1) # Wait for motion to finish
+        # pub.publish(arm_msg)
 
         #multi_msg.joint = [j7, j8, j9] # Add both to the list
 
