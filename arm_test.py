@@ -50,7 +50,7 @@ def move_arm():
         j7.run_time = 1000 
 
         arm_msg.joint.append(j7)
-        rospy.sleep(2) # Wait for motion to finish
+        rospy.sleep(1) # Wait for motion to finish
         pub.publish(arm_msg)
 
         #220 is TUCKED
@@ -64,7 +64,7 @@ def move_arm():
         j8.run_time = 1000 
 
         arm_msg.joint.append(j8)
-        rospy.sleep(2) # Wait for motion to finish
+        rospy.sleep(1) # Wait for motion to finish
         pub.publish(arm_msg)
         
         # Joint 2: Close the claw (ID 9)
@@ -76,7 +76,7 @@ def move_arm():
         j9.run_time = 1000
 
         arm_msg.joint.append(j9)
-        rospy.sleep(2) # Wait for motion to finish
+        rospy.sleep(1) # Wait for motion to finish
         pub.publish(arm_msg)
 
         #multi_msg.joint = [j7, j8, j9] # Add both to the list
