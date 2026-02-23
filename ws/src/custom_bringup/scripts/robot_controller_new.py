@@ -141,6 +141,7 @@ class Controller:
             self.pickup_target = (get_x, get_y)
             self.transition(States.FETCHING, SubStates.READY)
         else:
+            self.last_pickup_target_time = timestamp
             self.pickup_target_angle_relative_to_forward = angle_to_target
             self.object_box = (width, height)
         
@@ -388,6 +389,7 @@ class Controller:
                 align_msg = {
                     "header": "align_with_item",
                     "data": {
+                        "timestamp": self.last_pickup_target_time,
                         "relative_angle": self.pickup_target_angle_relative_to_forward
                     }
                 }
@@ -397,6 +399,7 @@ class Controller:
                 approach_msg = {
                     "header": "approach",
                     "data": {
+                        "timestamp": self.last_pickup_target_time,
                         "relative_angle": self.pickup_target_angle_relative_to_forward,
                         "linear_speed": 0.04 # Slow and steady for the final approach
                     }
