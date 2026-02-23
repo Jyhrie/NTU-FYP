@@ -269,9 +269,9 @@ class Controller:
 
         rospy.sleep(1.0)
 
-        self.state = States.FETCHING
-        self.sub_state = SubStates.REQUESTING_HOME_PATH
-        self.nav_state = NavStates.NULL
+        # self.state = States.FETCHING
+        # self.sub_state = SubStates.REQUESTING_HOME_PATH
+        # self.nav_state = NavStates.NULL
 
         while not rospy.is_shutdown():
             #debug
@@ -285,7 +285,7 @@ class Controller:
             self.rate.sleep()
 
     def manage_idle(self):
-        #self.transition(States.MAPPING)
+        self.transition(States.MAPPING)
         return
 
     def manage_mapping(self):
