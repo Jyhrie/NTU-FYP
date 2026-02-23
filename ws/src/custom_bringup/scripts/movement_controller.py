@@ -240,7 +240,6 @@ class PurePursuitController:
             )
             # Store this as a fixed goal in the world/odom frame
             self.latched_target_yaw = relative_target 
-            rospy.loginfo(f"[PP] Latched target: {self.latched_target_yaw:.2f}")
 
         # 2. CALCULATE ERROR BASED ON REAL-TIME ODOM (No delay)
         error = self.normalize_angle(self.latched_target_yaw - current_yaw)
