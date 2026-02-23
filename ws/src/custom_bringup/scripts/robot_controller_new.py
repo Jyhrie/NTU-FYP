@@ -405,7 +405,7 @@ class Controller:
                     "header": "approach",
                     "data": {
                         "timestamp": self.last_pickup_target_time,
-                        "cached_distance": self.cached_pickup_distance - 0.4,
+                        "cached_distance": self.cached_pickup_distance - 0.2,
                         "relative_angle": self.pickup_target_angle_relative_to_forward,
                         "max_distance": self.calculate_distance(self.object_box[0]),
                         "linear_speed": 0.07
