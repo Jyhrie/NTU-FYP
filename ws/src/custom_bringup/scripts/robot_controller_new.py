@@ -337,7 +337,7 @@ class Controller:
                 if not self.request_sent:
                     msg = String()
                     msg.data = json.dumps({
-                        "cmd": "request_waypoint", 
+                        "command": "request_waypoint", 
                         "x": self.pickup_target[0], 
                         "y": self.pickup_target[1],
                     })
@@ -407,32 +407,32 @@ class Controller:
                 
             # --- 5. PICK UP (With Failure Handling) ---
             elif self.sub_state == SubStates.PICKING_UP:
-                return
-                if self.received: # Wait for a reply from the hardware node
-                    if self.received.get("data") == "success":
-                        print("Pick up successful!")
-                        self.received = None
-                        self.sub_state = SubStates.REQUESTING_HOME_PATH
-                    elif self.received.get("data") == "failed":
-                        print("Pick up failed. Reversing to retry...")
-                        self.received = None
-                        self.sub_state = SubStates.REVERSING
-                else:
-                    self.global_request.publish("execute_pickup")
+                pickup_msg = {
+                    "header": "arm",
+                    "command": 'grab'
+                }
+                self.global_request.publish(json.dumps(pickup_msg))
+                rospy.sleep(5)
+                # After waiting for the arm sequence, we check if the pickup was successful
+                self.sub_state = SubStates.REQUESTING_HOME_PATH
 
             # --- 6. REVERSE (Retry Loop) ---
-            elif self.sub_state == SubStates.REVERSING:
-                if self.movement_complete:
-                    self.movement_complete = False
-                    # Loop back to alignment to try again
-                    self.sub_state = SubStates.ALIGNING
-                else:
-                    self.global_request.publish("reverse_slightly")
+            # elif self.sub_state == SubStates.REVERSING:
+            #     if self.movement_complete:
+            #         self.movement_complete = False
+            #         # Loop back to alignment to try again
+            #         self.sub_state = SubStates.ALIGNING
+            #     else:
+            #         self.global_request.publish("reverse_slightly")
 
             # --- 7. REQUEST PATH TO ORIGIN ---
             elif self.sub_state == SubStates.REQUESTING_HOME_PATH:
                 if not self.request_sent:
-                    self.global_request.publish("request_home")
+                    msg = {
+                        "header":"waypoint_node",
+                        "command":"request_home"
+                    }
+                    self.global_request.publish(json.dumps(msg))
                     self.request_sent = True
 
                 if self.received_path:

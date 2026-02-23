@@ -60,10 +60,12 @@ class WaypointNavigatorNode:
         else:
             try:
                 data = json.loads(msg.data)
-                if data.get("cmd") == "request_waypoint":
+                if data.get("command") == "request_waypoint":
                     target_x = data["x"]
                     target_y = data["y"]
                     rospy.loginfo("Navigating to Waypoint: ({}, {})".format(target_x, target_y))
+                elif data.get("command") == "request_home":
+                    target_x, target_y = self.home_pose
             except ValueError:
                 return # Not a JSON command for this node
 
