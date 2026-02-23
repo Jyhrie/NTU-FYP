@@ -75,10 +75,13 @@ class Controller:
         self.received = None
         self.received_path = None
         self.goal_path = None
+
         self.rotate_target_msg = None
         self.pickup_target = None 
         self.pickup_target_angle_relative_to_forward = None
         self.object_box = None
+
+        self.cached_pickup_distance = None
         
         self.request_sent = False
         self.request_timeout = 30
@@ -102,6 +105,7 @@ class Controller:
                 elif self.sub_state == SubStates.APPROACHING:
                     self.sub_state = SubStates.PICKING_UP
                 elif self.sub_state == SubStates.ALIGNING:
+                    self.cached_pickup_distance = self.calculate_distance(self.object_box[0]) if self.object_box else None
                     self.sub_state = SubStates.APPROACHING
                 elif self.sub_state == SubStates.RETURNING:
                     print("Back at origin. Fetch complete.")
@@ -401,6 +405,7 @@ class Controller:
                     "header": "approach",
                     "data": {
                         "timestamp": self.last_pickup_target_time,
+                        "cached_distance": self.cached_pickup_distance,
                         "relative_angle": self.pickup_target_angle_relative_to_forward,
                         "max_distance": self.calculate_distance(self.object_box[0]),
                         "linear_speed": 0.07

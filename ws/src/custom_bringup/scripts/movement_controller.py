@@ -78,14 +78,16 @@ class PurePursuitController:
                 self.state = MovementState.IDLE
                 self.stop_robot()
             elif header == 'approach':
-                # --- APPROACH LOGIC ---
-                self.state = MovementState.APPROACH
-                # We reuse align_error for steering during the approach
-                self.align_error = data.get("data", {}).get("relative_angle", 0.0)
-                # Store the speed sent by the high-level controller
-                self.approach_speed = data.get("data", {}).get("linear_speed", 0.1)
-                rospy.loginfo("[PP] Approaching: Angle %.2f | Speed %.2f", 
-                               self.align_error, self.approach_speed)
+                    self.state = MovementState.APPROACH
+                    self.align_error = data.get("data", {}).get("relative_angle", 0.0)
+                    self.approach_speed = data.get("data", {}).get("linear_speed", 0.07)
+                    
+                    # Extract the distance budget
+                    self.max_dist = data.get("data", {}).get("cached_distance", 0.0)
+                    
+                    # Reset tracking so get_approach knows to grab a new starting pose
+                    self.approach_start_pose = None 
+                    rospy.loginfo("[PP] Approaching blindly for %.2f meters", self.max_dist)
                 
         except ValueError:
             # If not JSON, handle as a plain string
@@ -289,22 +291,46 @@ class PurePursuitController:
         self.cmd_pub.publish(cmd)
 
     def get_approach(self):
-        if self.align_error is None:
-            return
+            # 1. Get current real-time pose (IMU/Odom)
+            pose = self.get_robot_pose()
+            if pose is None:
+                return
 
-        error_rad = math.radians(self.align_error)
-        
-        cmd = Twist()
-        # Linear speed from high-level controller (typically 0.04)
-        cmd.linear.x = self.approach_speed
-        
-        # Angular correction to stay centered while moving forward
-        # Keep this gain low to prevent zig-zagging
-        p_gain = 0.5 
-        angular_z = error_rad * p_gain
-        
-        cmd.angular.z = max(min(angular_z, 0.3), -0.3)
-        self.cmd_pub.publish(cmd)
+            curr_x, curr_y, _ = pose
+
+            # 2. Initialize Starting Pose (Capture the "zero" point)
+            if self.approach_start_pose is None:
+                self.approach_start_pose = (curr_x, curr_y)
+                rospy.loginfo("[PP] Approach start recorded at: x=%.2f, y=%.2f", curr_x, curr_y)
+                return
+
+            # 3. Calculate distance traveled using Euclidean distance
+            start_x, start_y = self.approach_start_pose
+            dist_traveled = math.hypot(curr_x - start_x, curr_y - start_y)
+
+            # 4. Check if we have exhausted our budget
+            # We use a small offset (e.g. 0.01) to ensure we don't undershoot
+            if dist_traveled >= self.max_dist:
+                rospy.loginfo("[PP] Cached distance reached (Traveled: %.2f). Stopping.", dist_traveled)
+                self.stop_robot()
+                
+                # Reset state for next command
+                self.state = MovementState.IDLE
+                self.approach_start_pose = None 
+                
+                # Tell the high-level controller we are done
+                self.node_topic.publish("done")
+                return
+
+            # 5. Execute Linear Move
+            cmd = Twist()
+            cmd.linear.x = self.approach_speed
+            
+            # Since you want to ignore relative angle, we keep angular.z at 0
+            # If the robot drifts, it's better to stay straight than to use laggy camera data
+            cmd.angular.z = 0.0 
+            
+            self.cmd_pub.publish(cmd)
 
     def reset_align_vars(self):
         self.latched_align_target = None
