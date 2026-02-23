@@ -266,51 +266,62 @@ class PurePursuitController:
         self.cmd_pub.publish(cmd)
             
     def get_align(self):
-        # 0.5 degrees in radians
         TOLERANCE = math.radians(0.5)
-        HOLD_TIME = 1.0  # seconds
+        HOLD_TIME = 1.0  
         
-        # Current error from the JSON message
-        error_rad = math.radians(self.align_error)
+        # 1. GET CURRENT STABLE POSE (IMU/Odom - No Delay)
+        pose = self.get_robot_pose()
+        if pose is None:
+            return
+        _, _, current_yaw = pose
 
-        # 1. Check if we are within the center zone
-        if abs(error_rad) < TOLERANCE:
+        # 2. LATCHING PHASE: Convert relative camera error to a fixed global target
+        if not hasattr(self, 'latched_align_target') or self.latched_align_target is None:
+            error_rad = math.radians(self.align_error)
+            
+            # The target is where we are NOW + what the camera says we need to change
+            # We 'latch' this so we stop listening to the laggy camera feed
+            self.latched_align_target = self.normalize_angle(current_yaw + error_rad)
+            self.align_target_reached_time = None 
+            rospy.loginfo(f"[PP] Latched Align Target: {self.latched_align_target:.2f}")
+
+        # 3. CALCULATE ERROR BASED ON LATCH (Fixed Goal vs. Real-time IMU)
+        # This error is now updated at the speed of your IMU, ignoring camera lag.
+        realtime_error = self.normalize_angle(self.latched_align_target - current_yaw)
+
+        # 4. CHECK COMPLETION (With the 1s Stability Hold)
+        if abs(realtime_error) < TOLERANCE:
             if self.align_target_reached_time is None:
-                # Start the clock!
                 self.align_target_reached_time = rospy.get_time()
-                rospy.loginfo("[PP] Centered. Holding for 1s...")
+                rospy.loginfo("[PP] Centered on Latched Target. Holding...")
 
-            # Check if we have held the position long enough
             elapsed = rospy.get_time() - self.align_target_reached_time
             if elapsed >= HOLD_TIME:
-                rospy.loginfo("[PP] Alignment Stable. Done.")
+                rospy.loginfo("[PP] Latched Alignment Stable. Done.")
                 self.stop_robot()
                 self.state = MovementState.IDLE
-                self.align_target_reached_time = None # Reset for next use
+                self.latched_align_target = None # Reset the Latch
+                self.align_target_reached_time = None 
                 self.node_topic.publish("done")
                 return
             
-            # While holding, we stop the motors or apply very small braking
             self.stop_robot()
             return
-
         else:
-            # We are outside the tolerance, reset the timer
+            # Reset timer if we drift outside tolerance
             self.align_target_reached_time = None
 
-        # 2. Proportional Control (Only runs if not in the "Hold" phase)
+        # 5. CONTROL LOOP
         cmd = Twist()
-        p_gain = 1.2
-        angular_z = error_rad * p_gain
+        p_gain = 0.8  # Lowered slightly for smoother approach
+        angular_z = realtime_error * p_gain
 
-        # 3. Handle Deadband (Transbot friction)
+        # Deadband and Caps
         MIN_VEL = 0.08
         if abs(angular_z) < MIN_VEL:
             angular_z = MIN_VEL if angular_z > 0 else -MIN_VEL
-
-        # 4. Cap the speed for safety
-        cmd.angular.z = max(min(angular_z, 0.25), -0.25)
         
+        cmd.angular.z = max(min(angular_z, 0.25), -0.25)
         self.cmd_pub.publish(cmd)
 
     def get_pp(self): #its called pp because pure pursuit.
