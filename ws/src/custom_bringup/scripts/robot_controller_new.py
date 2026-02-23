@@ -139,6 +139,7 @@ class Controller:
         if self.state != States.FETCHING:
             self.interrupt() # Stop current action immediately
             self.pickup_target = (get_x, get_y)
+            self.last_pickup_target_time = timestamp
             self.transition(States.FETCHING, SubStates.READY)
         else:
             self.last_pickup_target_time = timestamp
