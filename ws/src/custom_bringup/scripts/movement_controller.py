@@ -328,7 +328,7 @@ class PurePursuitController:
             
             # High gain for the gyro-lock because IMU data has zero delay
             # This will keep the robot's "nose" pointed exactly where it started
-            cmd.angular.z = yaw_error * 4.0 
+            cmd.angular.z = yaw_error * 8.0 
 
             self.cmd_pub.publish(cmd)
 
