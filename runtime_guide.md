@@ -33,3 +33,9 @@ rosrun custom_bringup robot_controller_new.py
 rosrun custom_bringup frontier_node.py
 rosrun custom_bringup movement_controller.py
 rosrun custom_bringup waypoint_navigator_node.py
+rosrun custom_bringup arm_control_node.py
+
+# RESET THE ARM
+cd fyp
+python arm_test.py
+
