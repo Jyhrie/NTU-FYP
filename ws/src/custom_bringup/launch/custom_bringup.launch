@@ -65,17 +65,9 @@
     <!-- launch astrapro from their launchfile, too much stuff to copy into here, -->
     <include file="$(find astra_camera)/launch/astrapro.launch">
         <arg name="depth_align" value="true"/>
-        
         <arg name="depth_format" value="Y16"/>
-
-        <arg name="color_width" value="1280"/>
         <arg name="color_height" value="720"/>
         
-        <arg name="color_fps" value="15"/>
-        <arg name="depth_fps" value="15"/>
-
-        <arg name="enable_point_cloud" value="true"/>
-        <arg name="enable_point_cloud_xyzrgb" value="true"/>
     </include>
     
     <!-- <include file="$(find custom_bringup)/launch/moveit_bridge.launch" /> -->
