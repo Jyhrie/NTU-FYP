@@ -10,7 +10,7 @@ from sensor_msgs.msg import Image
 # Configuration
 ENGINE_PATH = "/home/jetson/fyp/ws/src/custom_bringup/scripts/models/best.engine"
 IMAGE_TOPIC = "/camera/rgb/image_raw" # Astra Pro RGB Topic
-INPUT_W, INPUT_H = 320, 320 # Must match your ONNX export size
+INPUT_W, INPUT_H = 640, 640 # Must match your ONNX export size
 
 class YOLOv8TRTNode:
     def __init__(self):
