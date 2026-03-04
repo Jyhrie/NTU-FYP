@@ -1,14 +1,12 @@
 #!/usr/bin/env python2
 
-# -*- coding: utf-8 -*-
 import rospy
 import subprocess
 import os
 from std_msgs.msg import String
 
-# Path to trtexec — adjust if yours is elsewhere
+# Path to trtexec adjust if yours is elsewhere
 TRTEXEC = "/usr/src/tensorrt/bin/trtexec"
-
 
 class EngineConverterNode(object):
 
@@ -22,13 +20,11 @@ class EngineConverterNode(object):
         rospy.loginfo("[EngineConverter] Node ready. Waiting on /convert_to_engine ...")
         rospy.spin()
 
-    # ──────────────────────────────────────────────────────────────────────────
 
     def convert_callback(self, msg):
         onnx_path = msg.data.strip()
         rospy.loginfo("[EngineConverter] Received conversion request: %s", onnx_path)
 
-        # ── Validate ──────────────────────────────────────────────────────────
         if not os.path.isfile(onnx_path):
             err = "ERROR: .onnx file not found: {}".format(onnx_path)
             rospy.logerr("[EngineConverter] %s", err)
@@ -43,13 +39,13 @@ class EngineConverterNode(object):
 
         engine_path = os.path.splitext(onnx_path)[0] + ".engine"
 
-        # ── Build trtexec command ─────────────────────────────────────────────
+        # Build trtexec command
         cmd = [
             TRTEXEC,
             "--onnx={}".format(onnx_path),
             "--saveEngine={}".format(engine_path),
             "--fp16",
-            "--workspace=2048",   # MB — safe default for Jetson Nano 4 GB
+            "--workspace=2048",   # MB safe default for Jetson Nano 4 GB
             "--verbose",
         ]
 
@@ -85,8 +81,6 @@ class EngineConverterNode(object):
             rospy.logerr("[EngineConverter] %s", err)
             self.pub.publish(err)
 
-
-# ══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
     try:
