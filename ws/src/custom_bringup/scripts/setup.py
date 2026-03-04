@@ -1,20 +1,6 @@
 #!/usr/bin/env python2
 
 # -*- coding: utf-8 -*-
-"""
-engine_converter_node.py
-ROS1 Melodic node — listens for a std_msgs/String signal on /convert_to_engine,
-then runs trtexec to convert the .onnx to a FP16 .engine file in-place.
-
-Topic subscribed : /convert_to_engine   (std_msgs/String)
-  message data   : absolute path to the .onnx file
-                   e.g. "/home/jetson/fyp/ws/src/custom_bringup/scripts/models/best.onnx"
-
-Topic published  : /engine_ready        (std_msgs/String)
-  message data   : absolute path to the generated .engine file (on success)
-                   OR "ERROR: <reason>"  (on failure)
-"""
-
 import rospy
 import subprocess
 import os
