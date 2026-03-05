@@ -5,8 +5,9 @@ import subprocess
 import os
 from std_msgs.msg import String
 
-# Path to trtexec adjust if yours is elsewhere
+# Path to trtexec - adjust if yours is elsewhere
 TRTEXEC = "/usr/src/tensorrt/bin/trtexec"
+
 
 class EngineConverterNode(object):
 
@@ -19,7 +20,6 @@ class EngineConverterNode(object):
 
         rospy.loginfo("[EngineConverter] Node ready. Waiting on /convert_to_engine ...")
         rospy.spin()
-
 
     def convert_callback(self, msg):
         onnx_path = msg.data.strip()
@@ -39,17 +39,19 @@ class EngineConverterNode(object):
 
         engine_path = os.path.splitext(onnx_path)[0] + ".engine"
 
-        # Build trtexec command
+        # Build trtexec command - tuned for fastest possible build
         cmd = [
             TRTEXEC,
             "--onnx={}".format(onnx_path),
             "--saveEngine={}".format(engine_path),
             "--fp16",
-            "--workspace=2048",   # MB safe default for Jetson Nano 4 GB
-            "--verbose",
+            "--workspace=2048",   # MB - safe default for Jetson Nano 4 GB
+            "--avgTiming=1",      # only 1 averaged run per tactic (default=8) - 8x faster profiling
+            "--minTiming=1",      # minimum 1 iteration per tactic (default=1)
+            "--buildOnly",        # skip inference benchmarking after build - saves extra time
         ]
 
-        rospy.loginfo("[EngineConverter] Running trtexec (FP16)...")
+        rospy.loginfo("[EngineConverter] Running trtexec (FP16, fast build)...")
         rospy.loginfo("[EngineConverter] Command: %s", " ".join(cmd))
 
         try:
@@ -60,10 +62,16 @@ class EngineConverterNode(object):
                 universal_newlines=True,
             )
 
-            # Stream trtexec output to roslog
+            # Stream trtexec output to roslog - filter to only important lines
             for line in proc.stdout:
                 line = line.rstrip()
-                if line:
+                if not line:
+                    continue
+                # Only log errors, warnings, and key milestone lines to reduce spam
+                low = line.lower()
+                if any(k in low for k in ("[e]", "[w]", "error", "warning",
+                                           "building", "serializing", "saving",
+                                           "engine", "&&&&")):
                     rospy.loginfo("[trtexec] %s", line)
 
             proc.wait()
