@@ -42,6 +42,7 @@ class YOLOv8TRTNode:
         self.detection_counter  = 0
         self.last_print_time    = 0
         self.interrupt_sent_sim = False
+        self.frame_count        = 0  # for frame skipping
 
         # 4. ROS Subscriber
         self.sub = rospy.Subscriber(IMAGE_TOPIC, Image, self.image_callback,
@@ -89,6 +90,11 @@ class YOLOv8TRTNode:
     # -------------------------------------------------------------------------
 
     def image_callback(self, msg):
+        # Only run inference every 3rd frame to reduce GPU load and prevent overcurrent
+        self.frame_count += 1
+        if self.frame_count % 3 != 0:
+            return
+
         self.ctx.push()
         try:
             current_time = time.time()

@@ -39,6 +39,9 @@ rosrun custom_bringup arm_control_node.py
 cd fyp
 python arm_test.py
 
+# SETUP
+roslaunch custom_bringup setup.launch
+
 # ONNX -> .engine
 /usr/src/tensorrt/bin/trtexec --onnx=best.onnx --saveEngine=best.engine --fp16 --exportTimes=timing.json
 
