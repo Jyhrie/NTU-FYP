@@ -10,23 +10,21 @@ import time
 from sensor_msgs.msg import Image
 
 # --- CONFIGURATION ---
-ENGINE_PATH     = "/home/jetson/fyp/ws/src/custom_bringup/scripts/models/best.engine"
-IMAGE_TOPIC     = "/camera/rgb/image_raw"
-INPUT_W         = 640   # must match engine build size
-INPUT_H         = 640
-ASTRA_PRO_HFOV  = 58.4
-PRINT_INTERVAL  = 3.0
-CONF_THRESHOLD  = 0.85
-FRAME_THRESHOLD = 5
-
+ENGINE_PATH = "/home/jetson/fyp/ws/src/custom_bringup/scripts/models/best.engine"
+IMAGE_TOPIC = "/camera/rgb/image_raw"
+INPUT_W, INPUT_H = 640, 640
+ASTRA_PRO_HFOV = 58.4 
+PRINT_INTERVAL = 3.0  
+CONF_THRESHOLD = 0.85  
+FRAME_THRESHOLD = 5    
 
 class YOLOv8TRTNode:
     def __init__(self):
-        rospy.init_node('yolo_trt_detector', anonymous=True)
-
-        # 1. CUDA context for threading
+        rospy.init_node('yolo_trt_monitor', anonymous=True)
+        
+        # 1. Setup CUDA Context for Threading
         self.ctx = cuda.Device(0).make_context()
-
+        
         # 2. Load TensorRT Engine
         self.logger = trt.Logger(trt.Logger.WARNING)
         with open(ENGINE_PATH, "rb") as f, trt.Runtime(self.logger) as runtime:
@@ -34,33 +32,22 @@ class YOLOv8TRTNode:
         self.context = self.engine.create_execution_context()
         self.inputs, self.outputs, self.bindings, self.stream = self.allocate_buffers()
 
-        # Log binding shapes to verify
-        for i in range(self.engine.num_bindings):
-            rospy.loginfo("[YOLOv8TRT] Binding %d: %s %s",
-                          i,
-                          self.engine.get_binding_name(i),
-                          self.engine.get_binding_shape(i))
-
-        # 3. Logic variables
-        self.detection_counter  = 0
-        self.last_print_time    = 0
-        self.interrupt_sent_sim = False
-        self.frame_count        = 0  # for frame skipping
-
-        # 4. ROS subscriber
-        self.sub = rospy.Subscriber(IMAGE_TOPIC, Image, self.image_callback,
-                                    queue_size=1, buff_size=2**24)
-        rospy.loginfo("[YOLOv8TRT] Node ready. Waiting for images...")
-
-    # -------------------------------------------------------------------------
+        # 3. Logic Variables
+        self.detection_counter = 0
+        self.last_print_time = 0
+        self.interrupt_sent_sim = False 
+        
+        # 4. ROS Subscriber
+        self.sub = rospy.Subscriber(IMAGE_TOPIC, Image, self.image_callback, queue_size=1, buff_size=2**24)
+        rospy.loginfo("Monitoring Started. CUDA Context Initialized. Waiting for 100Plus Can...")
 
     def allocate_buffers(self):
         inputs, outputs, bindings = [], [], []
         stream = cuda.Stream()
         for i in range(self.engine.num_bindings):
-            size       = trt.volume(self.engine.get_binding_shape(i))
-            dtype      = trt.nptype(self.engine.get_binding_dtype(i))
-            host_mem   = cuda.pagelocked_empty(size, dtype)
+            size = trt.volume(self.engine.get_binding_shape(i))
+            dtype = trt.nptype(self.engine.get_binding_dtype(i))
+            host_mem = cuda.pagelocked_empty(size, dtype)
             device_mem = cuda.mem_alloc(host_mem.nbytes)
             bindings.append(int(device_mem))
             if self.engine.binding_is_input(i):
@@ -69,49 +56,40 @@ class YOLOv8TRTNode:
                 outputs.append({'host': host_mem, 'device': device_mem})
         return inputs, outputs, bindings, stream
 
-    # -------------------------------------------------------------------------
-
     def letterbox(self, img, new_shape=(640, 640), color=(114, 114, 114)):
-        shape     = img.shape[:2]  # (h, w)
-        r         = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
-        new_unpad = (int(round(shape[1] * r)), int(round(shape[0] * r)))
-        dw        = (new_shape[1] - new_unpad[0]) / 2
-        dh        = (new_shape[0] - new_unpad[1]) / 2
+        # Resize and pad image while meeting stride-multiple constraints
+        shape = img.shape[:2]  # current shape [height, width]
+        r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
 
-        if shape[::-1] != new_unpad:
+        # Compute padding
+        new_unpad = (int(round(shape[1] * r)), int(round(shape[0] * r)))
+        dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]  # wh padding
+        dw /= 2  # divide padding into 2 sides
+        dh /= 2
+
+        if shape[::-1] != new_unpad:  # resize
             img = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
-        top    = int(round(dh - 0.1))
-        bottom = int(round(dh + 0.1))
-        left   = int(round(dw - 0.1))
-        right  = int(round(dw + 0.1))
-        img = cv2.copyMakeBorder(img, top, bottom, left, right,
-                                 cv2.BORDER_CONSTANT, value=color)
+        top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
+        left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+        img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
         return img, r, (dw, dh)
 
-    # -------------------------------------------------------------------------
-
     def image_callback(self, msg):
-        # Run inference every 3rd frame to reduce GPU load / prevent overcurrent
-        self.frame_count += 1
-        if self.frame_count % 3 != 0:
-            return
-
-        self.ctx.push()
+        self.ctx.push() # CRITICAL: Fixes NCHWtoNCHHW2 error
         try:
             current_time = time.time()
-
-            # Decode ROS Image
             frame = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)
             if msg.encoding == 'rgb8':
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            
+            display_img = frame.copy()
+            h, w = frame.shape[:2]
 
-            display_img    = frame.copy()
-            orig_h, orig_w = frame.shape[:2]
-
-            # 1. Letterbox preprocess
+            # 1. Letterbox Preprocessing (Matches PC/Ultralytics behavior)
             blob_img, ratio, (dw, dh) = self.letterbox(frame, (INPUT_W, INPUT_H))
-            blob = cv2.cvtColor(blob_img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-            blob = np.ascontiguousarray(np.transpose(blob, (2, 0, 1))).ravel()
+            blob = cv2.cvtColor(blob_img, cv2.COLOR_BGR2RGB)
+            blob = blob.astype(np.float32) / 255.0
+            blob = np.transpose(blob, (2, 0, 1)).ravel()
 
             # 2. Inference
             np.copyto(self.inputs[0]['host'], blob)
@@ -120,24 +98,14 @@ class YOLOv8TRTNode:
             cuda.memcpy_dtoh_async(self.outputs[0]['host'], self.outputs[0]['device'], self.stream)
             self.stream.synchronize()
 
-            # 3. Post-process
-            # Engine output: (1, 5, 8400) -> reshape to (5, 8400) -> transpose to (8400, 5)
-            # Each row: [cx, cy, bw, bh, conf] in 640x640 letterboxed pixel space
-            raw         = self.outputs[0]['host']
-            num_classes = (raw.size // 8400) - 4
-            num_classes = max(num_classes, 1)
-            output      = raw.reshape(4 + num_classes, 8400).T  # (8400, 4+nc)
-
-            # One-time debug print to verify coordinate values
-            if not hasattr(self, '_debug_printed'):
-                self._debug_printed = True
-                for idx in range(min(3, len(output))):
-                    r = output[idx]
-                    rospy.loginfo("[DEBUG] anchor %d: cx=%.2f cy=%.2f bw=%.2f bh=%.2f conf=%.4f",
-                                  idx, r[0], r[1], r[2], r[3], r[4])
+            # 3. Post-processing (NumPy Vectorized)
+            # Reshape based on your model classes (YOLOv8 is typically 4 + num_classes)
+            output = self.outputs[0]['host'].reshape(-1, 8400).T 
+            if output.shape[1] > 84: # Handle different export shapes if needed
+                 output = output[:, :84]
 
             scores = np.max(output[:, 4:], axis=1)
-            mask   = scores > 0.1
+            mask = scores > 0.1
             filtered_output = output[mask]
             filtered_scores = scores[mask]
 
@@ -146,81 +114,62 @@ class YOLOv8TRTNode:
             if len(filtered_output) > 0:
                 boxes = []
                 for det in filtered_output:
-                    cx, cy, bw, bh = det[0], det[1], det[2], det[3]
-
-                    # Remove letterbox padding then scale to original image coords
-                    cx = (cx - dw) / ratio
-                    cy = (cy - dh) / ratio
-                    bw = bw / ratio
-                    bh = bh / ratio
-
-                    left = int(cx - bw / 2)
-                    top  = int(cy - bh / 2)
-                    boxes.append([left, top, int(bw), int(bh)])
+                    cx, cy, bw, bh = det[:4]
+                    # Map coordinates back through letterbox padding
+                    bx = (cx - dw) / ratio
+                    by = (cy - dh) / ratio
+                    bw_scaled = bw / ratio
+                    bh_scaled = bh / ratio
+                    
+                    left = int(bx - bw_scaled/2)
+                    top = int(by - bh_scaled/2)
+                    boxes.append([left, top, int(bw_scaled), int(bh_scaled)])
 
                 indices = cv2.dnn.NMSBoxes(boxes, filtered_scores.tolist(), 0.1, 0.4)
 
                 if len(indices) > 0:
                     for i in indices.flatten():
-                        conf = float(filtered_scores[i])
+                        conf = filtered_scores[i]
                         if conf > CONF_THRESHOLD:
                             found_high_conf_in_frame = True
-                            left, top, bw_box, bh_box = boxes[i]
-
+                            bx, by, bw_box, bh_box = boxes[i]
+                            
                             self.detection_counter += 1
-                            center_x_box = left + bw_box / 2
-                            angle = ((center_x_box - (orig_w / 2)) / orig_w) * ASTRA_PRO_HFOV
+                            center_x_box = bx + bw_box/2
+                            angle = ((center_x_box - (w/2)) / w) * ASTRA_PRO_HFOV
 
                             if self.detection_counter >= FRAME_THRESHOLD:
                                 if not self.interrupt_sent_sim:
-                                    rospy.loginfo("[YOLOv8TRT] TARGET LOCKED: Angle %.2f", angle)
+                                    print(f"🎯 TARGET LOCKED: Angle {angle:.2f}")
                                     self.interrupt_sent_sim = True
 
                                 if current_time - self.last_print_time > PRINT_INTERVAL:
                                     log_entry = {
-                                        "ros_time": "{}.{:09d}".format(
-                                            msg.header.stamp.secs,
-                                            msg.header.stamp.nsecs),
-                                        "target": "object",
-                                        "conf":   round(conf, 3),
-                                        "angle":  round(angle, 2)
+                                        "ros_time": f"{msg.header.stamp.secs}.{msg.header.stamp.nsecs:09d}",
+                                        "target": "can",
+                                        "conf": round(float(conf), 3),
+                                        "angle": round(angle, 2)
                                     }
-                                    rospy.loginfo("[YOLOv8TRT] DATA LOG: %s",
-                                                  json.dumps(log_entry))
+                                    print(f"\n📝 DATA LOG: {json.dumps(log_entry)}")
                                     self.last_print_time = current_time
 
                             color = (0, 255, 0) if self.interrupt_sent_sim else (0, 255, 255)
-                            cv2.rectangle(display_img,
-                                          (left, top),
-                                          (left + bw_box, top + bh_box),
-                                          color, 2)
-                            cv2.putText(display_img,
-                                        "object {:.2f}".format(conf),
-                                        (left, top - 10),
+                            cv2.rectangle(display_img, (bx, by), (bx + bw_box, by + bh_box), color, 2)
+                            cv2.putText(display_img, f"can {conf:.2f}", (bx, by - 10),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
             if not found_high_conf_in_frame:
                 self.detection_counter = 0
 
-            cv2.putText(display_img, "Inference Running", (20, 50),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.imshow("Transbot YOLO View", display_img)
+            cv2.imshow("Astra Pro Vision", display_img)
             cv2.waitKey(1)
 
         finally:
-            self.ctx.pop()
+            self.ctx.pop() # CRITICAL: Free the context for the next callback
 
     def __del__(self):
-        try:
-            self.ctx.detach()
-        except Exception:
-            pass
-
+        self.ctx.detach()
 
 if __name__ == '__main__':
-    try:
-        node = YOLOv8TRTNode()
-        rospy.spin()
-    except rospy.ROSInterruptException:
-        pass
-    cv2.destroyAllWindows()
+    node = YOLOv8TRTNode()
+    rospy.spin()
