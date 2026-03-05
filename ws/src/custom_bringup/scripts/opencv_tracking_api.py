@@ -11,7 +11,6 @@ import cv2
 import time
 
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
 
 import tensorrt as trt
 import pycuda.driver as cuda
@@ -180,8 +179,7 @@ class YoloTRTNode:
         engine         = load_engine(ENGINE_PATH)
         self.trt_infer = TRTInference(engine)
 
-        self.bridge       = CvBridge()
-        self.frame_counts = {}          # class_id → consecutive-frame counter
+        self.frame_counts = {}
         self.last_print_t = time.time()
 
         cv2.namedWindow("YOLO Detection", cv2.WINDOW_NORMAL)
@@ -189,13 +187,28 @@ class YoloTRTNode:
         rospy.Subscriber(IMAGE_TOPIC, Image, self.image_callback, queue_size=1, buff_size=2**24)
         rospy.loginfo("[yolo_trt] Node ready. Subscribing to %s", IMAGE_TOPIC)
 
-    def image_callback(self, msg: Image):
-        try:
-            cv_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        except CvBridgeError as e:
-            rospy.logerr(f"[yolo_trt] CvBridge error: {e}")
-            return
+    def ros_image_to_bgr(self, msg: Image) -> np.ndarray:
+        """Convert sensor_msgs/Image to a BGR numpy array without cv_bridge."""
+        dtype  = np.uint8
+        arr    = np.frombuffer(msg.data, dtype=dtype).reshape(msg.height, msg.width, -1)
+        enc    = msg.encoding.lower()
 
+        if enc in ("bgr8", "bgr"):
+            return arr.copy()
+        elif enc in ("rgb8", "rgb"):
+            return arr[:, :, ::-1].copy()           # RGB → BGR
+        elif enc in ("mono8", "8uc1"):
+            return cv2.cvtColor(arr[:, :, 0], cv2.COLOR_GRAY2BGR)
+        elif enc in ("bgra8", "bgra"):
+            return cv2.cvtColor(arr, cv2.COLOR_BGRA2BGR)
+        elif enc in ("rgba8", "rgba"):
+            return cv2.cvtColor(arr[:, :, ::-1], cv2.COLOR_RGBA2BGR)
+        else:
+            rospy.logwarn_once(f"[yolo_trt] Unknown encoding '{msg.encoding}', assuming BGR8")
+            return arr[:, :, :3].copy()
+
+    def image_callback(self, msg: Image):
+        cv_img = self.ros_image_to_bgr(msg)
         orig_h, orig_w = cv_img.shape[:2]
 
         # ── Inference ──
