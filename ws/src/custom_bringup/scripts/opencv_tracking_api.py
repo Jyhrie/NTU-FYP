@@ -2,111 +2,147 @@
 import rospy
 import cv2
 import numpy as np
-import onnxruntime as ort
-import json
-import time
+import tensorrt as trt
+import pycuda.driver as cuda
 from sensor_msgs.msg import Image
 
-# --- CONFIGURATION ---
-ONNX_PATH = "/home/jetson/fyp/ws/src/custom_bringup/scripts/models/best.onnx"
+# Configuration
+ENGINE_PATH = "/home/jetson/fyp/ws/src/custom_bringup/scripts/models/best.engine"
 IMAGE_TOPIC = "/camera/rgb/image_raw"
 INPUT_W, INPUT_H = 640, 640
-ASTRA_PRO_HFOV = 58.4 
-CONF_THRESHOLD = 0.85  
+CONF_THRESHOLD = 0.4
+NMS_THRESHOLD = 0.4
 
-class YOLOv8ONNXNode:
+class YOLOv8TRTNode:
     def __init__(self):
-        rospy.init_node('yolo_onnx_monitor', anonymous=True)
+        rospy.init_node('yolo_trt_detector', anonymous=True)
         
-        # 1. Load ONNX Session (Uses CUDAExecutionProvider for Jetson GPU)
-        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-        self.session = ort.InferenceSession(ONNX_PATH, providers=providers)
-        self.input_name = self.session.get_inputs()[0].name
+        # 1. Initialize CUDA and Context explicitly
+        cuda.init()
+        self.device = cuda.Device(0)
+        self.ctx = self.device.make_context() # Manual context
+        
+        self.logger = trt.Logger(trt.Logger.INFO)
+        
+        # 2. Load TensorRT Engine
+        with open(ENGINE_PATH, "rb") as f, trt.Runtime(self.logger) as runtime:
+            self.engine = runtime.deserialize_cuda_engine(f.read())
+        self.context = self.engine.create_execution_context()
+        
+        # 3. Allocate GPU Buffers
+        self.inputs, self.outputs, self.bindings, self.stream = self.allocate_buffers()
+        
+        # 4. ROS Subscriber with large buffer to prevent delay
+        self.sub = rospy.Subscriber(IMAGE_TOPIC, Image, self.image_callback, 
+                                   queue_size=1, buff_size=2**24)
+        
+        rospy.loginfo("YOLO TRT Node Fixed. CUDA Context initialized.")
 
-        # 2. State Variables
-        self.detection_counter = 0
-        self.interrupt_sent = False 
-        
-        self.sub = rospy.Subscriber(IMAGE_TOPIC, Image, self.image_callback, queue_size=1)
-        rospy.loginfo("✅ YOLOv8 ONNX Node Active. Running on GPU...")
+    def allocate_buffers(self):
+        inputs, outputs, bindings = [], [], []
+        stream = cuda.Stream()
+        for i in range(self.engine.num_bindings):
+            shape = self.engine.get_binding_shape(i)
+            size = trt.volume(shape)
+            dtype = trt.nptype(self.engine.get_binding_dtype(i))
+            # Page-locked memory for faster transfer
+            host_mem = cuda.pagelocked_empty(size, dtype)
+            device_mem = cuda.mem_alloc(host_mem.nbytes)
+            bindings.append(int(device_mem))
+            if self.engine.binding_is_input(i):
+                inputs.append({'host': host_mem, 'device': device_mem})
+            else:
+                outputs.append({'host': host_mem, 'device': device_mem})
+        return inputs, outputs, bindings, stream
 
-    def preprocess(self, img):
-        h, w = img.shape[:2]
-        r = min(INPUT_H / h, INPUT_W / w)
-        new_unpad = (int(round(w * r)), int(round(h * r)))
-        dw, dh = (INPUT_W - new_unpad[0]) / 2, (INPUT_H - new_unpad[1]) / 2
+    def postprocess(self, data, orig_w, orig_h):
+        # Reshape: 84 rows (4 boxes + 80 classes) x 8400 columns
+        data = data.reshape(84, -1).T
         
-        resized = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
-        top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
-        left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+        # Get max score and class ID for each row
+        scores = np.max(data[:, 4:], axis=1)
+        mask = scores > CONF_THRESHOLD
+        filtered_data = data[mask]
+        filtered_scores = scores[mask]
         
-        padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114, 114, 114))
+        if len(filtered_data) == 0:
+            return [], [], []
+
+        class_ids = np.argmax(filtered_data[:, 4:], axis=1)
+        boxes = filtered_data[:, :4]
         
-        # Convert to float and NCHW format
-        blob = cv2.cvtColor(padded, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-        blob = np.transpose(blob, (2, 0, 1))
-        blob = np.expand_dims(blob, axis=0) # Add batch dimension: [1, 3, 640, 640]
-        return blob, r, (dw, dh)
+        results_boxes = []
+        x_factor = orig_w / INPUT_W
+        y_factor = orig_h / INPUT_H
+
+        for i in range(len(boxes)):
+            cx, cy, w, h = boxes[i]
+            left = int((cx - 0.5 * w) * x_factor)
+            top = int((cy - 0.5 * h) * y_factor)
+            width = int(w * x_factor)
+            height = int(h * y_factor)
+            results_boxes.append([left, top, width, height])
+
+        indices = cv2.dnn.NMSBoxes(results_boxes, filtered_scores.tolist(), CONF_THRESHOLD, NMS_THRESHOLD)
+        
+        final_boxes, final_scores, final_ids = [], [], []
+        if len(indices) > 0:
+            for i in indices.flatten():
+                final_boxes.append(results_boxes[i])
+                final_scores.append(filtered_scores[i])
+                final_ids.append(class_ids[i])
+        
+        return final_boxes, final_scores, final_ids
 
     def image_callback(self, msg):
+        # IMPORTANT: Push the CUDA context to the current thread (ROS callback thread)
+        self.ctx.push()
+        
         try:
-            # 1. Image Conversion
+            # 1. Conversion
             frame = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)
             if msg.encoding == 'rgb8':
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            img_h, img_w = frame.shape[:2]
 
             # 2. Preprocess
-            blob, ratio, (dw, dh) = self.preprocess(frame)
+            blob = cv2.resize(frame, (INPUT_W, INPUT_H))
+            blob = cv2.cvtColor(blob, cv2.COLOR_BGR2RGB)
+            blob = blob.astype(np.float32) / 255.0
+            blob = np.transpose(blob, (2, 0, 1)).ravel()
 
             # 3. Inference
-            outputs = self.session.run(None, {self.input_name: blob})
-            output = np.squeeze(outputs[0]) # Shape: [84, 8400]
+            np.copyto(self.inputs[0]['host'], blob)
+            cuda.memcpy_htod_async(self.inputs[0]['device'], self.inputs[0]['host'], self.stream)
+            self.context.execute_async_v2(bindings=self.bindings, stream_handle=self.stream.handle)
+            cuda.memcpy_dtoh_async(self.outputs[0]['host'], self.outputs[0]['device'], self.stream)
+            self.stream.synchronize()
 
-            # 4. Post-processing
-            # YOLOv8: first 4 rows are cx, cy, w, h
-            boxes = output[:4, :].T 
-            scores = np.max(output[4:, :], axis=0)
-            
-            mask = scores > 0.4
-            valid_boxes = boxes[mask]
-            valid_scores = scores[mask]
+            # 4. Post-process
+            boxes, scores, ids = self.postprocess(self.outputs[0]['host'], msg.width, msg.height)
 
-            if len(valid_boxes) > 0:
-                rects = []
-                for i in range(len(valid_boxes)):
-                    cx, cy, bw, bh = valid_boxes[i]
-                    
-                    # Convert from 640 model space to real pixel space
-                    # ONNX usually gives raw pixels in 640 scale
-                    real_x = (cx - dw) / ratio
-                    real_y = (cy - dh) / ratio
-                    real_w = bw / ratio
-                    real_h = bh / ratio
-                    
-                    l = int(real_x - (real_w / 2))
-                    t = int(real_y - (real_h / 2))
-                    rects.append([l, t, int(real_w), int(real_h)])
+            # 5. Visualization
+            for box, score, cl_id in zip(boxes, scores, ids):
+                x, y, w, h = box
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                cv2.putText(frame, f"100Plus:{score:.2f}", (x, y-10), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-                indices = cv2.dnn.NMSBoxes(rects, valid_scores.tolist(), 0.4, 0.4)
-
-                if len(indices) > 0:
-                    for i in indices.flatten():
-                        conf = valid_scores[i]
-                        if conf > CONF_THRESHOLD:
-                            rx, ry, rw, rh = rects[i]
-                            
-                            # Drawing the box
-                            cv2.rectangle(frame, (rx, ry), (rx + rw, ry + rh), (0, 255, 0), 2)
-                            cv2.putText(frame, f"can {conf:.2f}", (rx, max(20, ry - 10)),
-                                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-            cv2.imshow("ONNX Detection", frame)
+            cv2.imshow("Transbot YOLO View", frame)
             cv2.waitKey(1)
+            
+        finally:
+            # Pop the context to avoid leaks
+            self.ctx.pop()
 
-        except Exception as e:
-            rospy.logerr(f"ONNX Error: {e}")
+    def __del__(self):
+        # Cleanup
+        self.ctx.pop()
+        self.ctx.detach()
 
 if __name__ == '__main__':
-    node = YOLOv8ONNXNode()
-    rospy.spin()
+    try:
+        node = YOLOv8TRTNode()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass
+    cv2.destroyAllWindows()
