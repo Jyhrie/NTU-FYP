@@ -18,7 +18,8 @@ ASTRA_PRO_HFOV  = 58.4
 PRINT_INTERVAL  = 3.0
 CONF_THRESHOLD  = 0.85
 FRAME_THRESHOLD = 5
-NMS_THRESHOLD   = 0.4  # NMS IoU threshold
+NMS_THRESHOLD   = 0.4  
+SKIP_COUNT      = 3    # Number of frames to skip after processing one
 
 class YOLOv8TRTNode:
     def __init__(self):
@@ -38,11 +39,12 @@ class YOLOv8TRTNode:
         self.detection_counter  = 0
         self.last_print_time    = 0
         self.interrupt_sent_sim = False
+        self.frame_count        = 0  # <--- Added for frame skipping
 
         # 4. ROS Subscriber
         self.sub = rospy.Subscriber(IMAGE_TOPIC, Image, self.image_callback,
                                     queue_size=1, buff_size=2**24)
-        rospy.loginfo("[YOLOv8TRT] Node ready. Waiting for frames...")
+        rospy.loginfo("[YOLOv8TRT] Node ready. Skipping %d frames per process.", SKIP_COUNT)
 
     # -------------------------------------------------------------------------
     def allocate_buffers(self):
@@ -60,13 +62,11 @@ class YOLOv8TRTNode:
                 outputs.append({'host': host_mem, 'device': device_mem})
         return inputs, outputs, bindings, stream
 
-    # -------------------------------------------------------------------------
     def letterbox(self, img, new_shape=(640, 640), color=(114, 114, 114)):
-        shape = img.shape[:2]  # (h, w)
+        shape = img.shape[:2]
         r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
         new_unpad = (int(round(shape[1] * r)), int(round(shape[0] * r)))
-        dw = new_shape[1] - new_unpad[0]
-        dh = new_shape[0] - new_unpad[1]
+        dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]
         dw /= 2
         dh /= 2
         img_resized = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
@@ -78,6 +78,19 @@ class YOLOv8TRTNode:
 
     # -------------------------------------------------------------------------
     def image_callback(self, msg):
+        # Frame Skipping Logic
+        # If SKIP_COUNT = 3: 
+        # Frame 0: Process (0 % 4 == 0)
+        # Frame 1: Skip
+        # Frame 2: Skip
+        # Frame 3: Skip
+        # Frame 4: Process (4 % 4 == 0)
+        if self.frame_count % (SKIP_COUNT + 1) != 0:
+            self.frame_count += 1
+            return 
+        
+        self.frame_count += 1
+        
         self.ctx.push()
         try:
             current_time = time.time()
@@ -103,13 +116,11 @@ class YOLOv8TRTNode:
 
             # --- Post-processing ---
             raw = self.outputs[0]['host']
-            # Raw TRT output shape = (4 + num_classes, 8400)
-            # reshape: (8400, 4+nc)
             num_classes = raw.size // 8400 - 4
             num_classes = max(num_classes, 1)
-            output = raw.reshape(4 + num_classes, 8400).T  # (8400, 4+nc)
+            output = raw.reshape(4 + num_classes, 8400).T
 
-            scores = np.max(output[:, 4:], axis=1)  # class confidence
+            scores = np.max(output[:, 4:], axis=1)
             mask = scores > CONF_THRESHOLD
             filtered_output = output[mask]
             filtered_scores = scores[mask]
@@ -118,19 +129,14 @@ class YOLOv8TRTNode:
             if len(filtered_output) > 0:
                 for det in filtered_output:
                     cx, cy, bw, bh = det[:4]
-
-                    # --- Undo letterbox padding ---
                     cx = (cx - dw) / ratio
                     cy = (cy - dh) / ratio
                     bw /= ratio
                     bh /= ratio
-
-                    # Convert to top-left corner
                     left = int(cx - bw / 2)
                     top  = int(cy - bh / 2)
                     boxes.append([left, top, int(bw), int(bh)])
 
-                # --- Apply NMS ---
                 indices = cv2.dnn.NMSBoxes(boxes, filtered_scores.tolist(), CONF_THRESHOLD, NMS_THRESHOLD)
 
                 if len(indices) > 0:
@@ -140,14 +146,12 @@ class YOLOv8TRTNode:
                         center_x_box = left + bw_box / 2
                         angle = ((center_x_box - (orig_w / 2)) / orig_w) * ASTRA_PRO_HFOV
 
-                        # Detection counter logic
                         if conf > CONF_THRESHOLD:
                             self.detection_counter += 1
                             if self.detection_counter >= FRAME_THRESHOLD and not self.interrupt_sent_sim:
                                 rospy.loginfo("[YOLOv8TRT] TARGET LOCKED: Angle %.2f", angle)
                                 self.interrupt_sent_sim = True
 
-                            # Periodic logging
                             if current_time - self.last_print_time > PRINT_INTERVAL:
                                 log_entry = {
                                     "ros_time": f"{msg.header.stamp.secs}.{msg.header.stamp.nsecs:09d}",
@@ -158,16 +162,10 @@ class YOLOv8TRTNode:
                                 rospy.loginfo("[YOLOv8TRT] DATA LOG: %s", json.dumps(log_entry))
                                 self.last_print_time = current_time
 
-                            # Draw boxes
                             color = (0, 255, 0) if self.interrupt_sent_sim else (0, 255, 255)
-                            cv2.rectangle(display_img,
-                                          (left, top),
-                                          (left + bw_box, top + bh_box),
-                                          color, 2)
-                            cv2.putText(display_img, f"object {conf:.2f}",
-                                        (left, top - 10),
+                            cv2.rectangle(display_img, (left, top), (left + bw_box, top + bh_box), color, 2)
+                            cv2.putText(display_img, f"obj {conf:.2f}", (left, top - 10),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
             else:
                 self.detection_counter = 0
 
@@ -177,14 +175,12 @@ class YOLOv8TRTNode:
         finally:
             self.ctx.pop()
 
-    # -------------------------------------------------------------------------
     def __del__(self):
         try:
             self.ctx.detach()
         except Exception:
             pass
 
-# -------------------------------------------------------------------------
 if __name__ == '__main__':
     node = YOLOv8TRTNode()
     rospy.spin()
