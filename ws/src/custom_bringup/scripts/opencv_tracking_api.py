@@ -74,6 +74,7 @@ class YOLOv8TRTNode:
     def image_callback(self, msg):
         self.ctx.push() 
         try:
+            print(f"DEBUG: Raw first box values: {output[0][:4]}")
             current_time = time.time()
             frame = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)
             if msg.encoding == 'rgb8':
