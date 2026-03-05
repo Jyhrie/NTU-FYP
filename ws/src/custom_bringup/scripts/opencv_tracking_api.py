@@ -71,7 +71,7 @@ class YOLOv8TRTNode:
         padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114, 114, 114))
         # NCHW format
         blob = cv2.cvtColor(padded, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-        blob = np.transpose(blob, (2, 0, 1)).ravel()
+        blob = np.ascontiguousarray(np.transpose(blob, (2, 0, 1)), dtype=np.float32)
         return blob, r, (dw, dh)
 
     def image_callback(self, msg):
@@ -150,6 +150,9 @@ class YOLOv8TRTNode:
                             cv2.rectangle(frame, (rx, ry), (rx + rw, ry + rh), color, 2)
                             cv2.putText(frame, f"can {conf:.2f}", (rx, max(20, ry - 10)),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                            
+            print(f"1. Model Raw Output (First 4): {output[:4, 0]}") 
+            print(f"2. Ratio: {ratio}, dw: {dw}, dh: {dh}")
 
             if not found_target:
                 self.detection_counter = 0
