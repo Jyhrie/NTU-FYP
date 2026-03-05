@@ -45,6 +45,7 @@ class EngineConverterNode(object):
             "--onnx={}".format(onnx_path),
             "--saveEngine={}".format(engine_path),
             "--fp16",
+            "--explicitBatch",
             "--workspace=2048",   # MB - safe default for Jetson Nano 4 GB
             "--avgTiming=1",      # only 1 averaged run per tactic (default=8) - 8x faster profiling
             "--minTiming=1",      # minimum 1 iteration per tactic (default=1)
