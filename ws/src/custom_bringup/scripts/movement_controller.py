@@ -51,6 +51,7 @@ class PurePursuitController:
 
         self.state = MovementState.IDLE
         self.rotate_target_pose = None
+        self.cached_transform = None
         
         self.align_error = None
         self.end_facing_target = None
@@ -66,15 +67,30 @@ class PurePursuitController:
             # Try to parse as JSON first
             data = json.loads(msg.data)
             header = data.get("header")
+            if header == 'interrupt':
+                self.stop_robot()
+                self.state = MovementState.IDLE
+
+            elif header == 'rotate':
+                self.state = MovementState.ROTATE
+                if self.cached_transform is not None:
+                    self.latched_target_yaw = self.cached_transform
+                relative_angle = data.get("data", {}).get("relative_angle", 0.0)
             
-            if header == 'align_with_item':
+            elif header == "approach":
+                self.state = MovementState.APPROACH
+                self.linear_distance = data.get("data", {}).get("linear_dist", 0.07)
+
+            elif header == 'align_with_item':
                 self.state = MovementState.ALIGN
                 # Store the relative error in degrees
                 self.align_error = data.get("data", {}).get("relative_angle", 0.0)
                 rospy.loginfo("[PP] Aligning with error: %.2f", self.align_error)
+
             elif header == 'navigate':
                 self.state = MovementState.MOVE
                 self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))
+                
             elif header == 'stop_movement':
                 self.state = MovementState.IDLE
                 self.stop_robot()
@@ -127,10 +143,8 @@ class PurePursuitController:
 
 
             return x, y, yaw
-
         except:
             return None
-
     # -------------------------------------------------
 
     def find_nearest_index(self, x, y):
@@ -413,6 +427,16 @@ class PurePursuitController:
         cmd.linear.x = self.linear_vel * scaling
         
         self.cmd_pub.publish(cmd)
+
+    def state_pursuit(self):
+        pass
+
+    def state_rotate(self):
+        pass
+
+    def state_approach(self):
+        pass
+
 
     def run(self):
         rospy.loginfo("[PP] Pure Pursuit controller started")

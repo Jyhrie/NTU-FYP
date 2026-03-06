@@ -1,0 +1,352 @@
+#!/usr/bin/env python
+
+import rospy
+from enum import Enum
+from std_msgs.msg import Empty, String
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PointStamped
+import json
+import tf2_ros
+import tf2_geometry_msgs
+import tf
+import math
+
+class NavStates(Enum):
+    NULL = 0
+    MOVING = 1
+    INTERRUPTED = 2
+    COMPLETE = 3
+    FAILED = 4
+
+class States(Enum):
+    NULL = 0
+    INIT = 1
+    IDLE = 2
+    REQUEST_FRONTIER_PATH = 3
+    NAVIGATE = 4
+    ROTATE = 5
+    FETCH_OBJECT = 6
+
+
+class State:
+    def __init__(self, state = States.NULL, info = ""):
+        self.state = state
+        self.info = info
+        pass
+
+class Controller:
+    def __init__(self):
+
+        rospy.init_node("python_controller")
+        self.recalib_pub = rospy.Publisher("/recalib_frontiers", Empty, queue_size=1)
+        self.state_pub   = rospy.Publisher("/controller_state", String, queue_size=1)
+        self.global_request = rospy.Publisher("/controller/global", String, queue_size=1)
+        self.rotate_pose_pub = rospy.Publisher("/rotate_target_pose", PoseStamped, queue_size=1)
+        self.global_exploration_path = rospy.Publisher("/global_exploration_path", Path, queue_size=1)
+
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+        
+        self.fontier_node_sub = rospy.Subscriber("/frontier_node_reply", String, self.frontier_node_cb)
+        self.frontier_node_path_sub = rospy.Subscriber("/frontier_node_path", Path, self.frontier_node_path_cb)
+        self.navigation_node_sub = rospy.Subscriber("/navigation_node_reply", String, self.navigation_node_cb)
+        self.pc_node_sub = rospy.Subscriber("/pc_node_reply", String, self.pc_node_cb)
+        self.movement_controller_sub = rospy.Subscriber("/movement_controller_message", String, self.movement_controller_cb)
+
+
+        self.reply_sub = rospy.Subscriber("/robot/reply", String, self.global_reply_cb) #reply as "header (node), data (content)" in json format, ex: {"node": "frontier", "cmd": "path"}
+        self.path_sub = rospy .Subscriber("/robot/path_reply", Path, self.path_reply_cb)
+
+        self.request_sent = False
+        self.received = False
+        self.received_path = False
+        self.nav_state = NavStates.NULL
+        self.request_timeout = 30
+
+        self.rotate_target_msg = None
+        self.movement_complete = False
+
+        self.pickup_target = None # (x, y) in map frame, set by PC node when it sends an interrupt command with the target location for pickup.
+
+        self.prev_state = None
+        self.init_complete = False
+        
+        self.state = State(state=States.INIT)
+        self.rate = rospy.Rate(5)
+
+        print("Initialization Complete, Node is Ready!")
+        pass
+
+    def global_reply_cb(self, msg):
+        self.received = json.loads(msg.data)
+        pass
+
+    def path_reply_cb(self, msg):
+        self.received_path = msg
+        pass
+
+    def movement_controller_cb(self, msg):
+        if msg.data == "done":
+            if self.state.state == States.NAVIGATE or self.state.state == States.ROTATE:
+                self.nav_state = NavStates.COMPLETE
+        pass
+
+    def frontier_node_cb(self, msg):
+        self.received = json.loads(msg.data)
+        pass
+
+    def frontier_node_path_cb(self, msg):
+        self.received_path = msg
+        pass
+
+    def navigation_node_cb(self, msg):
+        if msg == "COMPLETE":
+            self.nav_state = NavStates.COMPLETE
+        pass
+
+    def pc_node_cb(self, msg):
+        data = json.loads(msg.data)
+        if data.get("header") == "interrupt":
+            timestamp = data.get("timestamp", None)
+            angle = data.get("angle", None)
+            distance = data.get("distance", None)
+
+            if timestamp is not None and angle is not None and distance is not None:
+                self.pickup_target = self.get_relative_pickup_target(timestamp, angle, distance)
+                self.interrupt(next_state=States.FETCH_OBJECT, clear=True)
+        pass
+
+    # ====== UTIL ====== # 
+    def get_robot_pose(self):
+        try:
+            t = self.tf_buffer.lookup_transform(
+                "map", "base_link", rospy.Time(0), rospy.Duration(0.1)
+            )
+
+            x = t.transform.translation.x
+            y = t.transform.translation.y
+
+            q = t.transform.rotation
+            (_, _, yaw) = tf.transformations.euler_from_quaternion(
+                [q.x, q.y, q.z, q.w]
+            )
+
+            print("Robot Pose: ", x, y, yaw)
+
+            return x, y, yaw
+
+        except:
+            return None
+        
+    def get_relative_pickup_target(self, timestamp, angle, distance):
+        """
+        Returns a tuple (x, y) in the 'map' frame at the specific timestamp.
+        """
+        # 1. Prepare the point in the robot's local frame (e.g., 'base_link')
+        local_pt = PointStamped()
+        
+        # Handle timestamp: Ensure it's a rospy.Time object
+        if isinstance(timestamp, (int, float)):
+            local_pt.header.stamp = rospy.Time.from_sec(timestamp)
+        else:
+            local_pt.header.stamp = timestamp
+            
+        local_pt.header.frame_id = "base_link" 
+
+        # 2. Polar to Cartesian (standard math: x=forward, y=left)
+        local_pt.point.x = distance * math.cos(angle)
+        local_pt.point.y = distance * math.sin(angle)
+        local_pt.point.z = 0.0
+
+        try:
+            # 3. Transform to 'map' frame using the historical timestamp
+            # timeout allows the buffer to catch up if the data is very recent
+            map_pt = self.tf_buffer.transform(local_pt, "map", timeout=rospy.Duration(1.0))
+            
+            # 4. Return as a simple tuple
+            return (map_pt.point.x, map_pt.point.y)
+
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+            rospy.logwarn("TF2 Conversion Failed: %s", str(e))
+            return (None, None)
+
+    
+    def wrap_angle(self, a):
+        return math.atan2(math.sin(a), math.cos(a))
+
+    # ====== FSM ====== # 
+
+    def interrupt(self, next_state=None, clear=False):
+        print("Interrupting Current Action")
+        self.global_request.publish("interrupt")
+        if next_state is not None:
+            self.transition(next_state)
+        pass
+
+    def transition(self, nxt_state):
+        if nxt_state != self.state.state:
+            print("Transitioning", self.state.state.name, ">", nxt_state.name)
+            self.state.state = nxt_state
+
+    def state_init(self):
+        self.init_complete = True
+        if self.init_complete == True:
+            self.transition(States.REQUEST_FRONTIER_PATH)
+        pass
+
+    def state_request_path_home(self):
+        # 1. Send the request only once
+        if not self.request_sent:
+            msg = String()
+            msg.data = "request_home"  # Assuming your backend listens for this string
+            
+            self.global_request.publish(msg)
+            self.request_sent = True
+            self.start_time = rospy.get_time()
+
+        # 2. Check if the response has arrived
+        elif self.received:
+            if self.received["data"] == "path":
+                print("Home Path Received")
+                if self.received_path and len(self.received_path.poses) > 0:
+                    self.goal_path = self.received_path
+                    self.transition(States.NAVIGATE)
+                    
+                    # Reset flags for the next state
+                    self.request_sent = False
+                    self.received = False
+            
+            # If the backend sends a "rotate" command instead for some reason
+            elif self.received["data"] == "rotate":
+                print("Received rotate command while trying to go home.")
+                # You could handle this similarly to your frontier logic
+                self.transition(States.IDLE) 
+
+        # 3. Handle Timeout (Safe failure)
+        elif (rospy.get_time() - self.start_time) > self.request_timeout:
+            self.request_sent = False
+            self.transition(States.IDLE)
+            
+
+    def state_request_frontier_path(self):
+        if not self.request_sent:
+            msg = String()
+            msg.data = "request_frontier"
+            print("Trying to Publish: Request Frontier")
+            self.global_request.publish(msg)
+            self.request_sent = True
+            self.start_time = rospy.get_time()
+
+        elif self.received:
+            if self.received["data"] == "rotate":
+                pose = self.get_robot_pose()
+                if pose is None: 
+                    return
+                
+                current_x, current_y, yaw = pose
+                rotate_target_yaw = self.wrap_angle(yaw + math.pi)
+
+                msg = PoseStamped()
+
+                msg.header.frame_id = "map"
+                msg.header.stamp = rospy.Time.now()
+
+                # keep current position  only rotation matters
+                msg.pose.position.x = current_x
+                msg.pose.position.y = current_y
+                msg.pose.position.z = 0.0
+
+                q = tf.transformations.quaternion_from_euler(
+                    0, 0, rotate_target_yaw
+                )
+
+                msg.pose.orientation.x = q[0]
+                msg.pose.orientation.y = q[1]
+                msg.pose.orientation.z = q[2]
+                msg.pose.orientation.w = q[3]
+
+                self.rotate_target_msg = msg
+
+                self.transition(States.ROTATE)
+                self.request_sent = False
+                self.received = False
+                pass
+            elif self.received["data"] == "path": 
+                print("Path Received")
+                if self.received_path and len(self.received_path.poses) > 0:
+                    print("Transitioning")
+                    self.goal_path = self.received_path
+                    self.transition(States.NAVIGATE)
+                    self.request_sent = False
+                    self.received = False
+                pass
+
+        elif (rospy.get_time() - self.start_time) > self.request_timeout:
+            print("Request Timeout, Frontier Node Non-Responsive")
+            self.request_sent = False
+            self.transition(States.IDLE)
+
+    def state_navigate(self):
+        if self.nav_state == NavStates.NULL:
+            self.nav_state = NavStates.MOVING
+        
+        elif self.nav_state == NavStates.MOVING:
+            msg = String()
+            msg.data = "navigate"
+            self.global_request.publish(msg)
+            self.global_exploration_path.publish(self.goal_path)
+            pass
+
+        elif self.nav_state == NavStates.COMPLETE:
+            self.nav_state = NavStates.NULL
+            self.goal_path = None
+            self.transition(States.REQUEST_FRONTIER_PATH)
+
+    def state_rotate(self):
+        if self.nav_state == NavStates.NULL:
+            self.nav_state = NavStates.MOVING
+        
+        elif self.nav_state == NavStates.MOVING:
+            msg = String()
+            msg.data = "rotate"
+            self.global_request.publish(msg)
+            if self.rotate_target_msg is not None:
+                self.rotate_pose_pub.publish(self.rotate_target_msg)
+            pass
+
+        elif self.nav_state == NavStates.COMPLETE:
+            self.nav_state = NavStates.NULL
+            self.goal_path = None
+            self.transition(States.REQUEST_FRONTIER_PATH)
+        pass
+        
+
+    def run(self):
+        rospy.sleep(1.0)
+        while not rospy.is_shutdown():
+            print(self.state.state.name)
+            if self.state.state == States.INIT:
+                self.state_init()
+                pass
+
+            elif self.state.state == States.REQUEST_FRONTIER_PATH:
+                self.state_request_frontier_path()
+                pass
+            
+            elif self.state.state == States.NAVIGATE:
+                self.state_navigate()
+                pass
+
+            elif self.state.state == States.ROTATE:
+                self.state_rotate()
+                pass
+
+            self.rate.sleep()
+
+
+if __name__ == "__main__":
+    ctrl = Controller()
+    ctrl.run()
+
+    

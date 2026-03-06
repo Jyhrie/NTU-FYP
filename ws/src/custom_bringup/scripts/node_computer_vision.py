@@ -8,10 +8,12 @@ import pycuda.autoinit
 import json
 import time
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
 
 # --- CONFIGURATION ---
 ENGINE_PATH     = "/home/jetson/fyp/ws/src/custom_bringup/scripts/models/best.engine"
 IMAGE_TOPIC     = "/camera/rgb/image_raw"
+SELF_TOPIC      = "/robot/cv"
 INPUT_W         = 640
 INPUT_H         = 640
 ASTRA_PRO_HFOV  = 58.4
@@ -19,7 +21,7 @@ PRINT_INTERVAL  = 3.0
 CONF_THRESHOLD  = 0.85
 FRAME_THRESHOLD = 5
 NMS_THRESHOLD   = 0.4  
-SKIP_COUNT      = 3    # Number of frames to skip after processing one
+SKIP_COUNT      = 2    # Number of frames to skip after processing one
 
 class YOLOv8TRTNode:
     def __init__(self):
@@ -44,6 +46,7 @@ class YOLOv8TRTNode:
         # 4. ROS Subscriber
         self.sub = rospy.Subscriber(IMAGE_TOPIC, Image, self.image_callback,
                                     queue_size=1, buff_size=2**24)
+        self.sub = rospy.Publisher(self.SELF_TOPIC, String, queue_size=1, latch=True)
         rospy.loginfo("[YOLOv8TRT] Node ready. Skipping %d frames per process.", SKIP_COUNT)
 
     # -------------------------------------------------------------------------
@@ -143,26 +146,24 @@ class YOLOv8TRTNode:
                     for i in indices.flatten():
                         conf = float(filtered_scores[i])
                         left, top, bw_box, bh_box = boxes[i]
-                        center_x_box = left + bw_box / 2
-                        angle = ((center_x_box - (orig_w / 2)) / orig_w) * ASTRA_PRO_HFOV
 
                         if conf > CONF_THRESHOLD:
                             self.detection_counter += 1
-                            if self.detection_counter >= FRAME_THRESHOLD and not self.interrupt_sent_sim:
-                                rospy.loginfo("[YOLOv8TRT] TARGET LOCKED: Angle %.2f", angle)
-                                self.interrupt_sent_sim = True
+                            color = (0, 255, 0)
+                            if self.detection_counter >= FRAME_THRESHOLD:
+                                color = (0, 255, 255)
 
-                            if current_time - self.last_print_time > PRINT_INTERVAL:
-                                log_entry = {
-                                    "ros_time": f"{msg.header.stamp.secs}.{msg.header.stamp.nsecs:09d}",
-                                    "target": "object",
-                                    "conf": round(conf, 3),
-                                    "angle": round(angle, 2)
+                                #Sending Data
+                                msg = String()
+                                detection_data = {
+                                    "bbox": [left, top, bw_box, bh_box],
+                                    "conf": round(float(conf), 3),
+                                    "ros_time": f"{msg.header.stamp.secs}.{msg.header.stamp.nsecs:09d}"
                                 }
-                                rospy.loginfo("[YOLOv8TRT] DATA LOG: %s", json.dumps(log_entry))
-                                self.last_print_time = current_time
+                                json_payload = json.dumps(detection_data)
+                                self.data_pub.publish(json_payload)
 
-                            color = (0, 255, 0) if self.interrupt_sent_sim else (0, 255, 255)
+
                             cv2.rectangle(display_img, (left, top), (left + bw_box, top + bh_box), color, 2)
                             cv2.putText(display_img, f"obj {conf:.2f}", (left, top - 10),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
