@@ -40,10 +40,10 @@ class BlobCentroidEstimator:
     def process_depth(self):
         
         depth_data = np.frombuffer(self.latest_depth_msg.data, dtype=np.uint16)
-        #depth_map = depth_data.reshape((self.latest_depth_msg.height, self.latest_depth_msg.width))
+        depth_map = depth_data.reshape((self.latest_depth_msg.height, self.latest_depth_msg.width))
         
         xmin, ymin, xmax, ymax = self.bbox
-        roi = self.latest_depth_map[ymin:ymax, xmin:xmax]
+        roi = depth_map[ymin:ymax, xmin:xmax]
 
         valid_depths = roi[roi > 0]
         if valid_depths.size == 0:
