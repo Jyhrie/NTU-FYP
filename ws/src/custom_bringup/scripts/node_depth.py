@@ -31,15 +31,16 @@ class BlobCentroidEstimator:
         rospy.loginfo(f"Received depth request with bbox: {self.bbox}")
 
         # Process immediately if we already have a depth frame
-        if self.latest_depth_map is not None:
+        if self.latest_depth_msg is not None:
             self.process_depth()
 
     def depth_callback(self, msg):
         self.latest_depth_msg = msg
 
     def process_depth(self):
-        depth_data = np.frombuffer(self.latest_depth_msg.data, dtype=np.uint16)
         depth_map = depth_data.reshape((self.latest_depth_msg.height, self.latest_depth_msg.width))
+        depth_data = np.frombuffer(self.latest_depth_msg.data, dtype=np.uint16)
+        
         xmin, ymin, xmax, ymax = self.bbox
         roi = self.latest_depth_map[ymin:ymax, xmin:xmax]
 
@@ -69,9 +70,9 @@ class BlobCentroidEstimator:
                 "distance_m": round(exact_dist_mm / 1000.0, 3)
             })
             self.depth_pub.publish(result)
-            rospy.loginfo(f"Published depth: {result.data}")
+            print("Depth Published!")
         else:
-            rospy.logwarn("Could not isolate object blob within bounding box.")
+            print("No Depth")
 
 if __name__ == '__main__':
     node = BlobCentroidEstimator()
