@@ -390,10 +390,21 @@ class Controller:
             latest_cv_detection = self.last_cv_detection
 
             if float(latest_cv_detection['ros_time']) - float(cached_last_cv_detection['ros_time']) > 1.2: #PERSISTENCE CHECK PASS
-                bbox_old = cached_last_cv_detection['bbox']
-                bbox_latest = latest_cv_detection['bbox']
+                bbox_old = (
+                    cached_last_cv_detection['x_start'], 
+                    cached_last_cv_detection['y_start'], 
+                    cached_last_cv_detection['x_len'], 
+                    cached_last_cv_detection['y_len']
+                )
+
+                bbox_latest = (
+                    latest_cv_detection['x_start'], 
+                    latest_cv_detection['y_start'], 
+                    latest_cv_detection['x_len'], 
+                    latest_cv_detection['y_len']
+                )
                 if utils.compare_bbox_centroid(bbox_old, bbox_latest, radius=12):
-                    self.sub_state = SubStates.CHECKING_DEPTH_STATUS
+                    self.sub_state = SubStates.DEPTH_READING_AVAILABLE
             return
                 
 

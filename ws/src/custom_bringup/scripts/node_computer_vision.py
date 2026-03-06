@@ -156,7 +156,10 @@ class YOLOv8TRTNode:
                                 #Sending Data
                                 ros_time_str = "{}.{:09d}".format(msg.header.stamp.secs, msg.header.stamp.nsecs)
                                 detection_data = {
-                                    "bbox": [left, top, bw_box, bh_box],
+                                    "x_start": left,
+                                    "x_len": bw_box,
+                                    "y_start": top,
+                                    "y_len": bh_box,
                                     "conf": round(float(conf), 3),
                                     "ros_time": ros_time_str
                                 }
