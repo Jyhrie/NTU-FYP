@@ -2,3 +2,4 @@ move_group.launch
 demo.launch
 
 *.pyc
+*.whl
