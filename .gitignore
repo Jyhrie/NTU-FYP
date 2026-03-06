@@ -3,3 +3,6 @@ demo.launch
 
 *.pyc
 *.whl
+*.onnx
+*.engine
+/models
