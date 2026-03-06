@@ -33,26 +33,16 @@ class SubStates(Enum):
 
     ITEM_CONFIRMED = 4  # Detected item, preparing to align
     ROTATING_TO_UNOBSCURED_VIEW = 5
-    DEPTH_READING_UNAVAILABLE = 6
-    DEPTH_READING_AVAILABLE = 7
-    MOVING_TO_DEPTH_AVAILABLE = 8
-    APPROACH_ITEM = 9
-    PICKING_UP = 10
-    PICKED_UP = 11
-    REQUESTING_HOME_PATH = 12
-    COMPLETE = 13
-
-    MOVING_TO_ITEM = 4
-    ALIGNING = 5
-    PICKING_UP = 6
-    PICKED_UP = 7
-    RETURNING = 8
-    REVERSING = 9        # For retry logic
-    REQUESTING_HOME_PATH = 10
-    COMPLETE = 11
-    APPROACHING = 12
-
-    CONFIRMING_ITEM = 14
+    READING_DEPTH = 6
+    DEPTH_READING_UNAVAILABLE = 7
+    DEPTH_READING_AVAILABLE = 8
+    MOVING_TO_DEPTH_AVAILABLE = 9
+    APPROACH_ITEM = 10
+    PICKING_UP = 11
+    PICKED_UP = 12
+    REQUESTING_HOME_PATH = 13
+    COMPLETE = 14
+    CONFIRMING_ITEM = 15
 
 class NavStates(Enum):
     NULL = 0
@@ -404,15 +394,32 @@ class Controller:
                     latest_cv_detection['y_len']
                 )
                 if utils.compare_bbox_centroid(bbox_old, bbox_latest, radius=12):
-                    self.sub_state = SubStates.DEPTH_READING_AVAILABLE
+                    self.sub_state = SubStates.READING_DEPTH
             return
-                
+        
+
+        if self.sub_state == SubStates.READING_DEPTH:
+            msg = String()
+            msg.data = json.dumps({
+                "header": "depth_node",
+                "command": "check_depth",
+                "x_start": self.last_cv_detection['x_start'],
+                "x_len": self.last_cv_detection['x_len'],
+                "y_start": self.last_cv_detection['y_start'],
+                "y_len": self.last_cv_detection['y_len'],
+            })
+            self.global_request.publish(msg)
+
 
         if self.sub_state == SubStates.DEPTH_READING_UNAVAILABLE:
             msg = String()
             msg.data = json.dumps({
                 "header": "depth_node",
-                "command": "check_depth"
+                "command": "check_depth",
+                "x_start": self.last_cv_detection['x_start'],
+                "x_len": self.last_cv_detection['x_len'],
+                "y_start": self.last_cv_detection['y_start'],
+                "y_len": self.last_cv_detection['y_len'],
             })
             self.global_request.publish(msg)
 
