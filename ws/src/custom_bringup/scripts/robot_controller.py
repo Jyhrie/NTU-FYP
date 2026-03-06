@@ -81,7 +81,7 @@ class Controller:
         self.fontier_node_sub = rospy.Subscriber("/frontier_node_reply", String, self.frontier_node_cb)
         self.frontier_node_path_sub = rospy.Subscriber("/frontier_node_path", Path, self.frontier_node_path_cb)
         self.navigation_node_sub = rospy.Subscriber("/navigation_node_reply", String, self.navigation_node_cb)
-        self.pc_node_sub = rospy.Subscriber("/pc_node_reply", String, self.pc_node_cb)
+        #self.pc_node_sub = rospy.Subscriber("/pc_node_reply", String, self.pc_node_cb)
         self.movement_controller_sub = rospy.Subscriber("/movement_controller_message", String, self.movement_controller_cb)
         self.reply_sub = rospy.Subscriber("/robot/reply", String, self.global_reply_cb) 
         self.path_sub = rospy.Subscriber("/robot/path_reply", Path, self.path_reply_cb)
