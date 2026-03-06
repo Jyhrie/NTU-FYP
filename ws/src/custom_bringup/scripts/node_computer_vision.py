@@ -46,7 +46,7 @@ class YOLOv8TRTNode:
         # 4. ROS Subscriber
         self.sub = rospy.Subscriber(IMAGE_TOPIC, Image, self.image_callback,
                                     queue_size=1, buff_size=2**24)
-        self.sub = rospy.Publisher(SELF_TOPIC, String, queue_size=1, latch=True)
+        self.pub = rospy.Publisher(SELF_TOPIC, String, queue_size=1, latch=True)
         rospy.loginfo("[YOLOv8TRT] Node ready. Skipping %d frames per process.", SKIP_COUNT)
 
     # -------------------------------------------------------------------------
