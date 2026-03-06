@@ -14,6 +14,7 @@ class BlobCentroidEstimator:
         self.depth_pub = rospy.Publisher("/robot/depth_reading", String, queue_size=10)
 
         self.latest_depth_map = None
+        self.latest_depth_msg = None
         self.bbox = None
 
     def request_callback(self, msg):
