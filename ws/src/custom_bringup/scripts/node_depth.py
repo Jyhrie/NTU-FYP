@@ -13,7 +13,6 @@ class BlobCentroidEstimator:
         self.request_sub = rospy.Subscriber("controller/global", String, self.request_callback)
         self.depth_pub = rospy.Publisher("/robot/depth_reading", String, queue_size=10)
 
-        self.latest_depth_map = None
         self.latest_depth_msg = None
         self.bbox = None
 
@@ -39,8 +38,9 @@ class BlobCentroidEstimator:
         self.latest_depth_msg = msg
 
     def process_depth(self):
-        depth_map = depth_data.reshape((self.latest_depth_msg.height, self.latest_depth_msg.width))
+        
         depth_data = np.frombuffer(self.latest_depth_msg.data, dtype=np.uint16)
+        #depth_map = depth_data.reshape((self.latest_depth_msg.height, self.latest_depth_msg.width))
         
         xmin, ymin, xmax, ymax = self.bbox
         roi = self.latest_depth_map[ymin:ymax, xmin:xmax]
