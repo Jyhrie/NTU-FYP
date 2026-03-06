@@ -155,14 +155,13 @@ class YOLOv8TRTNode:
 
                                 #Sending Data
                                 ros_time_str = "{}.{:09d}".format(msg.header.stamp.secs, msg.header.stamp.nsecs)
-                                msg = String()
                                 detection_data = {
                                     "bbox": [left, top, bw_box, bh_box],
                                     "conf": round(float(conf), 3),
                                     "ros_time": ros_time_str
                                 }
                                 json_payload = json.dumps(detection_data)
-                                self.data_pub.publish(json_payload)
+                                self.pub.publish(json_payload)
 
 
                             cv2.rectangle(display_img, (left, top), (left + bw_box, top + bh_box), color, 2)
