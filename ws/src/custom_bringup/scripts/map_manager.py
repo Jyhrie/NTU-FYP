@@ -276,8 +276,8 @@ class PathingNode:
             goal_cell = (safe_gx, safe_gy)
 
             rospy.loginfo("Planning path to safe spot near object: grid({}, {})".format(safe_gx, safe_gy))
-
-            self.publish_marker(safe_gx, safe_gy)
+            
+            self.publish_marker(safe_gx, safe_gy, color="green")
             
             path, success = a_star_exploration(
                 self.map.data, self.global_costmap, start_cell, goal_cell
@@ -391,50 +391,45 @@ class PathingNode:
         y_min = max(0, cy - radius)
         y_max = min(map_h - 1, cy + radius)
 
-        # Build coordinate grids for the bounding box
-        gx = np.arange(x_min, x_max + 1)
-        gy = np.arange(y_min, y_max + 1)
-        GX, GY = np.meshgrid(gx, gy)  # shape: (rows, cols)
+        # Row = Y axis, Col = X axis — use indexing='ij' to keep axes unambiguous,
+        # then GY[r,c] is the true map-Y and GX[r,c] is the true map-X.
+        rows = np.arange(y_min, y_max + 1)   # Y indices  (row axis)
+        cols = np.arange(x_min, x_max + 1)   # X indices  (col axis)
+        GY, GX = np.meshgrid(rows, cols, indexing='ij')  # both shape (n_rows, n_cols)
 
-        dist_sq = (GX - cx) ** 2 + (GY - cy) ** 2
-        inner_sq = inner_radius**2
-        outer_sq = radius**2
+        dist_sq  = (GX - cx) ** 2 + (GY - cy) ** 2
+        inner_sq = inner_radius ** 2
+        outer_sq = radius ** 2
 
         # Ring mask: within outer circle, outside inner circle
         ring_mask = (dist_sq <= outer_sq) & (dist_sq >= inner_sq)
 
-        costs = self.global_costmap[y_min : y_max + 1, x_min : x_max + 1]
+        # Slice costmap the same way: rows=Y, cols=X
+        costs = self.global_costmap[y_min:y_max + 1, x_min:x_max + 1]
 
         # Exclude unknown (-1) and lethal (>=100) cells
         valid_mask = ring_mask & (costs >= 0) & (costs < 100)
 
         if not np.any(valid_mask):
-            rospy.logwarn(
-                "get_lowest_cost_in_ring: no valid cells in ring (r={}, t={}).".format(
-                    radius, thickness
-                )
-            )
+            rospy.logwarn("get_lowest_cost_in_ring: no valid cells in ring (r={}, t={}).".format(radius, thickness))
             return []
 
         valid_costs = costs[valid_mask]
-        valid_GX = GX[valid_mask]
-        valid_GY = GY[valid_mask]
+        valid_GX    = GX[valid_mask]
+        valid_GY    = GY[valid_mask]
 
-        # Partial sort only need the n_best lowest
+        # Partial sort — only need the n_best lowest
         k = min(n_best, len(valid_costs))
         idx = np.argpartition(valid_costs, k - 1)[:k]
-        idx_sorted = idx[np.argsort(valid_costs[idx])]  # sort that small slice
+        idx_sorted = idx[np.argsort(valid_costs[idx])]
 
         results = [
             (int(valid_costs[i]), int(valid_GX[i]), int(valid_GY[i]))
             for i in idx_sorted
         ]
 
-        rospy.logdebug(
-            "Ring sample (cx={}, cy={}, r={}, t={}): {}".format(
-                cx, cy, radius, thickness, results
-            )
-        )
+        rospy.logdebug("Ring sample (cx={}, cy={}, r={}, t={}): {}".format(
+            cx, cy, radius, thickness, results))
         return results
 
     def _get_shortest_path(self, paths):
