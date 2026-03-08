@@ -75,7 +75,7 @@ class PurePursuitController:
                 if command == "follow_path":
                     print("Controller Transitioning To Pursuit")
                     self.state = MovementState.PURSUIT
-                    self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))
+                    # self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))
 
             # if header == 'interrupt':
             #     self.stop_robot()
