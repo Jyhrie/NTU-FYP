@@ -21,7 +21,6 @@ TRUNCATION_SIZE = 7
 
 
 class PathingNode:
-
     def __init__(self):
         rospy.init_node("pathing_node")
 
@@ -47,6 +46,8 @@ class PathingNode:
         rospy.Subscriber("/controller/global", String, self.controller_cb)
         rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
         rospy.Subscriber("/map/costmap_global", OccupancyGrid, self.global_costmap_cb)
+
+        self.marker_pub = rospy.Publisher('/detected_object_marker', Marker, queue_size=10)
 
         # --- Publishers ---
         self.reply_pub = rospy.Publisher("/robot/reply", String, queue_size=1)
@@ -275,6 +276,7 @@ class PathingNode:
             goal_cell = (safe_gx, safe_gy)
 
             rospy.loginfo("Planning path to safe spot near object: grid({}, {})".format(safe_gx, safe_gy))
+            self.publish_marker(goal_cell, color="blue")
             
             path, success = a_star_exploration(
                 self.map.data, self.global_costmap, start_cell, goal_cell
@@ -292,6 +294,31 @@ class PathingNode:
     # -------------------------------------------------------------------------
     # Shared Helpers
     # -------------------------------------------------------------------------
+
+    def publish_marker(self, x, y, marker_id=0, color="green"):
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "localization_debug"
+        marker.id = marker_id
+        marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
+        
+        marker.pose.position.x = x
+        marker.pose.position.y = y
+        marker.pose.position.z = 0.05 
+        
+        marker.scale.x = 0.1
+        marker.scale.y = 0.1
+        marker.scale.z = 0.1
+        
+        marker.color.a = 1.0
+        if color == "green": # Target
+            marker.color.g = 1.0
+        elif color == "blue": # Robot Position
+            marker.color.b = 1.0
+            
+        self.marker_pub.publish(marker)
 
     def _maps_ready(self):
         if self.map is None or self.global_costmap is None:
