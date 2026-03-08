@@ -406,7 +406,7 @@ class Controller:
                     "header": "movement",
                     "command": "follow_path"
                 })
-                self.global_request(msg)
+                self.global_request.publish(msg)
                 self.global_path.publish(self.received_path)
                 self.sub_state = SubStates.MOVING
 
