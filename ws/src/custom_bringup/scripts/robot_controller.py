@@ -43,6 +43,7 @@ class SubStates(Enum):
     REQUESTING_HOME_PATH = 14
     COMPLETE = 15
     CONFIRMING_ITEM = 16
+    WAITING_PATH_RESPONSE_TO_OBJECT = 17
 
 class NavStates(Enum):
     NULL = 0
@@ -349,11 +350,7 @@ class Controller:
                 return
             else:
                 self.sub_state = SubStates.DEPTH_READING_AVAILABLE
-            
-
-            #do a rolling latch here.                           
-
-            
+                                    
         # if self.sub_state == SubStates.DEPTH_READING_UNAVAILABLE:
         #     msg = String()
         #     msg.data = json.dumps({
@@ -384,6 +381,7 @@ class Controller:
                 return
 
             obj_x, obj_y = self.target_object_transform
+
             #wipe detected distance for next detection.
             self.detected_distance = None
             
@@ -397,8 +395,12 @@ class Controller:
                 "y": obj_y
             })
             self.global_request.publish(msg)
-            #then request the waypoint navigator to get a path to that waypoint.
-            #
+
+            self.sub_state = SubStates.WAITING_PATH_RESPONSE_TO_OBJECT
+
+        if self.sub_state == SubStates.WAITING_PATH_RESPONSE_TO_OBJECT:
+            pass
+
 
         #TODO: add a moving to waypoint state here. robot will move to waypoint, and face the object +- 0.5deg.
 
