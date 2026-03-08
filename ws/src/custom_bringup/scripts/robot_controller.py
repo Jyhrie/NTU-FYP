@@ -94,6 +94,8 @@ class Controller:
         self.object_box = None
 
         self.cached_pickup_distance = None
+
+        self.detected_distance = None
         self.target_object_transform = None
         
         self.request_sent = False
