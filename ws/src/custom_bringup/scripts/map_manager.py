@@ -17,7 +17,7 @@ import tf
 
 from dependencies.frontier_detector import FrontierDetector
 from dependencies.astar_planner import a_star_exploration
-from dependencies.costmap import calc_cost_map
+from dependencies.costmap_wall import calc_cost_map
 
 TRUNCATION_SIZE = 7
 
