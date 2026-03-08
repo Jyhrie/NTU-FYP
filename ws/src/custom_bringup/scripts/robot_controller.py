@@ -345,7 +345,8 @@ class Controller:
 
             if self.detected_distance < -1:
                 return
-            
+            else:
+                self.sub_state = SubStates.DEPTH_READING_AVAILABLE
             
 
             #do a rolling latch here.                           
