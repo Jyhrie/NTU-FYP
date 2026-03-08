@@ -52,7 +52,7 @@ class PathingNode:
         # --- Publishers ---
         self.reply_pub = rospy.Publisher("/robot/reply", String, queue_size=1)
         self.path_pub = rospy.Publisher("/robot/path_reply", Path, queue_size=1)
-        self.marker_pub = rospy.Publisher("/detected_frontiers", Marker, queue_size=10)
+        # self.marker_pub = rospy.Publisher("/detected_frontiers", Marker, queue_size=10)
 
         rospy.loginfo("Pathing Node Initialized and Ready.")
 
