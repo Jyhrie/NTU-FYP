@@ -278,8 +278,8 @@ class PathingNode:
             rospy.loginfo("Planning path to safe spot near object: grid({}, {})".format(safe_gx, safe_gy))
             
             wx, wy = self.grid_to_world(safe_gx, safe_gy)
-            self.publish_marker(obj_x, obj_y, marker_id=2, color="green")
-            self.publish_marker(rx, ry, marker_id=1, color="blue")
+            self.publish_marker(obj_x, obj_y, marker_id=2, color="blue")
+            self.publish_marker(rx, ry, marker_id=1, color="red")
             self.publish_marker(wx, wy)
             
             path, success = a_star_exploration(
@@ -322,6 +322,8 @@ class PathingNode:
             marker.color.g = 1.0
         elif color == "blue": # Robot Position
             marker.color.b = 1.0
+        elif color == "red":
+            marker.color.r = 1.0
             
         self.marker_pub.publish(marker)
 
@@ -425,7 +427,7 @@ class PathingNode:
         # argpartition with negative index selects the k largest values.
         k          = min(n_best, len(valid_costs))
         idx        = np.argpartition(valid_costs, -k)[-k:]
-        idx_sorted = idx[np.argsort(valid_costs[idx])[::-1]]  # descending
+        idx_sorted = idx[np.argsort(valid_costs[idx])]  # descending
 
         return [(int(valid_costs[i]), int(valid_GX[i]), int(valid_GY[i])) for i in idx_sorted]
 
