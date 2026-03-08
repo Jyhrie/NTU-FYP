@@ -20,3 +20,18 @@ def compare_bbox_centroid(bbox1, bbox2, radius=12):
     distance = math.sqrt((c2_x - c1_x)**2 + (c2_y - c1_y)**2)
     
     return distance <= radius
+
+def wrap_angle(angle_rad):
+    return math.atan2(math.sin(angle_rad), math.cos(angle_rad))
+
+def project_local_to_world(robot_pose, rel_angle_deg, distance):
+    rx, ry, ryaw = robot_pose
+    
+    # 1. Total bearing: Robot's orientation + sensor's relative offset
+    total_bearing_rad = wrap_angle(ryaw + math.radians(rel_angle_deg))
+    
+    # 2. Project out from the robot's current (x, y)
+    world_x = rx + (distance * math.cos(total_bearing_rad))
+    world_y = ry + (distance * math.sin(total_bearing_rad))
+    
+    return (world_x, world_y)

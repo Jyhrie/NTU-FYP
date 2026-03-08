@@ -71,7 +71,7 @@ class Controller:
         self.fontier_node_sub = rospy.Subscriber("/frontier_node_reply", String, self.frontier_node_cb)
         self.frontier_node_path_sub = rospy.Subscriber("/frontier_node_path", Path, self.frontier_node_path_cb)
         self.navigation_node_sub = rospy.Subscriber("/navigation_node_reply", String, self.navigation_node_cb)
-        #self.pc_node_sub = rospy.Subscriber("/pc_node_reply", String, self.pc_node_cb)
+        self.depth_node_sub = rospy.Subscriber("/robot/depth", String, self.depth_cb)
         self.movement_controller_sub = rospy.Subscriber("/movement_controller_message", String, self.movement_controller_cb)
         self.reply_sub = rospy.Subscriber("/robot/reply", String, self.global_reply_cb) 
         self.path_sub = rospy.Subscriber("/robot/path_reply", Path, self.path_reply_cb)
@@ -94,6 +94,7 @@ class Controller:
         self.object_box = None
 
         self.cached_pickup_distance = None
+        self.target_object_transform = None
         
         self.request_sent = False
         self.request_timeout = 30
@@ -138,40 +139,16 @@ class Controller:
     def navigation_node_cb(self, msg):
         if msg.data == "COMPLETE":
             self.sub_state = SubStates.COMPLETE
-
-    # def pc_node_cb(self, msg):
-    #     data = json.loads(msg.data)
-
-    #     # 3. Unpack the specific fields from your log
-    #     timestamp = float(data.get('timestamp'))
-    #     target_label = data.get('target')        # e.g., "object_name" or "can"
-    #     angle_to_target = -float(data.get('angle'))     # e.g., 23.85
-    #     confidence = data.get('conf')            # e.g., 0.913
-        
-    #     width = data.get('w')                    # e.g., 59.6
-    #     height = data.get('h')                   # e.g., 125.1
-
-    #     # 4. Use the data (Example: Print and set target)
-    #     #print("Robot received target time:", timestamp, " at", angle_to_target, "degrees")
-
-    #     dist_m = self.calculate_distance(width)
-    #     #print("Distance = ", dist_m)
-
-    #     get_x, get_y = self.get_relative_pickup_target(timestamp, angle_to_target, dist_m) # Assuming a fixed distance of 1.0m for now
-
-    #     #self.global_request.publish(msg)
     
-    #     #load data in
-    #     if self.state != States.FETCHING:
-    #         self.interrupt() # Stop current action immediately
-    #         self.pickup_target = (get_x, get_y)
-    #         self.last_pickup_target_time = timestamp
-    #         self.transition(States.FETCHING, SubStates.READY)
-    #     else:
-    #         self.last_pickup_target_time = timestamp
-    #         self.pickup_target_angle_relative_to_forward = angle_to_target
-    #         self.object_box = (width, height)
-        
+    def depth_cb(self, msg): #mayhaps consolidate all these under 1 topic to prevent clutter.
+        data = json.loads(msg.data)
+        if data['header'] == "depth_reading":
+            distance = data['dist_m']
+            if distance == -1:
+                pass
+            else:
+                self.detected_distance = distance
+
     # ====== UTILS (Original methods) ====== #
     def get_robot_pose(self):
         try:
@@ -181,60 +158,6 @@ class Controller:
             (_, _, yaw) = tf.transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
             return x, y, yaw
         except: return None
-
-    def calculate_distance(self, pixel_width):
-        # Constants for Starbucks Can Diameter + Astra Pro @ 640px
-        FOCAL_LENGTH = 572.5  # Constant for 60 deg HFOV at 640px resolution
-        REAL_WIDTH = 0.065    # ~6.5 cm (diameter of the can) in meters
-        
-        if pixel_width <= 0:
-            return 0.0
-            
-        # Formula: distance = (FocalLength * RealWidth) / PixelWidth
-        distance = (FOCAL_LENGTH * REAL_WIDTH) / pixel_width
-        return distance
-
-    def get_relative_pickup_target(self, timestamp, angle, distance):
-            angle_rad = math.radians(angle)
-            
-            # Setup the points for the target
-            local_pt = PointStamped()
-            try:
-                if isinstance(timestamp, (str, unicode, float, int)):
-                    local_pt.header.stamp = rospy.Time.from_sec(float(timestamp))
-                else:
-                    local_pt.header.stamp = timestamp
-            except:
-                local_pt.header.stamp = rospy.Time.now()
-
-            # --- NEW: Get Robot's Global Position at that time ---
-            try:
-                # Transform the center of the robot (0,0,0) at the timestamp to the map
-                robot_origin = PointStamped()
-                robot_origin.header.stamp = local_pt.header.stamp
-                robot_origin.header.frame_id = "base_link"
-                robot_pos = self.tf_buffer.transform(robot_origin, "map", timeout=rospy.Duration(1.0))
-                
-                # Publish Blue Marker for Robot Position
-                self.publish_marker(robot_pos.point.x, robot_pos.point.y, marker_id=1, color="blue")
-            except Exception as e:
-                rospy.logwarn("Could not find robot past position: %s", e)
-
-            # --- Existing Target Logic ---
-            local_pt.header.frame_id = "camera_link" 
-            local_pt.point.x = distance * math.cos(angle_rad)
-            local_pt.point.y = distance * math.sin(angle_rad)
-            
-            try:
-                map_pt = self.tf_buffer.transform(local_pt, "map", timeout=rospy.Duration(1.0))
-                
-                # Publish Green Marker for Target Can
-                self.publish_marker(map_pt.point.x, map_pt.point.y, marker_id=0, color="green")
-                
-                return (map_pt.point.x, map_pt.point.y)
-            except Exception as e:
-                rospy.logwarn("TF Transform failed: %s", str(e))
-                return (None, None)
 
     def publish_marker(self, x, y, marker_id=0, color="green"):
             marker = Marker()
@@ -323,7 +246,12 @@ class Controller:
             # Logic for requesting and receiving paths/commands
             elif self.sub_state == SubStates.REQUESTING:
                 if not self.request_sent:
-                    self.global_request.publish("request_frontier")
+                    msg = String()
+                    msg.data = json.dumps({
+                        "header": "pathing",
+                        "command": "frontier",
+                    })
+                    self.global_request.publish(msg)
                     self.request_sent = True
                     self.start_time = rospy.get_time()
 
@@ -350,6 +278,12 @@ class Controller:
             elif self.sub_state == SubStates.MOVING:
                 # Execute the active task
                 if self.goal_path:
+                    msg = String()
+                    # msg.data = json.dumps({
+                    #     "header": "movement",
+                    #     "command": "follow_path",
+                    # })
+                    # self.global_request.publish(msg)
                     self.global_request.publish("navigate")
                     self.global_exploration_path.publish(self.goal_path)
                 elif self.rotate_target_msg:
@@ -410,7 +344,9 @@ class Controller:
             })
             self.global_request.publish(msg)
 
+            #do a rolling latch here.                           
 
+            
         if self.sub_state == SubStates.DEPTH_READING_UNAVAILABLE:
             msg = String()
             msg.data = json.dumps({
@@ -423,9 +359,24 @@ class Controller:
             })
             self.global_request.publish(msg)
 
+            #TODO: potentially need to back up then request for depth reading again.
+
         if self.sub_state == SubStates.DEPTH_READING_AVAILABLE:
             msg = String()
-            #TODO: use helper function from another node to get map, and find the lowest cost point in a radius.
+        
+            obj_angle_deg = self.last_cv_detection.get('angle', 0.0) 
+            angle = math.radians(obj_angle_deg)
+            dist = self.detected_distance
+            pose = self.get_robot_pose()
+            #so now we have all the information required to get the object's position in the world
+
+            #ok we know the definite position here, update it in the map.
+            self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
+            
+            #TODO: now given the map, determine a safe spot (Lowest Cost) to position within the radius of target_object_transform (use waypoint navigator and rename the node to something else).
+            #then request the waypoint navigator to get a path to that waypoint.
+            #
+
             msg.data = json.dumps({ 
                 "header": "waypoint_node",
                 "command": "nav_to_point",
@@ -434,176 +385,45 @@ class Controller:
             })
             self.global_request.publish(msg)
 
+        #TODO: add a moving to waypoint state here. robot will move to waypoint, and face the object +- 0.5deg.
 
         if self.sub_state == SubStates.APPROACH_ITEM:
+
+            x, y, _ = self.get_robot_pose()
+            obj_x, obj_y = self.target_object_transform
+            #then we convert the distance between the robot's current transform and the target_object_transform,
+            pickup_distance = abs(math.hypot(x-obj_x, y-obj_y)) - 0.35
+
+            if pickup_distance < 0.015: #1.5cm
+                msg = String()
+                msg.data = json.dumps({
+                    "header": "movement_controller",
+                    "command": "stop_movement",
+                })
+                self.global_request.publish(msg)
+                #TODO: perform the state transition, then return.
+                return
+            
             msg = String()
             msg.data = json.dumps({
                 "header": "movement_controller",
                 "command": "approach_item",
-                "distance": self.cached_pickup_distance - 0.35, # Stop 35 cm away from the target to prepare for pickup
+                "distance": pickup_distance, # Stop 35 cm away from the target to prepare for pickup
             })
+            #NOTE: potentially just pass in the coords of the object and let the movement controller handle it due to lower latency, but state transitions might be abit more annoying and i cba rn.
             self.global_request.publish(msg)
 
         if self.sub_state == SubStates.PICKING_UP:
+            #object should be perfectly positioned in front of the robot now, so just perform standard FK based grab command
             msg = String()
             msg.data = json.dumps({
                 "header": "arm",
                 "command": "grab"
             })
             self.global_request.publish(msg)
+
+        #TIME TO HUI JIA LIAO
         
-        #reverse then go home
-
-            
-
-        #tell the robot to stop until we confirm the pickup target
-
-        #if we get a depth reading right smack in the middle of the pickup target, we can move on to approaching the target
-        
-        #if we dont get a depth reading, we need to reverse/approach slightly to try to get a depth reading, then we can move on to approaching the target
-        #(use waypoint_node to determine position, then tell robot to turn to face object, then offset +- 15deg.)
-
-        #then we rotate to face the target, using center mass of the depth blob as a reference point to align with
-
-        #once we are close enough, we can attempt the pickup sequence
-
-        #then call for return to home
-
-        #then we can loop back to idle or mapping or whatever we want after that
-
-
-    #     if self.sub_state == SubStates.READY:
-    #         if self.pickup_target:
-    #             self.sub_state = SubStates.REQUESTING
-    #         else:
-    #             self.transition(States.IDLE)
-
-    # def manage_fetching(self):
-    #         # --- 1. READY: Initial Entry ---
-    #         if self.sub_state == SubStates.READY:
-    #             if self.pickup_target:
-    #                 self.sub_state = SubStates.REQUESTING
-    #             else:
-    #                 self.transition(States.IDLE)
-
-    #         # --- 2. REQUEST PATH TO ITEM ---
-    #         elif self.sub_state == SubStates.REQUESTING:
-    #             if not self.request_sent:
-    #                 msg = String()
-    #                 msg.data = json.dumps({
-    #                     "command": "request_waypoint", 
-    #                     "x": self.pickup_target[0], 
-    #                     "y": self.pickup_target[1],
-    #                 })
-    #                 self.global_request.publish(msg)
-    #                 self.request_sent = True
-
-    #             if self.received_path: # Once path_reply_cb gets the path
-    #                 # 1. Create a new Path message container
-    #                 path_msg = Path()
-    #                 path_msg.header = self.received_path.header
-    #                 path_msg.header.stamp = rospy.Time.now()
-
-    #                 # 2. Slice the list of poses from the received path
-    #                 # Check length first to avoid empty paths
-    #                 if len(self.received_path.poses) > 10:
-    #                     path_msg.poses = self.received_path.poses[:-10]
-    #                 else:
-    #                     self.sub_state = SubStates.ALIGNING
-
-    #                 # 3. Store the reformed message
-    #                 self.goal_path = path_msg
-    #                 self.request_sent = False
-    #                 print("path received")
-    #                 self.sub_state = SubStates.MOVING_TO_ITEM
-    #         # --- 3. MOVE TO ITEM ---
-
-    #         elif self.sub_state == SubStates.MOVING_TO_ITEM:
-    #             if self.goal_path:
-    #                 nav_msg = {
-    #                 "header": "navigate",
-    #                 "end_face_pt_x": self.pickup_target[0],
-    #                 "end_face_pt_y": self.pickup_target[1]
-    #                 }
-    #                 self.global_request.publish(json.dumps(nav_msg))
-    #                 self.global_exploration_path.publish(self.goal_path)
-                    
-    #         # --- 4. ALIGN WITH ITEM ---
-    #         elif self.sub_state == SubStates.ALIGNING:
-    #             align_msg = {
-    #                 "header": "align_with_item",
-    #                 "data": {
-    #                     "timestamp": self.last_pickup_target_time,
-    #                     "relative_angle": self.pickup_target_angle_relative_to_forward
-    #                 }
-    #             }
-    #             self.global_request.publish(json.dumps(align_msg))
-
-    #         elif self.sub_state == SubStates.APPROACHING:
-    #             approach_msg = {
-    #                 "header": "approach",
-    #                 "data": {
-    #                     "timestamp": self.last_pickup_target_time,
-    #                     "cached_distance": self.cached_pickup_distance - 0.35,
-    #                     "relative_angle": self.pickup_target_angle_relative_to_forward,
-    #                     "max_distance": self.calculate_distance(self.object_box[0]),
-    #                     "linear_speed": 0.07
-    #                 }
-    #             }
-    #             self.global_request.publish(json.dumps(approach_msg))
-
-    #             #perform a check to see if we are close enough to the target to attempt pickup
-    #             TARGET_W = 100
-                
-    #             if self.object_box and self.object_box[0] >= TARGET_W:
-    #                 print("Close enough to attempt pickup!")
-    #                 self.sub_state = SubStates.PICKING_UP
-    #                 msg = {
-    #                     "header": "stop_movement",
-    #                 }
-    #                 self.global_request.publish(json.dumps(msg))
-                
-    #         # --- 5. PICK UP (With Failure Handling) ---
-    #         elif self.sub_state == SubStates.PICKING_UP:
-    #             pickup_msg = {
-    #                 "header": "arm",
-    #                 "command": 'grab'
-    #             }
-    #             self.global_request.publish(json.dumps(pickup_msg))
-    #             rospy.sleep(5)
-    #             # After waiting for the arm sequence, we check if the pickup was successful
-    #             self.sub_state = SubStates.REQUESTING_HOME_PATH
-
-    #         # --- 6. REVERSE (Retry Loop) ---
-    #         # elif self.sub_state == SubStates.REVERSING:
-    #         #     if self.movement_complete:
-    #         #         self.movement_complete = False
-    #         #         # Loop back to alignment to try again
-    #         #         self.sub_state = SubStates.ALIGNING
-    #         #     else:
-    #         #         self.global_request.publish("reverse_slightly")
-
-    #         # --- 7. REQUEST PATH TO ORIGIN ---
-    #         elif self.sub_state == SubStates.REQUESTING_HOME_PATH:
-    #             if not self.request_sent:
-    #                 msg = {
-    #                     "header":"waypoint_node",
-    #                     "command":"request_home"
-    #                 }
-    #                 self.global_request.publish(json.dumps(msg))
-    #                 self.request_sent = True
-    #                 self.received_path = None # Clear any old paths just in case
-
-    #             if self.received_path:
-    #                 self.goal_path = self.received_path
-    #                 self.request_sent = False
-    #                 self.sub_state = SubStates.RETURNING
-
-    #         # --- 8. MOVE TO ORIGIN ---
-    #         elif self.sub_state == SubStates.RETURNING:
-    #             self.global_request.publish("navigate")
-    #             self.global_exploration_path.publish(self.goal_path)
-    #             #will get kicked out of this state by the movement controller callback once navigation is complete
 
 if __name__ == "__main__":
     ctrl = Controller()

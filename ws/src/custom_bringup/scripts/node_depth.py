@@ -11,7 +11,7 @@ class BlobCentroidEstimator:
         rospy.init_node('blob_distance_node', anonymous=True)
         self.image_sub = rospy.Subscriber("camera/depth/image_raw", Image, self.depth_callback)
         self.request_sub = rospy.Subscriber("controller/global", String, self.request_callback)
-        self.depth_pub = rospy.Publisher("/robot/depth_reading", String, queue_size=10)
+        self.depth_pub = rospy.Publisher("/robot/depth", String, queue_size=10)
 
         self.latest_depth_msg = None
         self.bbox = None
@@ -47,7 +47,12 @@ class BlobCentroidEstimator:
 
         valid_depths = roi[roi > 0]
         if valid_depths.size == 0:
-            rospy.logwarn("No valid depth data in bounding box.")
+            result = String()
+            result.data = json.dumps({
+                "header": "depth_reading",
+                "dist_m": -1
+            })
+            self.depth_pub.publish(result)
             return
 
         approx_dist = np.median(valid_depths)
@@ -68,7 +73,7 @@ class BlobCentroidEstimator:
                 "header": "depth_reading",
                 "x": round(global_x, 1),
                 "y": round(global_y, 1),
-                "distance_m": round(exact_dist_mm / 1000.0, 3)
+                "dist_m": round(exact_dist_mm / 1000.0, 3)
             })
             self.depth_pub.publish(result)
             print("Depth Published!")
