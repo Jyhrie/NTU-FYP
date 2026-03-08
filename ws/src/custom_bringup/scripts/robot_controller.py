@@ -126,8 +126,8 @@ class Controller:
         if msg.data == "done":
             print("Movement Controller reports: Movement Complete")
             if self.state == States.FETCHING:
-                if self.sub_state == SubStates.MOVING_TO_ITEM:
-                    self.sub_state = SubStates.ALIGNING
+                if self.sub_state == SubStates.MOVING:
+                    self.sub_state = SubStates.COMPLETE
                 elif self.sub_state == SubStates.APPROACHING:
                     self.sub_state = SubStates.PICKING_UP
                 elif self.sub_state == SubStates.ALIGNING:
