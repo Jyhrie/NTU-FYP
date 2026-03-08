@@ -343,7 +343,9 @@ class Controller:
             })
             self.global_request.publish(msg)
 
-            if self.detected_distance < -1:
+            if self.detected_distance is None:
+                return
+            elif self.detected_distance < -1:
                 return
             else:
                 self.sub_state = SubStates.DEPTH_READING_AVAILABLE
