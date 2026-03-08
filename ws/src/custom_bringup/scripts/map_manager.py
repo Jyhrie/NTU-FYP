@@ -75,11 +75,6 @@ class PathingNode:
             (msg.info.height, msg.info.width)
         )
 
-    # -------------------------------------------------------------------------
-    # Controller Callback — unified message format:
-    #   { "pathing": "<type>", "command": "<cmd>" }
-    # -------------------------------------------------------------------------
-
     def controller_cb(self, msg):
         try:
             data = json.loads(msg.data)
