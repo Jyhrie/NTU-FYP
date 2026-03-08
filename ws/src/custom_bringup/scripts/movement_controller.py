@@ -441,6 +441,7 @@ class PurePursuitController:
     def state_pursuit(self):
         pose = self.get_robot_pose()
         if pose is None or self.path is None:
+            print("no pose or path")
             return
 
         x, y, yaw = pose
