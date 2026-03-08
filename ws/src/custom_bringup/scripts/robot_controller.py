@@ -144,10 +144,7 @@ class Controller:
         data = json.loads(msg.data)
         if data['header'] == "depth_reading":
             distance = data['dist_m']
-            if distance == -1:
-                pass
-            else:
-                self.detected_distance = distance
+            self.detected_distance = distance
 
     # ====== UTILS (Original methods) ====== #
     def get_robot_pose(self):
@@ -344,22 +341,27 @@ class Controller:
             })
             self.global_request.publish(msg)
 
+            if self.detected_distance < -1:
+                return
+            
+            
+
             #do a rolling latch here.                           
 
             
-        if self.sub_state == SubStates.DEPTH_READING_UNAVAILABLE:
-            msg = String()
-            msg.data = json.dumps({
-                "header": "depth_node",
-                "command": "check_depth",
-                "x_start": self.last_cv_detection['x_start'],
-                "x_len": self.last_cv_detection['x_len'],
-                "y_start": self.last_cv_detection['y_start'],
-                "y_len": self.last_cv_detection['y_len'],
-            })
-            self.global_request.publish(msg)
+        # if self.sub_state == SubStates.DEPTH_READING_UNAVAILABLE:
+        #     msg = String()
+        #     msg.data = json.dumps({
+        #         "header": "depth_node",
+        #         "command": "check_depth",
+        #         "x_start": self.last_cv_detection['x_start'],
+        #         "x_len": self.last_cv_detection['x_len'],
+        #         "y_start": self.last_cv_detection['y_start'],
+        #         "y_len": self.last_cv_detection['y_len'],
+        #     })
+        #     self.global_request.publish(msg)
 
-            #TODO: potentially need to back up then request for depth reading again.
+        #     #TODO: potentially need to back up then request for depth reading again.
 
         if self.sub_state == SubStates.DEPTH_READING_AVAILABLE:
             msg = String()
@@ -373,7 +375,10 @@ class Controller:
             #ok we know the definite position here, update it in the map.
             self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
             
-            #TODO: now given the map, determine a safe spot (Lowest Cost) to position within the radius of target_object_transform (use waypoint navigator and rename the node to something else).
+            #wipe detected distance for next detection.
+            self.detected_distance = None
+            
+            #now given the map, determine a safe spot (Lowest Cost) to position within the radius of target_object_transform (use waypoint navigator and rename the node to something else).
             msg.data = json.dumps({
                 "header": "pathing",
                 "command": "object",
