@@ -16,6 +16,7 @@ import tf
 
 from dependencies.frontier_detector import FrontierDetector
 from dependencies.astar_planner import a_star_exploration
+from dependencies.costmap import calc_cost_map
 
 TRUNCATION_SIZE = 7
 
@@ -45,10 +46,10 @@ class PathingNode:
         # --- Subscribers ---
         rospy.Subscriber("/controller/global", String, self.controller_cb)
         rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
-        rospy.Subscriber("/map/costmap_global", OccupancyGrid, self.global_costmap_cb)
+        #rospy.Subscriber("/map/costmap_global", OccupancyGrid, self.global_costmap_cb)
 
         self.marker_pub = rospy.Publisher('/detected_object_marker', Marker, queue_size=10)
-
+        self.costmap_pub = rospy.Publisher('/costmap/global', OccupancyGrid, queue_size=1)
         # --- Publishers ---
         self.reply_pub = rospy.Publisher("/robot/reply", String, queue_size=1)
         self.path_pub = rospy.Publisher("/robot/path_reply", Path, queue_size=1)
@@ -70,11 +71,29 @@ class PathingNode:
                 origin_x=msg.info.origin.position.x,
                 origin_y=msg.info.origin.position.y,
             )
+        self.global_costmap = calc_cost_map(msg)
+        # 2. Prepare the OccupancyGrid message
+        out_msg = OccupancyGrid()
+        out_msg.header = msg.header
+        out_msg.header.stamp = rospy.Time.now()
+        out_msg.info = msg.info
 
-    def global_costmap_cb(self, msg):
-        self.global_costmap = np.array(msg.data).reshape(
-            (msg.info.height, msg.info.width)
-        )
+        # 3. Normalize to 0-100 range for Rviz visualization
+        max_val = np.max(self.global_costmap)
+        if max_val > 0:
+            # High cost (walls) = 100, Low cost (centers) = 0
+            normalized = (self.global_costmap.astype(float) / max_val * 100)
+            # OccupancyGrid data must be a list of int8
+            out_msg.data = normalized.flatten().astype(np.int8).tolist()
+        else:
+            out_msg.data = self.global_costmap.flatten().astype(np.int8).tolist()
+
+        self.costmap_pub.publish(out_msg)
+
+    # def global_costmap_cb(self, msg):
+    #     self.global_costmap = np.array(msg.data).reshape(
+    #         (msg.info.height, msg.info.width)
+    #     )
 
     def controller_cb(self, msg):
         try:

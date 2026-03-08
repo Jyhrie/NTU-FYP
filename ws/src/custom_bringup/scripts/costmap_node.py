@@ -109,23 +109,6 @@ class CostmapNode:
         final_cost_map[final_cost_map > 0] -= 1
         return final_cost_map
 
-    def nudge_robot(self):
-        rospy.loginfo("Nudging robot to wake up SLAM...")
-        pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
-        rospy.sleep(1) # Wait for publisher to connect
-        
-        move_msg = Twist()
-        move_msg.linear.x = 0.1  # Move at 0.1 m/s
-        
-        # Publish for 0.5 seconds to move ~5cm
-        start_time = rospy.Time.now()
-        while (rospy.Time.now() - start_time) < rospy.Duration(0.5):
-            pub.publish(move_msg)
-            rospy.sleep(0.1)
-            
-        # Stop
-        pub.publish(Twist())
-
 if __name__ == "__main__":
     try:
         node = CostmapNode()

@@ -18,6 +18,7 @@ from nav_msgs.msg import OccupancyGrid
 from dependencies.frontier_detector import FrontierDetector
 from dependencies.astar_planner import a_star_exploration
 from dependencies.astar import PathPlanner
+from dependencies.costmap import calc_cost_map
 
 TRUNCATION_SIZE = 7
 
@@ -38,7 +39,7 @@ class FrontierNode:
         )
 
         self.map_topic = rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
-        self.costmap_global = rospy.Subscriber("/map/costmap_global", OccupancyGrid, self.global_costmap_cb)
+        #self.costmap_global = rospy.Subscriber("/map/costmap_global", OccupancyGrid, self.global_costmap_cb)
 
         self.marker_pub = rospy.Publisher("/detected_frontiers", Marker, queue_size=10)
 
@@ -87,6 +88,7 @@ class FrontierNode:
                 origin_x=msg.info.origin.position.x,
                 origin_y=msg.info.origin.position.y,
             )
+        self.costmap = calc_cost_map(msg)
         pass
 
     def global_costmap_cb(self, msg):
