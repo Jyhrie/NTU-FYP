@@ -368,7 +368,7 @@ class Controller:
         if self.sub_state == SubStates.DEPTH_READING_AVAILABLE:
             msg = String()
         
-            obj_angle_deg = self.last_cv_detection.get('angle', 0.0) 
+            obj_angle_deg = -(self.last_cv_detection.get('angle', 0.0))
             angle = math.radians(obj_angle_deg)
             dist = self.detected_distance
             pose = self.get_robot_pose()
