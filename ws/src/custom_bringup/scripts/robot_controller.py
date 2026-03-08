@@ -127,11 +127,14 @@ class Controller:
             print("Movement Controller reports: Movement Complete")
             if self.state == States.FETCHING:
                 if self.sub_state == SubStates.MOVING:
-                    self.sub_state = SubStates.COMPLETE
-                elif self.sub_state == SubStates.APPROACHING:
+                    self.sub_state = SubStates.APPROACH_ITEM
+
+                elif self.sub_state == SubStates.APPROACH_ITEM:
                     self.sub_state = SubStates.PICKING_UP
+
                 elif self.sub_state == SubStates.ALIGNING:
                     self.cached_pickup_distance = self.calculate_distance(self.object_box[0]) if self.object_box else None
+
                     self.sub_state = SubStates.APPROACHING
                 elif self.sub_state == SubStates.RETURNING:
                     print("Back at origin. Fetch complete.")
@@ -408,7 +411,11 @@ class Controller:
             msg = String()
             msg.data = json.dumps({
                 "header": "movement",
-                "command": "follow_path"
+                "command": "follow_path",
+                "extra": "face_coordinates",
+                "x": obj_x,
+                "y": obj_y
+                
             })
             self.global_request.publish(msg)
             self.global_path.publish(self.received_path)

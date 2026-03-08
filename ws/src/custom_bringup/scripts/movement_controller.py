@@ -58,6 +58,8 @@ class PurePursuitController:
         self.end_facing_target = None
         self.align_target_reached_time = None
         self.approach_start_pose = None
+
+        self.face_coordinates = None
         
         self.rate = rospy.Rate(15)
 
@@ -70,11 +72,17 @@ class PurePursuitController:
             # header = data.get(header)
             header = data.get("header")
             command = data.get("command")
+            extra = data.get("extra")
+
+            self.face_coordinates = None
 
             if header == "movement":
                 if command == "follow_path":
-                    print("Controller Transitioning To Pursuit")
                     self.state = MovementState.PURSUIT
+                    if extra == "face_coordinates":
+                        self.face_coordinates = (data.get("x"), data.get("y"))
+
+                    
                     # self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))
 
             # if header == 'interrupt':
@@ -449,9 +457,8 @@ class PurePursuitController:
         if self.goal_reached(x, y, yaw):
             rospy.loginfo("[PP] Goal location reached!")
             # Check if we have a specific point to face
-            if self.end_facing_target and all(v is not None for v in self.end_facing_target):
-                tx, ty = self.end_facing_target
-                
+            if self.face_coordinates and all(v is not None for v in self.end_facing_target):
+                tx, ty = self.face_coordinates
                 # Calculate the angle to face the target point from current position
                 angle_to_target = math.atan2(ty - y, tx - x)
                 
@@ -529,8 +536,8 @@ class PurePursuitController:
         while not rospy.is_shutdown():
             if self.state == MovementState.PURSUIT:
                 self.state_pursuit()
-            # if self.state == MovementState.ROTATE:
-            #     self.get_rot()
+            if self.state == MovementState.ROTATE:
+                self.get_rot()
             #     pass
             # if self.state == MovementState.MOVE:
             #     self.get_pp()
