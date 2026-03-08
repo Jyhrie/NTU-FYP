@@ -30,24 +30,24 @@ class SubStates(Enum):
     REQUESTING = 1  # Waiting for external node data (paths/commands)
     MOVING = 2      # Actively navigating or rotating
     WAITING = 3     # Short pauses or timeouts
-
-    ITEM_CONFIRMED = 4  # Detected item, preparing to align
-    ROTATING_TO_UNOBSCURED_VIEW = 5
-    READING_DEPTH = 6
-    DEPTH_READING_UNAVAILABLE = 7
-    DEPTH_READING_AVAILABLE = 8
-    MOVING_TO_DEPTH_AVAILABLE = 9
-    APPROACH_ITEM = 10
-    PICKING_UP = 11
-    PICKED_UP = 12
-    REQUESTING_HOME_PATH = 13
-    COMPLETE = 14
-    CONFIRMING_ITEM = 15
+    PATH_RECEIVED = 4
+    ITEM_CONFIRMED = 5  # Detected item, preparing to align
+    ROTATING_TO_UNOBSCURED_VIEW = 6
+    READING_DEPTH = 7
+    DEPTH_READING_UNAVAILABLE = 8
+    DEPTH_READING_AVAILABLE = 9
+    MOVING_TO_DEPTH_AVAILABLE = 10
+    APPROACH_ITEM = 11
+    PICKING_UP = 12
+    PICKED_UP = 13
+    REQUESTING_HOME_PATH = 14
+    COMPLETE = 15
+    CONFIRMING_ITEM = 16
 
 class NavStates(Enum):
     NULL = 0
     MOVING = 1
-    COMPLETE = 2 # Simplified from your original set
+    COMPLETE = 2
 
 class Controller:
     def __init__(self):

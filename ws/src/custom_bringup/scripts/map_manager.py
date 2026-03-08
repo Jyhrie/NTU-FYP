@@ -93,9 +93,11 @@ class PathingNode:
             command = data.get("command", "")
 
             if command == "waypoint":
-                self._handle_waypoint(command, data)
+                self._handle_waypoint(data)
             elif command == "frontier":
-                self._handle_frontier(command)
+                self._handle_frontier()
+            elif command == "object":
+                self._handle_object(command, data)
             else:
                 rospy.logwarn("Pathing Node: Unknown command type '{}'".format(command))
 
@@ -103,24 +105,14 @@ class PathingNode:
     # Waypoint Handling
     # -------------------------------------------------------------------------
 
-    def _handle_waypoint(self, command, data):
+    def _handle_waypoint(self, data):
         if not self._maps_ready():
             return
 
-        if command == "request_home":
-            target_x, target_y = self.home_pose
-            rospy.loginfo("Navigating to Home: {}".format(self.home_pose))
-
-        elif command == "request_waypoint":
-            target_x = data.get("x")
-            target_y = data.get("y")
-            if target_x is None or target_y is None:
-                rospy.logerr("Waypoint command missing 'x' or 'y'.")
-                return
-            rospy.loginfo("Navigating to Waypoint: ({}, {})".format(target_x, target_y))
-
-        else:
-            rospy.logwarn("Unknown waypoint command: '{}'".format(command))
+        target_x = data.get("x")
+        target_y = data.get("y")
+        if target_x is None or target_y is None:
+            rospy.logerr("Waypoint command missing 'x' or 'y'.")
             return
 
         self._plan_and_publish_waypoint(target_x, target_y)
@@ -238,6 +230,70 @@ class PathingNode:
                 return
 
         rospy.logwarn("No valid frontier path found.")
+
+    # -------------------------------------------------------------------------
+    # Object Handling
+    # -------------------------------------------------------------------------
+
+    def _handle_object(self, data):
+            """
+            Calculates a path to the safest spot (lowest costmap value) 
+            in a ring around a detected object.
+            """
+            if not self._maps_ready():
+                return
+
+            # 1. Extract object coordinates from message
+            obj_x = data.get("x")
+            obj_y = data.get("y")
+            
+            if obj_x is None or obj_y is None:
+                rospy.logerr("Object command missing 'x' or 'y'.")
+                return
+
+            # 2. Find the safest spot near the object
+            # Convert world coordinates of object to grid cells
+            obj_cx, obj_cy = self.pose_to_cell(obj_x, obj_y)
+
+            # Define ring parameters (in cells)
+            # Assuming resolution is 0.05m, radius=10 is 0.5m away
+            sampling_radius = 18
+            sampling_thickness = 4
+
+            candidates = self.get_lowest_cost_in_ring(
+                obj_cx, obj_cy, radius=sampling_radius, thickness=sampling_thickness, n_best=1
+            )
+
+            if not candidates:
+                rospy.logwarn("Pathing Node: No safe spot found around object at ({}, {})".format(obj_x, obj_y))
+                return
+
+            # candidates[0] is (cost, gx, gy)
+            _, safe_gx, safe_gy = candidates[0]
+            
+            # 3. Plan path from robot to the safe spot
+            robot_pose = self.get_robot_pose()
+            if not robot_pose:
+                return
+            
+            rx, ry, _ = robot_pose
+            start_cell = self.pose_to_cell(rx, ry)
+            goal_cell = (safe_gx, safe_gy)
+
+            rospy.loginfo("Planning path to safe spot near object: grid({}, {})".format(safe_gx, safe_gy))
+            
+            path, success = a_star_exploration(
+                self.map.data, self.global_costmap, start_cell, goal_cell
+            )
+
+            # 4. Publish results
+            if success and path:
+                # Reusing your waypoint publishing logic
+                self._publish_path(path)
+                # Notify the controller that an 'object' path is ready
+                self.reply_pub.publish(json.dumps({"header": "object", "data": "path_ready"}))
+            else:
+                rospy.logerr("Pathing Node: Failed to find A* path to the safe spot.")
 
     # -------------------------------------------------------------------------
     # Shared Helpers
