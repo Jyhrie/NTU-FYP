@@ -377,16 +377,17 @@ class Controller:
 
             #ok we know the definite position here, update it in the map.
             self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
-            
+            obj_x, obj_y = self.target_object_transform
             #wipe detected distance for next detection.
             self.detected_distance = None
+            
             
             #now given the map, determine a safe spot (Lowest Cost) to position within the radius of target_object_transform (use waypoint navigator and rename the node to something else).
             msg.data = json.dumps({
                 "header": "pathing",
                 "command": "object",
-                "x": self.pickup_target[0],
-                "y": self.pickup_target[1]
+                "x": obj_x,
+                "y": obj_y
             })
             self.global_request.publish(msg)
             #then request the waypoint navigator to get a path to that waypoint.
