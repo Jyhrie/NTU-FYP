@@ -393,7 +393,7 @@ class PathingNode:
         valid_GX = GX[valid_mask]
         valid_GY = GY[valid_mask]
 
-        # Partial sort — only need the n_best lowest
+        # Partial sort only need the n_best lowest
         k = min(n_best, len(valid_costs))
         idx = np.argpartition(valid_costs, k - 1)[:k]
         idx_sorted = idx[np.argsort(valid_costs[idx])]  # sort that small slice
