@@ -377,6 +377,9 @@ class Controller:
 
             #ok we know the definite position here, update it in the map.
             self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
+            if self.target_object_transform is None:
+                return
+
             obj_x, obj_y = self.target_object_transform
             #wipe detected distance for next detection.
             self.detected_distance = None
