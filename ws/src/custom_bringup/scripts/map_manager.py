@@ -91,7 +91,7 @@ class PathingNode:
             elif command == "frontier":
                 self._handle_frontier()
             elif command == "object":
-                self._handle_object(command, data)
+                self._handle_object(data)
             else:
                 rospy.logwarn("Pathing Node: Unknown command type '{}'".format(command))
 
