@@ -535,6 +535,7 @@ class PurePursuitController:
     def run(self):
         rospy.loginfo("[PP] Pure Pursuit controller started")
         while not rospy.is_shutdown():
+            print(self.state.name)
             if self.state == MovementState.PURSUIT:
                 self.state_pursuit()
             if self.state == MovementState.ROTATE:
