@@ -404,22 +404,21 @@ class Controller:
 
         if self.sub_state == SubStates.WAITING_PATH_RESPONSE_TO_OBJECT:
             if self.received_path is not None:
+                obj_x, obj_y = self.target_object_transform
+                msg = String()
+                msg.data = json.dumps({
+                    "header": "movement",
+                    "command": "follow_path",
+                    "extra": "face_coordinates",
+                    "x": obj_x,
+                    "y": obj_y
+                })
+                self.global_request.publish(msg)
+                self.global_path.publish(self.received_path)
                 self.sub_state = SubStates.MOVING
 
         
         if self.sub_state == SubStates.MOVING:
-            obj_x, obj_y = self.target_object_transform
-            msg = String()
-            msg.data = json.dumps({
-                "header": "movement",
-                "command": "follow_path",
-                "extra": "face_coordinates",
-                "x": obj_x,
-                "y": obj_y
-                
-            })
-            self.global_request.publish(msg)
-            self.global_path.publish(self.received_path)
             pass
             
 

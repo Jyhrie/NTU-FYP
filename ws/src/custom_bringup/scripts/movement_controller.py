@@ -458,6 +458,7 @@ class PurePursuitController:
             rospy.loginfo("[PP] Goal location reached!")
             # Check if we have a specific point to face
             if self.face_coordinates and all(v is not None for v in self.end_facing_target):
+                print("face_coordinates exist, rotating")
                 tx, ty = self.face_coordinates
                 # Calculate the angle to face the target point from current position
                 angle_to_target = math.atan2(ty - y, tx - x)
