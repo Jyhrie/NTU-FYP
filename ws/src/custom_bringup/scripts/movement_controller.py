@@ -73,6 +73,7 @@ class PurePursuitController:
 
             if header == "movement":
                 if command == "follow_path":
+                    print("Controller Transitioning To Pursuit")
                     self.state = MovementState.PURSUIT
                     self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))
 
