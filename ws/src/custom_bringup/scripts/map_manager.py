@@ -371,65 +371,60 @@ class PathingNode:
 
     def get_lowest_cost_in_ring(self, cx, cy, radius, thickness, n_best=1):
         """
-        Return the n_best lowest-cost free cells in an annular ring around (cx, cy).
-
-        Args:
-            cx, cy    : Centre in grid cells.
-            radius    : Outer radius in cells.
-            thickness : Ring width in cells (inner radius = radius - thickness).
-            n_best    : Number of candidates to return (default 1).
-
-        Returns:
-            List of (cost, gx, gy) sorted ascending by cost.
+        Finds the safest cells in a ring by cross-referencing the static Map 
+        and the Global Costmap.
         """
         if self.global_costmap is None or self.map is None:
-            rospy.logwarn("get_lowest_cost_in_ring: costmap not ready.")
+            rospy.logwarn("get_lowest_cost_in_ring: Map or Costmap not ready.")
             return []
 
+        # 1. Setup search window
         map_h, map_w = self.global_costmap.shape
-        inner_radius = max(0, radius - thickness)
+        x_min, x_max = max(0, cx - radius), min(map_w - 1, cx + radius)
+        y_min, y_max = max(0, cy - radius), min(map_h - 1, cy + radius)
 
-        x_min = max(0,         cx - radius)
-        x_max = min(map_w - 1, cx + radius)
-        y_min = max(0,         cy - radius)
-        y_max = min(map_h - 1, cy + radius)
+        # 2. Create local grids
+        xs = np.arange(x_min, x_max + 1)
+        ys = np.arange(y_min, y_max + 1)
+        GX, GY = np.meshgrid(xs, ys)
 
-        rows = np.arange(y_min, y_max + 1)
-        cols = np.arange(x_min, x_max + 1)
-        GY, GX = np.meshgrid(rows, cols, indexing='ij')  # GY=row axis, GX=col axis
+        # 3. Calculate Ring Mask
+        dist_sq = (GX - cx)**2 + (GY - cy)**2
+        inner_r_sq = max(0, radius - thickness)**2
+        outer_r_sq = radius**2
+        ring_mask = (dist_sq >= inner_r_sq) & (dist_sq <= outer_r_sq)
 
-        dist_sq   = (GX - cx) ** 2 + (GY - cy) ** 2
-        ring_mask = (dist_sq <= radius ** 2) & (dist_sq >= inner_radius ** 2)
+        # 4. Extract Costmap and Map data for the window
+        # Note: OccupancyGrid data is a flat list, we need to reshape it or index it correctly
+        window_costs = self.global_costmap[y_min:y_max+1, x_min:x_max+1]
+        
+        # Reshape map data to match costmap dimensions for indexing
+        map_array = np.array(self.map.data).reshape((self.map.info.height, self.map.info.width))
+        window_map = map_array[y_min:y_max+1, x_min:x_max+1]
 
-        costs = self.global_costmap[y_min:y_max + 1, x_min:x_max + 1]
+        # 5. Logical Intersection (The Multi-Layer Check)
+        # Map Check: 0 = Free, 100 = Occupied, -1 = Unknown
+        map_free = (window_map == 0) 
+        
+        # Costmap Check: Avoid Lethal (100) and Inscribed (99)
+        cost_safe = (window_costs >= 0) & (window_costs < 99)
 
-        # Cross-check against the raw occupancy map.
-        # The costmap marks out-of-bounds/unmapped areas as 0 (free), so without
-        # this check those cells would appear as valid low-cost candidates.
-        occ = np.array(self.map.data, dtype=np.int8).reshape(
-            (self.map.info.height, self.map.info.width)
-        )[y_min:y_max + 1, x_min:x_max + 1]
+        # Combine all constraints
+        final_mask = ring_mask & map_free & cost_safe
 
-        # Valid cell must pass both filters:
-        #   costmap  : not unknown (-1), not lethal (>=100)
-        #   occ map  : not unknown (-1), not occupied (>=50)
-        valid_mask = ring_mask & (costs >= 0) & (costs < 100) & (occ >= 0) & (occ < 50)
-
-        if not np.any(valid_mask):
-            rospy.logwarn("get_lowest_cost_in_ring: no valid cells (r={}, t={}).".format(radius, thickness))
+        if not np.any(final_mask):
+            rospy.logwarn("No cells found that are FREE in the map AND safe in the costmap.")
             return []
 
-        valid_costs = costs[valid_mask]
-        valid_GX    = GX[valid_mask]
-        valid_GY    = GY[valid_mask]
+        # 6. Extract and Sort
+        valid_x = GX[final_mask]
+        valid_y = GY[final_mask]
+        valid_costs = window_costs[final_mask]
 
-        # Highest cost = furthest from walls = safest approach point.
-        # argpartition with negative index selects the k largest values.
-        k          = min(n_best, len(valid_costs))
-        idx        = np.argpartition(valid_costs, -k)[-k:]
-        idx_sorted = idx[np.argsort(valid_costs[idx])]  # descending
-
-        return [(int(valid_costs[i]), int(valid_GX[i]), int(valid_GY[i])) for i in idx_sorted]
+        # Return as (x, y, cost) sorted by cost
+        results = sorted(zip(valid_x, valid_y, valid_costs), key=lambda x: x[2])
+        
+        return results[:n_best]
 
     def _get_shortest_path(self, paths):
         best_path, min_length = None, float("inf")
