@@ -71,6 +71,7 @@ class PathingNode:
                 origin_x=msg.info.origin.position.x,
                 origin_y=msg.info.origin.position.y,
             )
+
         self.global_costmap = calc_cost_map(msg)
         # 2. Prepare the OccupancyGrid message
         out_msg = OccupancyGrid()
@@ -271,7 +272,7 @@ class PathingNode:
 
             # Define ring parameters (in cells)
             # Assuming resolution is 0.05m, radius=10 is 0.5m away
-            sampling_radius = 18
+            sampling_radius = 10
             sampling_thickness = 4
 
             candidates = self.get_lowest_cost_in_ring(
