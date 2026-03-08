@@ -292,16 +292,26 @@ class PathingNode:
             obj_cx, obj_cy = self.pose_to_cell(obj_x, obj_y)
 
             
-            idx = obj_cy * local_map.info.width + obj_cx
-            # Set the pixel to 100 (Occupied)
-            if 0 <= idx < len(local_map.data):
-                # We convert to list because OccupancyGrid.data is usually a tuple/immutable
-                temp_data = list(local_map.data)
-                temp_data[idx] = 100 
-                local_map.data = temp_data
-                rospy.loginfo("Injected object obstacle at grid: {}, {}".format(obj_cx, obj_cy))
+            local_map = copy.deepcopy(self.map)
+            temp_data = list(local_map.data)
+            width = local_map.info.width
+            height = local_map.info.height
+
+            # 2. Inject a 3x3 block instead of 1 pixel
+            # This ensures the dilation logic has a stronger starting point
+            thickness = 1 # radius of 1 = 3x3 block
+            for dx in range(-thickness, thickness + 1):
+                for dy in range(-thickness, thickness + 1):
+                    nx, ny = obj_cx + dx, obj_cy + dy
+                    if 0 <= nx < width and 0 <= ny < height:
+                        idx = ny * width + nx
+                        temp_data[idx] = 100 
             
-            self.global_costmap = calc_cost_map(self.map)
+            local_map.data = temp_data
+            rospy.loginfo("Injected 3x3 obstacle at: {}, {}".format(obj_cx, obj_cy))
+
+            # 3. Calculate costmap with the thicker obstacle
+            self.global_costmap = calc_cost_map(local_map)
 
             # 2. Prepare the OccupancyGrid message
             out_msg = OccupancyGrid()
