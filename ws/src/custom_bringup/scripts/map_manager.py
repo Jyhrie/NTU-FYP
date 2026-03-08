@@ -84,9 +84,8 @@ class PathingNode:
 
         header = data.get("header", "")
 
-        if header != "pathing":
+        if header == "pathing":
             command = data.get("command", "")
-
             if command == "waypoint":
                 self._handle_waypoint(data)
             elif command == "frontier":
