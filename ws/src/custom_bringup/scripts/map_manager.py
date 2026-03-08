@@ -278,6 +278,8 @@ class PathingNode:
             rospy.loginfo("Planning path to safe spot near object: grid({}, {})".format(safe_gx, safe_gy))
             
             wx, wy = self.grid_to_world(safe_gx, safe_gy)
+            self.publish_marker(obj_x, obj_y, marker_id=2, color="green")
+            self.publish_marker(rx, ry, marker_id=1, color="blue")
             self.publish_marker(wx, wy)
             
             path, success = a_star_exploration(

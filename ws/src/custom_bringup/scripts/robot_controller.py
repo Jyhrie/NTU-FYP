@@ -385,7 +385,7 @@ class Controller:
             #wipe detected distance for next detection.
             self.detected_distance = None
 
-            self.publish_marker(pose[0], pose[1], marker_id=2, color="red")
+            # self.publish_marker(pose[0], pose[1], marker_id=2, color="red")
             #self.publish_marker(obj_x, obj_y, marker_id=1, color="blue")
 
             #now given the map, determine a safe spot (Lowest Cost) to position within the radius of target_object_transform (use waypoint navigator and rename the node to something else).
