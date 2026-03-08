@@ -3,6 +3,6 @@
   </node>
 
   <include file="$(find custom_bringup)/launch/custom_bringup.launch" />
-  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+  <!-- <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" /> -->
   <include file="$(find custom_bringup)/launch/gmapping.launch" />
 </launch>
