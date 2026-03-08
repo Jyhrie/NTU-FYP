@@ -374,16 +374,15 @@ class Controller:
             self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
             
             #TODO: now given the map, determine a safe spot (Lowest Cost) to position within the radius of target_object_transform (use waypoint navigator and rename the node to something else).
-            #then request the waypoint navigator to get a path to that waypoint.
-            #
-
-            msg.data = json.dumps({ 
-                "header": "waypoint_node",
-                "command": "nav_to_point",
+            msg.data = json.dumps({
+                "header": "pathing",
+                "command": "object",
                 "x": self.pickup_target[0],
                 "y": self.pickup_target[1]
             })
             self.global_request.publish(msg)
+            #then request the waypoint navigator to get a path to that waypoint.
+            #
 
         #TODO: add a moving to waypoint state here. robot will move to waypoint, and face the object +- 0.5deg.
 
