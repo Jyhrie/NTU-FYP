@@ -408,6 +408,7 @@ class Controller:
 
         
         if self.sub_state == SubStates.MOVING:
+            obj_x, obj_y = self.target_object_transform
             msg = String()
             msg.data = json.dumps({
                 "header": "movement",
