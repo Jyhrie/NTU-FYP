@@ -401,8 +401,8 @@ class PathingNode:
         self.marker_pub.publish(marker)
 
     def _maps_ready(self):
-        if self.map is None or self.global_costmap is None:
-            rospy.logwarn("Pathing Node: Waiting for map/costmap...")
+        if self.map is None:
+            rospy.logwarn("Pathing Node: Waiting for map")
             return False
         return True
 
