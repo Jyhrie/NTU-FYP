@@ -59,7 +59,7 @@ class Controller:
         self.state_pub   = rospy.Publisher("/controller_state", String, queue_size=1)
         self.global_request = rospy.Publisher("/controller/global", String, queue_size=1)
         self.rotate_pose_pub = rospy.Publisher("/rotate_target_pose", PoseStamped, queue_size=1)
-        self.global_exploration_path = rospy.Publisher("/global_exploration_path", Path, queue_size=1)
+        self.global_path = rospy.Publisher("/global_path", Path, queue_size=1)
 
         #TO REMOVE
         self.marker_pub = rospy.Publisher('/detected_object_marker', Marker, queue_size=10)
@@ -279,13 +279,13 @@ class Controller:
                 # Execute the active task
                 if self.goal_path:
                     msg = String()
-                    # msg.data = json.dumps({
-                    #     "header": "movement",
-                    #     "command": "follow_path",
-                    # })
-                    # self.global_request.publish(msg)
+                    msg.data = json.dumps({
+                        "header": "movement",
+                        "command": "follow_path",
+                    })
+                    self.global_request.publish(msg)
                     self.global_request.publish("navigate")
-                    self.global_exploration_path.publish(self.goal_path)
+                    self.global_path.publish(self.goal_path)
                 elif self.rotate_target_msg:
                     self.global_request.publish("rotate")
                     self.rotate_pose_pub.publish(self.rotate_target_msg)
@@ -385,8 +385,8 @@ class Controller:
             #wipe detected distance for next detection.
             self.detected_distance = None
 
-            # self.publish_marker(pose[0], pose[1], marker_id=2, color="red")
-            #self.publish_marker(obj_x, obj_y, marker_id=1, color="blue")
+            #in case somewhere got a leftover path.
+            self.received_path = None
 
             #now given the map, determine a safe spot (Lowest Cost) to position within the radius of target_object_transform (use waypoint navigator and rename the node to something else).
             msg.data = json.dumps({
@@ -400,10 +400,20 @@ class Controller:
             self.sub_state = SubStates.WAITING_PATH_RESPONSE_TO_OBJECT
 
         if self.sub_state == SubStates.WAITING_PATH_RESPONSE_TO_OBJECT:
+            if self.received_path is not None:
+                msg = String()
+                msg.data = json.dumps({
+                    "header": "movement",
+                    "command": "follow_path"
+                })
+                self.global_request(msg)
+                self.global_path.publish(self.received_path)
+                self.sub_state = SubStates.MOVING
+
+        
+        if self.sub_state == SubStates.MOVING:
             pass
-
-
-        #TODO: add a moving to waypoint state here. robot will move to waypoint, and face the object +- 0.5deg.
+            
 
         if self.sub_state == SubStates.APPROACH_ITEM:
 

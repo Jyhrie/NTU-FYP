@@ -20,6 +20,7 @@ class MovementState(Enum):
     COMPLETE = 3 
     ALIGN = 4
     APPROACH = 5
+    PURSUIT = 6
 
 class PurePursuitController:
 
@@ -66,43 +67,51 @@ class PurePursuitController:
         try:
             # Try to parse as JSON first
             data = json.loads(msg.data)
+            # header = data.get(header)
             header = data.get("header")
-            if header == 'interrupt':
-                self.stop_robot()
-                self.state = MovementState.IDLE
+            command = data.get("command")
 
-            elif header == 'rotate':
-                self.state = MovementState.ROTATE
-                if self.cached_transform is not None:
-                    self.latched_target_yaw = self.cached_transform
-                relative_angle = data.get("data", {}).get("relative_angle", 0.0)
+            if header == "movement":
+                if command == "follow_path":
+                    self.state = MovementState.PURSUIT
+                    self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))
+
+            # if header == 'interrupt':
+            #     self.stop_robot()
+            #     self.state = MovementState.IDLE
+
+            # elif header == 'rotate':
+            #     self.state = MovementState.ROTATE
+            #     if self.cached_transform is not None:
+            #         self.latched_target_yaw = self.cached_transform
+            #     relative_angle = data.get("data", {}).get("relative_angle", 0.0)
             
-            elif header == "approach":
-                self.state = MovementState.APPROACH
-                self.linear_distance = data.get("data", {}).get("linear_dist", 0.07)
+            # elif header == "approach":
+            #     self.state = MovementState.APPROACH
+            #     self.linear_distance = data.get("data", {}).get("linear_dist", 0.07)
 
-            elif header == 'align_with_item':
-                self.state = MovementState.ALIGN
-                # Store the relative error in degrees
-                self.align_error = data.get("data", {}).get("relative_angle", 0.0)
-                rospy.loginfo("[PP] Aligning with error: %.2f", self.align_error)
+            # elif header == 'align_with_item':
+            #     self.state = MovementState.ALIGN
+            #     # Store the relative error in degrees
+            #     self.align_error = data.get("data", {}).get("relative_angle", 0.0)
+            #     rospy.loginfo("[PP] Aligning with error: %.2f", self.align_error)
 
-            elif header == 'navigate':
-                self.state = MovementState.MOVE
-                self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))
+            # elif header == 'navigate':
+            #     self.state = MovementState.MOVE
+            #     self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))
                 
-            elif header == 'stop_movement':
-                self.state = MovementState.IDLE
-                self.stop_robot()
-            elif header == 'approach':
-                    self.state = MovementState.APPROACH
-                    self.align_error = data.get("data", {}).get("relative_angle", 0.0)
-                    self.approach_speed = data.get("data", {}).get("linear_speed", 0.07)
+            # elif header == 'stop_movement':
+            #     self.state = MovementState.IDLE
+            #     self.stop_robot()
+            # elif header == 'approach':
+            #         self.state = MovementState.APPROACH
+            #         self.align_error = data.get("data", {}).get("relative_angle", 0.0)
+            #         self.approach_speed = data.get("data", {}).get("linear_speed", 0.07)
                     
-                    # Extract the distance budget
-                    self.max_dist = data.get("data", {}).get("cached_distance", 0.0)
-                    # Reset tracking so get_approach knows to grab a new starting pose
-                    rospy.loginfo("[PP] Approaching blindly for %.2f meters", self.max_dist)
+            #         # Extract the distance budget
+            #         self.max_dist = data.get("data", {}).get("cached_distance", 0.0)
+            #         # Reset tracking so get_approach knows to grab a new starting pose
+            #         rospy.loginfo("[PP] Approaching blindly for %.2f meters", self.max_dist)
                 
         except ValueError:
             # If not JSON, handle as a plain string
@@ -429,6 +438,81 @@ class PurePursuitController:
         self.cmd_pub.publish(cmd)
 
     def state_pursuit(self):
+        pose = self.get_robot_pose()
+        if pose is None or self.path is None:
+            return
+
+        x, y, yaw = pose
+
+        if self.goal_reached(x, y, yaw):
+            rospy.loginfo("[PP] Goal location reached!")
+            # Check if we have a specific point to face
+            if self.end_facing_target and all(v is not None for v in self.end_facing_target):
+                tx, ty = self.end_facing_target
+                
+                # Calculate the angle to face the target point from current position
+                angle_to_target = math.atan2(ty - y, tx - x)
+                
+                # Create a temporary PoseStamped to reuse get_rot() logic
+                target_pose = PoseStamped()
+                target_pose.header.frame_id = "map"
+                q = tf.transformations.quaternion_from_euler(0, 0, angle_to_target)
+                target_pose.pose.orientation.x = q[0]
+                target_pose.pose.orientation.y = q[1]
+                target_pose.pose.orientation.z = q[2]
+                target_pose.pose.orientation.w = q[3]
+                
+                self.rotate_target_pose = target_pose
+                self.state = MovementState.ROTATE
+                rospy.loginfo("[PP] Transitioning to ROTATE to face target point")
+            else:
+                self.stop_robot()
+                self.node_topic.publish("done")
+                self.state = MovementState.COMPLETE
+            return
+
+        # 2. Find lookahead point
+        nearest = self.find_nearest_index(x, y)
+        lx, ly = self.find_lookahead_point(x, y, nearest)
+        
+        # 3. Transform lookahead point to robot frame
+        dx = lx - x
+        dy = ly - y
+        
+        # Rotation matrix to local coordinates
+        x_r = math.cos(-yaw) * dx - math.sin(-yaw) * dy
+        y_r = math.sin(-yaw) * dx + math.cos(-yaw) * dy
+
+        # 4. Heading Check (The Precaution)
+        # Calculate angle to the lookahead point relative to robot heading
+        lookahead_angle = math.atan2(y_r, x_r)
+
+        # If lookahead is more than 90 degrees away (opposite direction)
+        if abs(lookahead_angle) > (math.pi / 2.0):
+            rospy.loginfo_throttle(1, "[PP] Lookahead point behind robot - Rotating in place")
+            cmd = Twist()
+            cmd.linear.x = 0.0
+            # Simple proportional control to face the point
+            cmd.angular.z = max(min(lookahead_angle * 1.5, 0.5), -0.5)
+            self.cmd_pub.publish(cmd)
+            return
+
+        # 5. Normal Pure Pursuit (if lookahead is in front)
+        # Curvature formula: kappa = 2*y / L^2
+        L_sq = x_r**2 + y_r**2
+        if L_sq < 0.01: L_sq = 0.01 # Prevent division by zero
+        
+        kappa = (2.0 * y_r) / L_sq
+
+        # Calculate velocities
+        cmd = Twist()
+        cmd.angular.z = max(min(kappa * self.linear_vel, 0.4), -0.4)
+        
+        # Scale linear velocity: slow down if turning sharply
+        scaling = 1.0 - min(abs(cmd.angular.z) / 0.4, 0.8)
+        cmd.linear.x = self.linear_vel * scaling
+        
+        self.cmd_pub.publish(cmd)
         pass
 
     def state_rotate(self):
@@ -441,15 +525,17 @@ class PurePursuitController:
     def run(self):
         rospy.loginfo("[PP] Pure Pursuit controller started")
         while not rospy.is_shutdown():
-            if self.state == MovementState.ROTATE:
-                self.get_rot()
-                pass
-            if self.state == MovementState.MOVE:
-                self.get_pp()
-            elif self.state == MovementState.ALIGN:
-                self.get_align() # Process the alignment P-loop
-            elif self.state == MovementState.APPROACH:
-                self.get_approach() # Process the approach logic
+            if self.state == MovementState.PURSUIT:
+                self.state_pursuit()
+            # if self.state == MovementState.ROTATE:
+            #     self.get_rot()
+            #     pass
+            # if self.state == MovementState.MOVE:
+            #     self.get_pp()
+            # elif self.state == MovementState.ALIGN:
+            #     self.get_align() # Process the alignment P-loop
+            # elif self.state == MovementState.APPROACH:
+            #     self.get_approach() # Process the approach logic
 
             self.rate.sleep()
 
