@@ -277,7 +277,7 @@ class PathingNode:
 
             rospy.loginfo("Planning path to safe spot near object: grid({}, {})".format(safe_gx, safe_gy))
             
-            self.publish_marker(safe_gx, safe_gy, color="green")
+            self.publish_marker(safe_gx, safe_gy)
             
             path, success = a_star_exploration(
                 self.map.data, self.global_costmap, start_cell, goal_cell
@@ -297,6 +297,7 @@ class PathingNode:
     # -------------------------------------------------------------------------
 
     def publish_marker(self, x, y, marker_id=0, color="green"):
+        print("publishing marker")
         marker = Marker()
         marker.header.frame_id = "map"
         marker.header.stamp = rospy.Time.now()
