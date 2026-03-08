@@ -385,7 +385,7 @@ class Controller:
             #wipe detected distance for next detection.
             self.detected_distance = None
             
-            self.publish_marker(obj_x, obj_y)
+            #self.publish_marker(obj_x, obj_y)
 
             #now given the map, determine a safe spot (Lowest Cost) to position within the radius of target_object_transform (use waypoint navigator and rename the node to something else).
             msg.data = json.dumps({
