@@ -374,6 +374,7 @@ class Controller:
             dist = self.detected_distance
             pose = self.get_robot_pose()
             #so now we have all the information required to get the object's position in the world
+            print(angle, dist, pose)
 
             #ok we know the definite position here, update it in the map.
             self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
