@@ -369,18 +369,16 @@ class PathingNode:
 
     def get_lowest_cost_in_ring(self, cx, cy, radius, thickness, n_best=1):
         """
-        Samples the costmap in a ring around a centre cell (cx, cy) and
-        returns the lowest-cost reachable cell(s).
+        Return the n_best lowest-cost free cells in an annular ring around (cx, cy).
 
         Args:
-            cx, cy    : Centre in grid cells (can be world-derived via pose_to_cell).
-            radius    : Outer radius of the ring in cells.
-            thickness : Radial width of the ring in cells (inner radius = radius - thickness).
-            n_best    : Number of lowest-cost candidates to return (default 1).
+            cx, cy    : Centre in grid cells.
+            radius    : Outer radius in cells.
+            thickness : Ring width in cells (inner radius = radius - thickness).
+            n_best    : Number of candidates to return (default 1).
 
         Returns:
-            List of (cost, gx, gy) tuples sorted ascending by cost, length <= n_best.
-            Returns an empty list if the costmap isn't ready or no valid cells exist.
+            List of (cost, gx, gy) sorted ascending by cost.
         """
         if self.global_costmap is None or self.map is None:
             rospy.logwarn("get_lowest_cost_in_ring: costmap not ready.")
@@ -389,52 +387,47 @@ class PathingNode:
         map_h, map_w = self.global_costmap.shape
         inner_radius = max(0, radius - thickness)
 
-        # Bounding box to avoid iterating the whole map
-        x_min = max(0, cx - radius)
+        x_min = max(0,         cx - radius)
         x_max = min(map_w - 1, cx + radius)
-        y_min = max(0, cy - radius)
+        y_min = max(0,         cy - radius)
         y_max = min(map_h - 1, cy + radius)
 
-        # Row = Y axis, Col = X axis use indexing='ij' to keep axes unambiguous,
-        # then GY[r,c] is the true map-Y and GX[r,c] is the true map-X.
-        rows = np.arange(y_min, y_max + 1)   # Y indices  (row axis)
-        cols = np.arange(x_min, x_max + 1)   # X indices  (col axis)
-        GY, GX = np.meshgrid(rows, cols, indexing='ij')  # both shape (n_rows, n_cols)
+        rows = np.arange(y_min, y_max + 1)
+        cols = np.arange(x_min, x_max + 1)
+        GY, GX = np.meshgrid(rows, cols, indexing='ij')  # GY=row axis, GX=col axis
 
-        dist_sq  = (GX - cx) ** 2 + (GY - cy) ** 2
-        inner_sq = inner_radius ** 2
-        outer_sq = radius ** 2
+        dist_sq   = (GX - cx) ** 2 + (GY - cy) ** 2
+        ring_mask = (dist_sq <= radius ** 2) & (dist_sq >= inner_radius ** 2)
 
-        # Ring mask: within outer circle, outside inner circle
-        ring_mask = (dist_sq <= outer_sq) & (dist_sq >= inner_sq)
-
-        # Slice costmap the same way: rows=Y, cols=X
         costs = self.global_costmap[y_min:y_max + 1, x_min:x_max + 1]
 
-        # Exclude unknown (-1) and lethal (>=100) cells
-        valid_mask = ring_mask & (costs >= 0) & (costs < 100)
+        # Cross-check against the raw occupancy map.
+        # The costmap marks out-of-bounds/unmapped areas as 0 (free), so without
+        # this check those cells would appear as valid low-cost candidates.
+        occ = np.array(self.map.data, dtype=np.int8).reshape(
+            (self.map.info.height, self.map.info.width)
+        )[y_min:y_max + 1, x_min:x_max + 1]
+
+        # Valid cell must pass both filters:
+        #   costmap  : not unknown (-1), not lethal (>=100)
+        #   occ map  : not unknown (-1), not occupied (>=50)
+        valid_mask = ring_mask & (costs >= 0) & (costs < 100) & (occ >= 0) & (occ < 50)
 
         if not np.any(valid_mask):
-            rospy.logwarn("get_lowest_cost_in_ring: no valid cells in ring (r={}, t={}).".format(radius, thickness))
+            rospy.logwarn("get_lowest_cost_in_ring: no valid cells (r={}, t={}).".format(radius, thickness))
             return []
 
         valid_costs = costs[valid_mask]
         valid_GX    = GX[valid_mask]
         valid_GY    = GY[valid_mask]
 
-        # Partial sort only need the n_best lowest
-        k = min(n_best, len(valid_costs))
-        idx = np.argpartition(valid_costs, k - 1)[:k]
-        idx_sorted = idx[np.argsort(valid_costs[idx])]
+        # Highest cost = furthest from walls = safest approach point.
+        # argpartition with negative index selects the k largest values.
+        k          = min(n_best, len(valid_costs))
+        idx        = np.argpartition(valid_costs, -k)[-k:]
+        idx_sorted = idx[np.argsort(valid_costs[idx])[::-1]]  # descending
 
-        results = [
-            (int(valid_costs[i]), int(valid_GX[i]), int(valid_GY[i]))
-            for i in idx_sorted
-        ]
-
-        rospy.logdebug("Ring sample (cx={}, cy={}, r={}, t={}): {}".format(
-            cx, cy, radius, thickness, results))
-        return results
+        return [(int(valid_costs[i]), int(valid_GX[i]), int(valid_GY[i])) for i in idx_sorted]
 
     def _get_shortest_path(self, paths):
         best_path, min_length = None, float("inf")
