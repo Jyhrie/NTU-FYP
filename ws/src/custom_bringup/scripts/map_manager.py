@@ -391,7 +391,7 @@ class PathingNode:
         y_min = max(0, cy - radius)
         y_max = min(map_h - 1, cy + radius)
 
-        # Row = Y axis, Col = X axis — use indexing='ij' to keep axes unambiguous,
+        # Row = Y axis, Col = X axis use indexing='ij' to keep axes unambiguous,
         # then GY[r,c] is the true map-Y and GX[r,c] is the true map-X.
         rows = np.arange(y_min, y_max + 1)   # Y indices  (row axis)
         cols = np.arange(x_min, x_max + 1)   # X indices  (col axis)
