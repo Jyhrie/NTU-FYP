@@ -264,6 +264,7 @@ class PathingNode:
                 return
 
             # candidates[0] is (cost, gx, gy)
+            print()
             _, safe_gx, safe_gy = candidates[0]
             
             # 3. Plan path from robot to the safe spot
@@ -422,7 +423,7 @@ class PathingNode:
         valid_costs = window_costs[final_mask]
 
         # Return as (x, y, cost) sorted by cost
-        results = sorted(zip(valid_x, valid_y, valid_costs), key=lambda x: x[2])
+        results = sorted(zip(valid_costs, valid_x, valid_y), key=lambda x: x[0])
         
         return results[:n_best]
 
