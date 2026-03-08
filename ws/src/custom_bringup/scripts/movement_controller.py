@@ -48,7 +48,7 @@ class PurePursuitController:
         
         rospy.Subscriber("/controller/global", String, self.controller_cb)
         rospy.Subscriber("/rotate_target_pose", PoseStamped, self.rotate_pose_cb)
-        rospy.Subscriber("/global_exploration_path", Path, self.path_cb)
+        rospy.Subscriber("/global_path", Path, self.path_cb)
 
         self.state = MovementState.IDLE
         self.rotate_target_pose = None
