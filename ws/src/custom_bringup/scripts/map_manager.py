@@ -5,6 +5,7 @@ import json
 import math
 import numpy as np
 from enum import Enum
+import copy
 
 from std_msgs.msg import String
 from nav_msgs.msg import Path, OccupancyGrid
@@ -72,24 +73,24 @@ class PathingNode:
                 origin_y=msg.info.origin.position.y,
             )
 
-        self.global_costmap = calc_cost_map(msg)
-        # 2. Prepare the OccupancyGrid message
-        out_msg = OccupancyGrid()
-        out_msg.header = msg.header
-        out_msg.header.stamp = rospy.Time.now()
-        out_msg.info = msg.info
+        # self.global_costmap = calc_cost_map(msg)
+        # # 2. Prepare the OccupancyGrid message
+        # out_msg = OccupancyGrid()
+        # out_msg.header = msg.header
+        # out_msg.header.stamp = rospy.Time.now()
+        # out_msg.info = msg.info
 
-        # 3. Normalize to 0-100 range for Rviz visualization
-        max_val = np.max(self.global_costmap)
-        if max_val > 0:
-            # High cost (walls) = 100, Low cost (centers) = 0
-            normalized = (self.global_costmap.astype(float) / max_val * 100)
-            # OccupancyGrid data must be a list of int8
-            out_msg.data = normalized.flatten().astype(np.int8).tolist()
-        else:
-            out_msg.data = self.global_costmap.flatten().astype(np.int8).tolist()
+        # # 3. Normalize to 0-100 range for Rviz visualization
+        # max_val = np.max(self.global_costmap)
+        # if max_val > 0:
+        #     # High cost (walls) = 100, Low cost (centers) = 0
+        #     normalized = (self.global_costmap.astype(float) / max_val * 100)
+        #     # OccupancyGrid data must be a list of int8
+        #     out_msg.data = normalized.flatten().astype(np.int8).tolist()
+        # else:
+        #     out_msg.data = self.global_costmap.flatten().astype(np.int8).tolist()
 
-        self.costmap_pub.publish(out_msg)
+        # self.costmap_pub.publish(out_msg)
 
     # def global_costmap_cb(self, msg):
     #     self.global_costmap = np.array(msg.data).reshape(
@@ -258,6 +259,25 @@ class PathingNode:
             if not self._maps_ready():
                 return
 
+            
+
+            # out_msg = OccupancyGrid()
+            # out_msg.header = msg.header
+            # out_msg.header.stamp = rospy.Time.now()
+            # out_msg.info = msg.info
+
+            # # 3. Normalize to 0-100 range for Rviz visualization
+            # max_val = np.max(self.global_costmap)
+            # if max_val > 0:
+            #     # High cost (walls) = 100, Low cost (centers) = 0
+            #     normalized = (self.global_costmap.astype(float) / max_val * 100)
+            #     # OccupancyGrid data must be a list of int8
+            #     out_msg.data = normalized.flatten().astype(np.int8).tolist()
+            # else:
+            #     out_msg.data = self.global_costmap.flatten().astype(np.int8).tolist()
+
+            # self.costmap_pub.publish(out_msg)
+
             # 1. Extract object coordinates from message
             obj_x = data.get("x")
             obj_y = data.get("y")
@@ -266,9 +286,41 @@ class PathingNode:
                 rospy.logerr("Object command missing 'x' or 'y'.")
                 return
 
-            # 2. Find the safest spot near the object
+            local_map = copy.deepcopy(self.map)
+
             # Convert world coordinates of object to grid cells
             obj_cx, obj_cy = self.pose_to_cell(obj_x, obj_y)
+
+            
+            idx = obj_cy * local_map.info.width + obj_cx
+            # Set the pixel to 100 (Occupied)
+            if 0 <= idx < len(local_map.data):
+                # We convert to list because OccupancyGrid.data is usually a tuple/immutable
+                temp_data = list(local_map.data)
+                temp_data[idx] = 100 
+                local_map.data = temp_data
+                rospy.loginfo("Injected object obstacle at grid: {}, {}".format(obj_cx, obj_cy))
+            
+            self.global_costmap = calc_cost_map(self.map)
+
+            # 2. Prepare the OccupancyGrid message
+            out_msg = OccupancyGrid()
+            out_msg.header = self.map.header
+            out_msg.header.stamp = rospy.Time.now()
+            out_msg.info = self.map.info
+
+            # 3. Normalize to 0-100 range for Rviz visualization
+            max_val = np.max(self.global_costmap)
+            if max_val > 0:
+                # High cost (walls) = 100, Low cost (centers) = 0
+                normalized = (self.global_costmap.astype(float) / max_val * 100)
+                # OccupancyGrid data must be a list of int8
+                out_msg.data = normalized.flatten().astype(np.int8).tolist()
+            else:
+                out_msg.data = self.global_costmap.flatten().astype(np.int8).tolist()
+
+            self.costmap_pub.publish(out_msg)
+
 
             # Define ring parameters (in cells)
             # Assuming resolution is 0.05m, radius=10 is 0.5m away
