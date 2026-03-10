@@ -432,7 +432,7 @@ class PurePursuitController:
 
         # 4. TERMINATION CHECK
         # Stop when the remaining distance to move is zero (or we overshot slightly)
-        if move_dist_remaining <= 0.01: # 1cm tolerance
+        if move_dist_remaining <= 0.01 and yaw_error < math.radians(2): # 1cm tolerance
             rospy.loginfo("[APPROACH] Stopping distance reached. Final Gap: %.2f", dist_to_target)
             self.stop_robot()
             self.approach_target = None
@@ -666,6 +666,8 @@ class PurePursuitController:
                 self.state_pursuit()
             if self.state == MovementState.ROTATE:
                 self.state_rotate()
+            elif self.state == MovementState.APPROACH:
+                self.state_approach() # Process the approach logic
             #     pass
             # if self.state == MovementState.MOVE:
             #     self.get_pp()
