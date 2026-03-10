@@ -59,6 +59,7 @@ class PurePursuitController:
         self.align_target_reached_time = None
         self.approach_start_pose = None
 
+        self.initial_rotation_yaw = None
         self.face_coordinates = None
         self.rotate_angular = None
         
