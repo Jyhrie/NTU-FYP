@@ -10,7 +10,7 @@ import math
 INPUT_W         = 640
 INPUT_H         = 640
 ASTRA_PRO_HFOV  = 58.4
-ANGLE_OFFSET = 
+ANGLE_OFFSET = 3
 class BlobCentroidEstimator:
     def __init__(self):
         rospy.init_node('blob_distance_node', anonymous=True)
