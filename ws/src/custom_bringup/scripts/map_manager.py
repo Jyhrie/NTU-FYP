@@ -252,6 +252,7 @@ class PathingNode:
         if paths:
             sel_path = self._get_shortest_path(paths)
             if sel_path and len(sel_path) > 3:
+                reply_msg = String()
                 rospy.loginfo("No complete path; sending best partial.")
                 reply_msg.data = json.dumps({
                     "header": "map",
@@ -261,7 +262,8 @@ class PathingNode:
                 self.reply_pub.publish(reply_msg)
                 self._publish_path(path)
                 return
-
+            
+        reply_msg = String()
         reply_msg.data = json.dumps({
             "header": "map",
             "command": "complete"
