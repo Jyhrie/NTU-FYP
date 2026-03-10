@@ -636,7 +636,7 @@ class PurePursuitController:
         
         # 2. DEFINE THE "SWEET SPOT" (Setpoint)
         # For a search and retrieve robot, you might want to stop 15cm away
-        desired_dist = 0.15 
+        desired_dist = self.stop_distance
         dist_error = current_dist - desired_dist
         
         # 3. HEADING CALCULATION
