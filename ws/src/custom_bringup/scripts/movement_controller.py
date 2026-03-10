@@ -12,6 +12,7 @@ from nav_msgs.msg import Path
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
+from sensor_msgs.msg import LaserScan # Add this import at the top
 
 class MovementState(Enum):
     IDLE = 0
@@ -46,6 +47,7 @@ class PurePursuitController:
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
         self.node_topic = rospy.Publisher("/movement_controller_message", String, queue_size=10)
         
+        self.scan_sub = rospy.Subscriber("/scan", LaserScan, self.scan_cb)
         rospy.Subscriber("/controller/global", String, self.controller_cb)
         rospy.Subscriber("/rotate_target_pose", PoseStamped, self.rotate_pose_cb)
         rospy.Subscriber("/global_path", Path, self.path_cb)
@@ -62,10 +64,48 @@ class PurePursuitController:
         self.initial_rotation_yaw = None
         self.face_coordinates = None
         self.rotate_angular = None
+
+        self.safety_threshold = 0.4  # Distance in meters to start nudging
         
         self.rate = rospy.Rate(15)
 
     # -------------------------------------------------
+
+    def scan_cb(self, msg):
+        # Assuming 0 is front, 90 is Left, 270 is Right
+        # Adjust indices based on your specific LiDAR's msg.angle_increment
+        num_readings = len(msg.ranges)
+        
+        # Define index for 90 degrees (Left) and 270 degrees (Right)
+        idx_90 = int(num_readings * 0.25)
+        idx_270 = int(num_readings * 0.75)
+        
+        # 40-degree windows (approx 20 degrees each side of the 90/270 axis)
+        window = int(num_readings * (20.0 / 360.0))
+        
+        left_ranges = msg.ranges[idx_90 - window : idx_90 + window]
+        right_ranges = msg.ranges[idx_270 - window : idx_270 + window]
+
+        def get_valid_min(sector):
+            valid = [r for r in sector if msg.range_min < r < msg.range_max and r > 0.05]
+            return min(valid) if valid else float('inf')
+
+        min_l = get_valid_min(left_ranges)
+        min_r = get_valid_min(right_ranges)
+
+        nudge_velocity = 0.0
+        gain = 0.4  # Strength of the nudge
+
+        # If too close to left wall -> nudge RIGHT (negative angular z)
+        if min_l < self.safety_threshold:
+            nudge_velocity -= (self.safety_threshold - min_l) * gain
+            
+        # If too close to right wall -> nudge LEFT (positive angular z)
+        if min_r < self.safety_threshold:
+            nudge_velocity += (self.safety_threshold - min_r) * gain
+
+        # Apply a small low-pass filter to prevent jittery steering
+        self.side_nudge = 0.5 * self.side_nudge + 0.5 * nudge_velocity
 
     def controller_cb(self, msg):
         try:
@@ -546,13 +586,16 @@ class PurePursuitController:
         
         kappa = (2.0 * y_r) / L_sq
 
-        # Calculate velocities
-        cmd = Twist()
-        cmd.angular.z = max(min(kappa * self.linear_vel, 0.4), -0.4)
+        base_angular = kappa * self.linear_vel
         
-        # Scale linear velocity: slow down if turning sharply
-        scaling = 1.0 - min(abs(cmd.angular.z) / 0.4, 0.8)
-        cmd.linear.x = self.linear_vel * scaling
+        cmd = Twist()
+        # Combine Pure Pursuit steering with the side-avoidance nudge
+        cmd.angular.z = base_angular + self.side_nudge
+        
+        # Optional: Slow down linear speed if we are nudging hard (safety)
+        nudge_intensity = abs(self.side_nudge)
+        speed_factor = max(0.4, 1.0 - nudge_intensity) 
+        cmd.linear.x = self.linear_vel * speed_factor
         
         self.cmd_pub.publish(cmd)
         pass
