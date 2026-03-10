@@ -47,3 +47,13 @@ roslaunch custom_bringup setup.launch
 # ONNX -> .engine
 /usr/src/tensorrt/bin/trtexec --onnx=best.onnx --saveEngine=best.engine --fp16 --exportTimes=timing.json
 
+/usr/src/tensorrt/bin/trtexec \
+  --onnx=best.onnx \
+  --saveEngine=best.engine \
+  --workspace=2048 \
+  --explicitBatch \
+  --avgTiming=1 \
+  --minTiming=1 \
+  --buildOnly \
+  --fp16
+
