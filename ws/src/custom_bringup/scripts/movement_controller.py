@@ -427,14 +427,23 @@ class PurePursuitController:
         angle_to_target = math.atan2(ty - curr_y, tx - curr_x)
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
-        # TERMINATION - 0.5 degree tolerance
-        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(0.5):
-            self.get_logger().info("[APPROACH] Pickup position achieved. Final dist: %.3f" % dist_to_target)
-            self.stop_robot()
-            self.approach_target = None
-            self.state = MovementState.COMPLETE
-            self.node_topic.publish("done")
-            return
+        # TERMINATION - must hold tolerance for N consecutive ticks
+        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(1.0):
+            self._approach_stable_ticks += 1
+            rospy.loginfo("[APPROACH] Stable tick %d/%d, yaw_error=%.2f deg",
+                self._approach_stable_ticks, APPROACH_STABLE_REQUIRED, math.degrees(yaw_error))
+
+            if self._approach_stable_ticks >= APPROACH_STABLE_REQUIRED:
+                rospy.loginfo("[APPROACH] Pickup position achieved. Final dist: %.3f", dist_to_target)
+                self.stop_robot()
+                self.approach_target = None
+                self._approach_stable_ticks = 0
+                self.state = MovementState.COMPLETE
+                self.node_topic.publish("done")
+                return
+        else:
+            # Reset counter if we leave the window
+            self._approach_stable_ticks = 0
 
         cmd = Twist()
 
@@ -442,55 +451,21 @@ class PurePursuitController:
         if abs(yaw_error) > math.radians(2):
             cmd.linear.x = 0.0
             cmd.angular.z = max(min(yaw_error * 1.5, 0.3), -0.3)
-            self.get_logger().info("[APPROACH] Pivoting... yaw_error=%.2f deg" % math.degrees(yaw_error))
+            rospy.loginfo_throttle(0.5, "[APPROACH] Pivoting... yaw_error=%.2f deg", math.degrees(yaw_error))
 
         # PHASE 2 - Move forward with heading correction
         elif move_dist_remaining > 0.01:
             raw_speed = move_dist_remaining * 1.5
             cmd.linear.x = max(min(raw_speed, 0.25), 0.08)
             cmd.angular.z = max(min(yaw_error * 3.0, 0.2), -0.2)
-            self.get_logger().info("[APPROACH] Approaching... dist=%.3f yaw_err=%.2f deg" % (move_dist_remaining, math.degrees(yaw_error)))
-
-        # PHASE 3 - At distance, fine alignment
-        else:
-            cmd.linear.x = 0.0
-
-            # Deadband - if already close enough, publish zero and let EKF settle
-            # Don't keep nudging or you will oscillate
-            if abs(yaw_error) < math.radians(1.0):
-                cmd.angular.z = 0.0
-                self.get_logger().info("[APPROACH] Holding... waiting for EKF to settle. yaw_error=%.2f deg" % math.degrees(yaw_error))
-            else:
-                # Very gentle correction - low gain, tight clamp
-                cmd.angular.z = max(min(yaw_error * 0.8, 0.1), -0.1)
-                self.get_logger().info("[APPROACH] Fine aligning... yaw_error=%.2f deg" % math.degrees(yaw_error))
-
-        self.cmd_pub.publish(cmd)
-
-        # PHASE 1 - Initial pivot: don't move until heading is close
-        # Tight 2-degree threshold before we allow any forward motion
-        if abs(yaw_error) > math.radians(2):
-            cmd.linear.x = 0.0
-            # Slow P-control - don't overshoot the heading
-            cmd.angular.z = max(min(yaw_error * 1.5, 0.3), -0.3)
-            rospy.loginfo_throttle(0.5, "[APPROACH] Pivoting... yaw_error=%.2f deg",
-                                math.degrees(yaw_error))
-
-        # PHASE 2 - Move forward with tight heading correction
-        elif move_dist_remaining > 0.01:
-            raw_speed = move_dist_remaining * 1.5
-            cmd.linear.x = max(min(raw_speed, 0.25), 0.08)
-            # Tight angular correction while moving
-            cmd.angular.z = max(min(yaw_error * 3.0, 0.2), -0.2)
             rospy.loginfo_throttle(0.5, "[APPROACH] Approaching... dist=%.3f yaw_err=%.2f deg",
-                                move_dist_remaining, math.degrees(yaw_error))
+                move_dist_remaining, math.degrees(yaw_error))
 
-        # PHASE 3 - At distance, but heading has drifted: stop and re-align
+        # PHASE 3 - Fine alignment, let it oscillate symmetrically
         else:
             cmd.linear.x = 0.0
-            cmd.angular.z = max(min(yaw_error * 1.5, 0.2), -0.2)
-            rospy.loginfo_throttle(0.5, "[APPROACH] Final alignment... yaw_error=%.2f deg",
-                                math.degrees(yaw_error))
+            cmd.angular.z = max(min(yaw_error * 2.5, 0.15), -0.15)
+            rospy.loginfo_throttle(0.5, "[APPROACH] Fine aligning... yaw_error=%.2f deg", math.degrees(yaw_error))
 
         self.cmd_pub.publish(cmd)
 
@@ -651,63 +626,6 @@ class PurePursuitController:
         
         self.cmd_pub.publish(cmd)
         pass
-
-
-    def state_approach(self):
-        pose = self.get_robot_pose()
-        if pose is None or self.approach_target is None:
-            return
-
-        curr_x, curr_y, curr_yaw = pose
-        tx, ty = self.approach_target
-
-        dist_to_target = math.hypot(tx - curr_x, ty - curr_y)
-        move_dist_remaining = dist_to_target - self.stop_distance
-
-        angle_to_target = math.atan2(ty - curr_y, tx - curr_x)
-        yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
-
-        # TERMINATION - must hold tolerance for N consecutive ticks
-        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(1.0):
-            self._approach_stable_ticks += 1
-            self.get_logger().info("[APPROACH] Stable tick %d/%d, yaw_error=%.2f deg" % (
-                self._approach_stable_ticks, APPROACH_STABLE_REQUIRED, math.degrees(yaw_error)))
-
-            if self._approach_stable_ticks >= APPROACH_STABLE_REQUIRED:
-                self.get_logger().info("[APPROACH] Pickup position achieved. Final dist: %.3f" % dist_to_target)
-                self.stop_robot()
-                self.approach_target = None
-                self._approach_stable_ticks = 0
-                self.state = MovementState.COMPLETE
-                self.node_topic.publish("done")
-                return
-        else:
-            # Reset counter if we leave the window - don't accumulate across oscillations
-            self._approach_stable_ticks = 0
-
-        cmd = Twist()
-
-        # PHASE 1 - Initial pivot before moving
-        if abs(yaw_error) > math.radians(2):
-            cmd.linear.x = 0.0
-            cmd.angular.z = max(min(yaw_error * 1.5, 0.3), -0.3)
-            self.get_logger().info("[APPROACH] Pivoting... yaw_error=%.2f deg" % math.degrees(yaw_error))
-
-        # PHASE 2 - Move forward with heading correction
-        elif move_dist_remaining > 0.01:
-            raw_speed = move_dist_remaining * 1.5
-            cmd.linear.x = max(min(raw_speed, 0.25), 0.08)
-            cmd.angular.z = max(min(yaw_error * 3.0, 0.2), -0.2)
-            self.get_logger().info("[APPROACH] Approaching... dist=%.3f yaw_err=%.2f deg" % (
-                move_dist_remaining, math.degrees(yaw_error)))
-
-        # PHASE 3 - Fine alignment, let it oscillate symmetrically
-        else:
-            cmd.linear.x = 0.0
-            cmd.angular.z = max(min(yaw_error * 2.5, 0.15), -0.15)
-            self.get_logger().info("[APPROACH] Fine aligning... yaw_error=%.2f deg" % math.degrees(yaw_error))
-
-        self.cmd_pub.publish(cmd)
 
 
     def run(self):
