@@ -240,6 +240,7 @@ class PathingNode:
                     "header": "map",
                     "command": "path"
                 })
+                self.reply_pub.publish(reply_msg)
                 rospy.loginfo("Valid frontier path found, publishing.")
                 self._publish_path(path)
                 return
