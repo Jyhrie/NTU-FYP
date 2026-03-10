@@ -65,7 +65,7 @@ class Controller:
         self.global_path = rospy.Publisher("/global_path", Path, queue_size=1)
 
         #TO REMOVE
-        self.marker_pub = rospy.Publisher('/detected_object_marker', Marker, queue_size=10)
+        self.marker_pub = rospy.Publisher('/self_marker', Marker, queue_size=10)
 
         # --- TF Setup ---
         self.tf_buffer = tf2_ros.Buffer(rospy.Duration(5.0))
@@ -232,6 +232,8 @@ class Controller:
             status = "\rMain State: %-10s | Sub-State: %-10s\033[K" % (self.state.name, self.sub_state.name)
             sys.stdout.write(status)
             sys.stdout.flush()
+            x, y, _ = self.get_robot_pose()
+            self.publish_marker(x,y)
 
             if self.state == States.IDLE:    self.manage_idle()
             elif self.state == States.MAPPING:  self.manage_mapping()
