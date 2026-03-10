@@ -546,26 +546,20 @@ class PurePursuitController:
         x, y, yaw = pose
 
         if self.goal_reached(x, y, yaw):
-            rospy.loginfo("[PP] Goal location reached!")
-            # Check if we have a specific point to face
             if self.face_coordinates and all(v is not None for v in self.face_coordinates):
-                print("face_coordinates exist, rotating")
                 tx, ty = self.face_coordinates
-                # Calculate the angle to face the target point from current position
+                # 1. Calculate absolute angle to target
                 angle_to_target = math.atan2(ty - y, tx - x)
                 
-                # Create a temporary PoseStamped to reuse get_rot() logic
-                target_pose = PoseStamped()
-                target_pose.header.frame_id = "map"
-                q = tf.transformations.quaternion_from_euler(0, 0, angle_to_target)
-                target_pose.pose.orientation.x = q[0]
-                target_pose.pose.orientation.y = q[1]
-                target_pose.pose.orientation.z = q[2]
-                target_pose.pose.orientation.w = q[3]
+                # 2. Convert absolute target to RELATIVE degrees for state_rotate
+                # Formula: (Target_Absolute - Current_Absolute)
+                relative_rad = math.atan2(math.sin(angle_to_target - yaw), math.cos(angle_to_target - yaw))
+                self.rotate_angular = math.degrees(relative_rad)
                 
-                self.rotate_target_pose = target_pose
+                # 3. Trigger the state
+                self.initial_rotation_yaw = None # Ensure a fresh snapshot is taken
                 self.state = MovementState.ROTATE
-                rospy.loginfo("[PP] Transitioning to ROTATE to face target point")
+                rospy.loginfo("[PP] Rotating %.2f degrees to face target point", self.rotate_angular)
             else:
                 self.stop_robot()
                 self.node_topic.publish("done")
