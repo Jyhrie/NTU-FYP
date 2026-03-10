@@ -462,7 +462,7 @@ class Controller:
             msg = String()
             msg.data = json.dumps({
                 "header": "movement",
-                "command": "approach_item",
+                "command": "approach",
                 "extra": "face_coordinates",
                 "stopping_distance": 0,
                 "x": obj_x,
