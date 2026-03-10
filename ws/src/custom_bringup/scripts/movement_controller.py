@@ -423,9 +423,9 @@ class PurePursuitController:
         angle_to_target = math.atan2(ty - curr_y, tx - curr_x)
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
-        # TERMINATION - strict heading tolerance for pickup (0.5 degrees)
+        # TERMINATION - 0.5 degree tolerance
         if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(0.5):
-            rospy.loginfo("[APPROACH] Pickup position achieved. Final dist: %.3f", dist_to_target)
+            self.get_logger().info("[APPROACH] Pickup position achieved. Final dist: %.3f" % dist_to_target)
             self.stop_robot()
             self.approach_target = None
             self.state = MovementState.COMPLETE
@@ -433,6 +433,35 @@ class PurePursuitController:
             return
 
         cmd = Twist()
+
+        # PHASE 1 - Initial pivot before moving
+        if abs(yaw_error) > math.radians(2):
+            cmd.linear.x = 0.0
+            cmd.angular.z = max(min(yaw_error * 1.5, 0.3), -0.3)
+            self.get_logger().info("[APPROACH] Pivoting... yaw_error=%.2f deg" % math.degrees(yaw_error))
+
+        # PHASE 2 - Move forward with heading correction
+        elif move_dist_remaining > 0.01:
+            raw_speed = move_dist_remaining * 1.5
+            cmd.linear.x = max(min(raw_speed, 0.25), 0.08)
+            cmd.angular.z = max(min(yaw_error * 3.0, 0.2), -0.2)
+            self.get_logger().info("[APPROACH] Approaching... dist=%.3f yaw_err=%.2f deg" % (move_dist_remaining, math.degrees(yaw_error)))
+
+        # PHASE 3 - At distance, fine alignment
+        else:
+            cmd.linear.x = 0.0
+
+            # Deadband - if already close enough, publish zero and let EKF settle
+            # Don't keep nudging or you will oscillate
+            if abs(yaw_error) < math.radians(1.0):
+                cmd.angular.z = 0.0
+                self.get_logger().info("[APPROACH] Holding... waiting for EKF to settle. yaw_error=%.2f deg" % math.degrees(yaw_error))
+            else:
+                # Very gentle correction - low gain, tight clamp
+                cmd.angular.z = max(min(yaw_error * 0.8, 0.1), -0.1)
+                self.get_logger().info("[APPROACH] Fine aligning... yaw_error=%.2f deg" % math.degrees(yaw_error))
+
+        self.cmd_pub.publish(cmd)
 
         # PHASE 1 - Initial pivot: don't move until heading is close
         # Tight 2-degree threshold before we allow any forward motion
