@@ -241,7 +241,7 @@ class PathingNode:
                     "command": "path"
                 })
                 rospy.loginfo("Valid frontier path found, publishing.")
-                self._publish_frontier_path(path)
+                self.path_pub.publish(path)
                 return
 
             if path:
@@ -554,10 +554,9 @@ class PathingNode:
         """Used by waypoint handler."""
         self.path_pub.publish(self._build_path_msg(grid_path))
 
-    def _publish_frontier_path(self, grid_path):
-        """Publishes a frontier path with its reply header."""
-        self._publish_frontier_reply("path")
-        self.path_pub.publish(self._build_path_msg(grid_path))
+    # def _publish_frontier_path(self, grid_path):
+    #     """Publishes a frontier path with its reply header."""
+    #     self.path_pub.publish(self._build_path_msg(grid_path))
 
     # def _publish_frontier_reply(self, data_value):
     #     msg = String()
