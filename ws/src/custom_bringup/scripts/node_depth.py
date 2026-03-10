@@ -12,7 +12,7 @@ INPUT_H         = 640
 ASTRA_PRO_HFOV  = 58.4
 ANGLE_OFFSET = 3
 ASSUMED_DEPTH_OFFSET = 0.02
-CAMERA_DEPTH_OFFSET = 0.15
+CAMERA_DEPTH_OFFSET = 0.12
 class BlobCentroidEstimator: 
     def __init__(self):
         rospy.init_node('blob_distance_node', anonymous=True)
