@@ -83,9 +83,8 @@ class PurePursuitController:
                     if extra == "face_coordinates":
                         self.face_coordinates = (data.get("x"), data.get("y"))
                 if command == "rotate":
+                    self.state = MovementState.ROTATE
                     self.rotate_angular = data.get("angle")
-                    self.start_relative_rotation(degrees=self.rotate_angular)
-                    
 
 
 
@@ -240,32 +239,42 @@ class PurePursuitController:
 
     # -------------------------------------------------
     def state_rotate(self):
+        # 1. Get current pose
         pose = self.get_robot_pose()
-        if pose is None or self.rotate_target_pose is None:
+        if pose is None:
             return
 
-        # Get current and target yaw
         _, _, current_yaw = pose
-        q = self.rotate_target_pose.pose.orientation
-        _, _, target_yaw = tf.transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
 
-        # Calculate error
-        error = target_yaw - current_yaw
-        # Correct for wrap-around
-        error = math.atan2(math.sin(error), math.cos(error))
+        # 2. THE CACHE CHECK: If no cached pose exists, this is the FIRST frame
+        if self.initial_rotation_yaw is None:
+            self.initial_rotation_yaw = current_yaw
 
-        # Check if finished (e.g., within 0.05 radians / ~3 degrees)
-        if abs(error) < 0.05:
+        # 3. CALCULATE TARGET & ERROR
+        # Target is the snapshot + our relative offset
+        target_yaw = self.initial_rotation_yaw + math.radians(self.rotate_angular)
+        
+        # Calculate shortest path error
+        error = math.atan2(math.sin(target_yaw - current_yaw), math.cos(target_yaw - current_yaw))
+
+        # 4. TERMINATION CHECK
+        if abs(error) < math.radians(1.5): # Within 1.5 degrees
+            rospy.loginfo("[ROTATE] Target reached.")
             self.stop_robot()
+            
+            # RESET EVERYTHING for the next time this node is called
+            self.initial_rotation_yaw = None
+            self.rotate_angular = None 
+            
             self.state = MovementState.COMPLETE
             self.node_topic.publish("done")
             return
 
-        # Proportional control for rotation
+        # 5. MOTOR COMMANDS (P-Control)
         cmd = Twist()
         cmd.linear.x = 0.0
-        # Kp gain (e.g., 1.0), clamped to max speed (0.5)
-        cmd.angular.z = max(min(error * 1.5, 0.5), -0.5)
+        # Clamped angular velocity
+        cmd.angular.z = max(min(error * 2.0, 0.6), -0.6)
         self.cmd_pub.publish(cmd)
 
     def start_relative_rotation(self, degrees):
