@@ -19,7 +19,7 @@ from dependencies.frontier_detector import FrontierDetector
 from dependencies.astar_planner import a_star_exploration
 from dependencies.costmap_wall import calc_cost_map
 
-TRUNCATION_SIZE = 7
+TRUNCATION_SIZE = 5
 
 
 class PathingNode:
@@ -195,7 +195,7 @@ class PathingNode:
                 self.map.data, self.global_costmap, start, frontier
             )
 
-            if len(path) < TRUNCATION_SIZE + 5:
+            if len(path) < TRUNCATION_SIZE + 3:
                 rospy.loginfo(
                     "Discarding short path to frontier {}: len={}".format(
                         frontier, len(path)
