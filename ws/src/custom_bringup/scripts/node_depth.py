@@ -5,13 +5,22 @@ import numpy as np
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from scipy import ndimage
+import math
 
+INPUT_W         = 640
+INPUT_H         = 640
+ASTRA_PRO_HFOV  = 58.4
+ANGLE_OFFSET = 
 class BlobCentroidEstimator:
     def __init__(self):
         rospy.init_node('blob_distance_node', anonymous=True)
+        
         self.image_sub = rospy.Subscriber("camera/depth/image_raw", Image, self.depth_callback)
         self.request_sub = rospy.Subscriber("controller/global", String, self.request_callback)
         self.depth_pub = rospy.Publisher("/robot/depth", String, queue_size=10)
+
+        self.fx = (INPUT_W / 2) / math.tan(math.radians(ASTRA_PRO_HFOV / 2))
+        self.cx = INPUT_W / 2
 
         self.latest_depth_msg = None
         self.bbox = None
@@ -68,12 +77,15 @@ class BlobCentroidEstimator:
             global_x = xmin + rel_x
             global_y = ymin + rel_y
 
+            angle_deg = math.degrees(math.atan2(global_x - self.cx, self.fx))
+
             result = String()
             result.data = json.dumps({
                 "header": "depth_reading",
                 "x": round(global_x, 1),
                 "y": round(global_y, 1),
-                "dist_m": round(exact_dist_mm / 1000.0, 3)
+                "dist_m": round(exact_dist_mm / 1000.0, 3),
+                "angle_deg": round(angle_deg, 2)
             })
             self.depth_pub.publish(result)
             print("Depth Published!")

@@ -43,7 +43,7 @@ class SubStates(Enum):
     REQUESTING_HOME_PATH = 14
     COMPLETE = 15
     CONFIRMING_ITEM = 16
-    WAITING_PATH_RESPONSE_TO_OBJECT = 17
+    WAITING_PATH_RESPONSE = 17
 
 class NavStates(Enum):
     NULL = 0
@@ -69,9 +69,9 @@ class Controller:
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
         
         # --- Original Subscribers ---
-        self.fontier_node_sub = rospy.Subscriber("/frontier_node_reply", String, self.frontier_node_cb)
-        self.frontier_node_path_sub = rospy.Subscriber("/frontier_node_path", Path, self.frontier_node_path_cb)
-        self.navigation_node_sub = rospy.Subscriber("/navigation_node_reply", String, self.navigation_node_cb)
+        # self.fontier_node_sub = rospy.Subscriber("/frontier_node_reply", String, self.frontier_node_cb)
+        # self.frontier_node_path_sub = rospy.Subscriber("/frontier_node_path", Path, self.frontier_node_path_cb)
+        # self.navigation_node_sub = rospy.Subscriber("/navigation_node_reply", String, self.navigation_node_cb)
         self.depth_node_sub = rospy.Subscriber("/robot/depth", String, self.depth_cb)
         self.movement_controller_sub = rospy.Subscriber("/movement_controller_message", String, self.movement_controller_cb)
         self.reply_sub = rospy.Subscriber("/robot/reply", String, self.global_reply_cb) 
@@ -97,7 +97,10 @@ class Controller:
         self.cached_pickup_distance = None
 
         self.detected_distance = None
+        self.detected_angle = None
         self.target_object_transform = None
+
+        self.f_mapping_complete = False
         
         self.request_sent = False
         self.request_timeout = 30
@@ -140,7 +143,6 @@ class Controller:
                     print("Back at origin. Fetch complete.")
                     self.transition(States.NULL)
                 return
-            self.sub_state = SubStates.COMPLETE
 
     def navigation_node_cb(self, msg):
         if msg.data == "COMPLETE":
@@ -149,8 +151,8 @@ class Controller:
     def depth_cb(self, msg): #mayhaps consolidate all these under 1 topic to prevent clutter.
         data = json.loads(msg.data)
         if data['header'] == "depth_reading":
-            distance = data['dist_m']
-            self.detected_distance = distance
+            self.detected_angle = data.get('angle_deg')
+            self.detected_distance = data.get('dist_m')
 
     # ====== UTILS (Original methods) ====== #
     def get_robot_pose(self):
@@ -243,6 +245,8 @@ class Controller:
             # Initial entry: move to requesting data
             if self.sub_state == SubStates.READY:
                 self.sub_state = SubStates.REQUESTING
+
+                #clear goal_path for next request.
                 self.goal_path = None
                 self.rotate_target_msg = None
 
@@ -257,26 +261,49 @@ class Controller:
                     self.global_request.publish(msg)
                     self.request_sent = True
                     self.start_time = rospy.get_time()
+                    self.sub_state = SubStates.WAITING_PATH_RESPONSE
 
-                if self.received:
+                # if self.received and self.received.get("header") == "map": #NOTE: additionally perform a timestamp check in case its an old piece of data.
+                #     # Handle path receipt
+                #     recv_cmd = self.received.get("command")
+                #     if self.received_path and recv_cmd == "path":
+                #         self.goal_path = self.received_path
+                #         self.received = None
+                #         self.request_sent = False
+                #         self.sub_state = SubStates.MOVING
+                #     # Handle rotation command
+                #     if recv_cmd == "rotate":
+                #         self.rotate_target_msg = self.prepare_flip()
+                #         self.received = None
+                #         self.request_sent = False
+                #         self.sub_state = SubStates.MOVING
+                #     if recv_cmd == "complete":
+                #         self.received = None
+                #         self.request_sent = False
+                #         self.sub_state = SubStates.COMPLETE
+
+            #TODO: add a timeout
+            if self.sub_state == SubStates.WAITING_PATH_RESPONSE:
+                if self.received and self.received.get("header") == "map": #NOTE: additionally perform a timestamp check in case its an old piece of data.
                     # Handle path receipt
-                    if self.received.get("data") == "path" and self.received_path:
+                    recv_cmd = self.received.get("command")
+                    if self.received_path and recv_cmd == "path":
                         self.goal_path = self.received_path
+                        self.received = None
+                        self.request_sent = False
                         self.sub_state = SubStates.MOVING
-                    # Handle rotation command
-                    elif self.received.get("data") == "rotate":
+                    # Handle rotation command   
+                    if recv_cmd == "rotate":
                         self.rotate_target_msg = self.prepare_flip()
+                        self.received = None
+                        self.request_sent = False
                         self.sub_state = SubStates.MOVING
-                    
-                    # Reset communication flags
-                    self.received = None
-                    self.request_sent = False
-
-            # Logic while the robot is physically in motion
-            elif self.sub_state == SubStates.COMPLETE:
-                self.goal_path = None
-                self.rotate_target_msg = None
-                self.transition(States.MAPPING, SubStates.READY)
+                    if recv_cmd == "complete":
+                        self.f_mapping_complete = True
+                        self.received = None
+                        self.request_sent = False
+                        self.sub_state = SubStates.COMPLETE
+                pass
 
             elif self.sub_state == SubStates.MOVING:
                 # Execute the active task
@@ -287,11 +314,21 @@ class Controller:
                         "command": "follow_path",
                     })
                     self.global_request.publish(msg)
-                    self.global_request.publish("navigate")
                     self.global_path.publish(self.goal_path)
                 elif self.rotate_target_msg:
-                    self.global_request.publish("rotate")
-                    self.rotate_pose_pub.publish(self.rotate_target_msg)
+                    msg.data = json.dumps({
+                        "header": "movement",
+                        "command": "rotate",
+                        "angle": 0
+                    })
+                    self.global_request.publish(msg)
+
+            # Logic while the robot is physically in motion
+            elif self.sub_state == SubStates.COMPLETE:
+                self.goal_path = None
+                self.rotate_target_msg = None
+                self.transition(States.IDLE, SubStates.READY)
+
             else:
                 print("Unknown sub-state in MAPPING: {}".format(self.sub_state))
 
@@ -371,8 +408,6 @@ class Controller:
         if self.sub_state == SubStates.DEPTH_READING_AVAILABLE:
             msg = String()
         
-            obj_angle_deg = -(self.last_cv_detection.get('angle', 0.0))
-            angle = math.radians(obj_angle_deg)
             dist = self.detected_distance
             pose = self.get_robot_pose()
             #so now we have all the information required to get the object's position in the world
@@ -400,9 +435,9 @@ class Controller:
             })
             self.global_request.publish(msg)
 
-            self.sub_state = SubStates.WAITING_PATH_RESPONSE_TO_OBJECT
+            self.sub_state = SubStates.WAITING_PATH_RESPONSE
 
-        if self.sub_state == SubStates.WAITING_PATH_RESPONSE_TO_OBJECT:
+        if self.sub_state == SubStates.WAITING_PATH_RESPONSE:
             if self.received_path is not None:
                 obj_x, obj_y = self.target_object_transform
                 msg = String()
@@ -423,7 +458,6 @@ class Controller:
             
 
         if self.sub_state == SubStates.APPROACH_ITEM:
-
             x, y, _ = self.get_robot_pose()
             obj_x, obj_y = self.target_object_transform
             #then we convert the distance between the robot's current transform and the target_object_transform,
@@ -432,16 +466,17 @@ class Controller:
             if pickup_distance < 0.015: #1.5cm
                 msg = String()
                 msg.data = json.dumps({
-                    "header": "movement_controller",
+                    "header": "movement",
                     "command": "stop_movement",
                 })
                 self.global_request.publish(msg)
+                self.sub_state = SubStates.PICKING_UP
                 #TODO: perform the state transition, then return.
                 return
             
             msg = String()
             msg.data = json.dumps({
-                "header": "movement_controller",
+                "header": "movement",
                 "command": "approach_item",
                 "distance": pickup_distance, # Stop 35 cm away from the target to prepare for pickup
             })
@@ -456,8 +491,54 @@ class Controller:
                 "command": "grab"
             })
             self.global_request.publish(msg)
+            rospy.sleep(3.0)
 
         #TIME TO HUI JIA LIAO
+        if self.sub_state == SubStates.REQUESTING_HOME_PATH:
+            msg = String()
+            msg.data = json.dumps({
+                "header": "movement",
+                "command": "approach_item",
+                "distance": pickup_distance, # Stop 35 cm away from the target to prepare for pickup
+            })
+            #NOTE: potentially just pass in the coords of the object and let the movement controller handle it due to lower latency, but state transitions might be abit more annoying and i cba rn.
+            self.global_request.publish(msg)
+            
+        if self.sub_state == SubStates.WAITING_HOME_PATH_RESPONSE:
+            obj_x, obj_y = self.target_object_transform
+            msg = String()
+            msg.data = json.dumps({
+                "header": "movement",
+                "command": "follow_path",
+                "extra": "face_coordinates",
+                "x": obj_x,
+                "y": obj_y
+            })
+            self.global_request.publish(msg)
+            self.global_path.publish(self.received_path)
+            self.sub_state = SubStates.MOVING_HOME
+        
+        if self.sub_state == SubStates.MOVING_HOME:
+            pass
+
+        if self.sub_state == SubStates.DROPPING_ITEM:
+            #object should be perfectly positioned in front of the robot now, so just perform standard FK based grab command
+            msg = String()
+            msg.data = json.dumps({
+                "header": "arm",
+                "command": "drop"
+            })
+            self.global_request.publish(msg)
+            rospy.sleep(3.0)
+            self.sub_state = SubStates.COMPLETE
+        
+        if self.sub_state == SubStates.COMPLETE:
+            self.transition(States.IDLE, SubStates.READY)
+
+        
+
+
+        
         
 
 if __name__ == "__main__":

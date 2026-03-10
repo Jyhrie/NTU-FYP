@@ -105,7 +105,6 @@ class PathingNode:
             return
 
         header = data.get("header", "")
-
         if header == "pathing":
             command = data.get("command", "")
             if command == "waypoint":
@@ -179,6 +178,8 @@ class PathingNode:
             rospy.logwarn("No TF pose available for frontier exploration.")
             return
 
+        self.global_costmap = calc_cost_map(self.map)
+
         x, y, yaw = pose
         start = self.pose_to_cell(x, y)
         sx, sy = start
@@ -227,9 +228,18 @@ class PathingNode:
                                 round(math.degrees(angle_diff), 1)
                             )
                         )
-                        self._publish_frontier_reply("rotate")
+                        reply_msg = String()
+                        reply_msg.data = json.dumps({
+                            "header": "map",
+                            "command": "rotate"
+                        })
+                        self.reply_pub.publish(reply_msg)
                         return
-
+                reply_msg = String()
+                reply_msg.data = json.dumps({
+                    "header": "map",
+                    "command": "path"
+                })
                 rospy.loginfo("Valid frontier path found, publishing.")
                 self._publish_frontier_path(path)
                 return
@@ -258,8 +268,6 @@ class PathingNode:
             """
             if not self._maps_ready():
                 return
-
-            
 
             # out_msg = OccupancyGrid()
             # out_msg.header = msg.header
@@ -551,10 +559,10 @@ class PathingNode:
         self._publish_frontier_reply("path")
         self.path_pub.publish(self._build_path_msg(grid_path))
 
-    def _publish_frontier_reply(self, data_value):
-        msg = String()
-        msg.data = json.dumps({"header": "frontier", "data": data_value})
-        self.reply_pub.publish(msg)
+    # def _publish_frontier_reply(self, data_value):
+    #     msg = String()
+    #     msg.data = json.dumps({"header": "frontier", "data": data_value})
+    #     self.reply_pub.publish(msg)
 
     def _publish_frontier_markers(self, frontiers):
         if not frontiers:
