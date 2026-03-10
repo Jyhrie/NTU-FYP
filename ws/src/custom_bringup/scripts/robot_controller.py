@@ -143,6 +143,9 @@ class Controller:
                     print("Back at origin. Fetch complete.")
                     self.transition(States.NULL)
                 return
+            if self.state == States.MAPPING:
+                if self.sub_state == SubStates.MOVING:
+                    self.sub_state = SubStates.COMPLETE
 
     def navigation_node_cb(self, msg):
         if msg.data == "COMPLETE":
