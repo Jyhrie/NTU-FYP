@@ -95,7 +95,7 @@ class PurePursuitController:
             min_r = get_valid_min(right_ranges)
 
             nudge_velocity = 0.0
-            gain = 1.5  # Strength of the nudge
+            gain = 1  # Strength of the nudge
             
             # --- Obstacle Detection Prints ---
             if min_l < self.safety_threshold:
@@ -601,7 +601,7 @@ class PurePursuitController:
         
         # Optional: Slow down linear speed if we are nudging hard (safety)
         nudge_intensity = abs(self.side_nudge)
-        speed_factor = max(0.4, 1.0 - nudge_intensity) 
+        speed_factor = max(0.3, 0.6 - nudge_intensity) 
         cmd.linear.x = self.linear_vel * speed_factor
         
         self.cmd_pub.publish(cmd)
