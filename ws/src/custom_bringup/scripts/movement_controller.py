@@ -81,6 +81,11 @@ class PurePursuitController:
                     self.state = MovementState.PURSUIT
                     if extra == "face_coordinates":
                         self.face_coordinates = (data.get("x"), data.get("y"))
+                if command == "rotate":
+                    self.state = MovementState.ROTATE
+                    if self.cached_transform is not None:
+                        self.latched_target_yaw = self.cached_transform
+                        
 
                     
                     # self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))

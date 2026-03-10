@@ -320,7 +320,7 @@ class Controller:
                     msg.data = json.dumps({
                         "header": "movement",
                         "command": "rotate",
-                        "angle": 0
+                        "angle": 180
                     })
                     self.global_request.publish(msg)
 
