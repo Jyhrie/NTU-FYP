@@ -65,6 +65,7 @@ class PurePursuitController:
         self.face_coordinates = None
         self.rotate_angular = None
 
+        self.side_nudge = 0
         self.safety_threshold = 0.4  # Distance in meters to start nudging
         
         self.rate = rospy.Rate(15)
