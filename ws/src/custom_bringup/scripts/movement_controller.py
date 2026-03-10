@@ -420,16 +420,16 @@ class PurePursuitController:
 
         # 2. CALCULATE DISTANCES
         dist_to_target = math.hypot(tx - curr_x, ty - curr_y)
+        # How much further we need to travel (positive = not there yet)
         move_dist_remaining = dist_to_target - self.stop_distance
 
         # 3. CALCULATE HEADING
         angle_to_target = math.atan2(ty - curr_y, tx - curr_x)
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
-        # 4. TERMINATION CHECK
-        # We allow a small distance tolerance (1cm) and heading tolerance (2 degrees)
+        # 4. TERMINATION CHECK — within 1cm of stop_distance AND heading settled
         if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(2):
-            rospy.loginfo("[APPROACH] Target achieved. Final Gap: %.2f", dist_to_target)
+            rospy.loginfo("[APPROACH] Target achieved. Final dist: %.3f", dist_to_target)
             self.stop_robot()
             self.approach_target = None
             self.state = MovementState.COMPLETE
@@ -438,27 +438,28 @@ class PurePursuitController:
 
         cmd = Twist()
 
-        # 5. PIVOT FIRST (Face the object)
-        # We use a 5-degree threshold to decide when to start moving forward
+        # 5. PHASE 1 — Pivot to face target before moving
         if abs(yaw_error) > math.radians(5):
             cmd.linear.x = 0.0
-            # P-control for rotation
             cmd.angular.z = max(min(yaw_error * 2.0, 0.5), -0.5)
-            rospy.loginfo_throttle(1, "[APPROACH] Aligning heading...")
-        
-        # 6. MOVE FORWARD SLOWLY (With heading maintenance)
+            rospy.loginfo_throttle(1, "[APPROACH] Aligning heading... yaw_error=%.1f deg",
+                                math.degrees(yaw_error))
+
+        # 6. PHASE 2 — Move forward, correcting heading as we go
         else:
-            # Calculate velocity with your 0.15 - 0.3 range
-            # We use a P-gain (1.5) but clamp it between your min and max
-            raw_speed = move_dist_remaining * 1.5
-            cmd.linear.x = max(min(raw_speed, 0.3), 0.15)
-            
-            # If we have technically "passed" the stop line, don't move at all
-            if move_dist_remaining <= 0:
+            if move_dist_remaining > 0:
+                # Ramp down as we approach: P-gain 1.5, clamped 0.08–0.25
+                # Using 0.08 min (not 0.15) so we can creep to a clean stop
+                raw_speed = move_dist_remaining * 1.5
+                cmd.linear.x = max(min(raw_speed, 0.25), 0.08)
+            else:
+                # Overshot the stop distance — halt, termination will catch it next tick
                 cmd.linear.x = 0.0
 
-            # Keep the "nose" pointed at the object while moving
-            cmd.angular.z = yaw_error * 2.0 
+            # Heading correction while moving — clamped so it doesn't fight forward motion
+            cmd.angular.z = max(min(yaw_error * 2.0, 0.3), -0.3)
+            rospy.loginfo_throttle(1, "[APPROACH] Moving... dist_remaining=%.3f speed=%.2f",
+                                move_dist_remaining, cmd.linear.x)
 
         self.cmd_pub.publish(cmd)
 
