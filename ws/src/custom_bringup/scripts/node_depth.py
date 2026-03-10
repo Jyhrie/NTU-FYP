@@ -85,7 +85,7 @@ class BlobCentroidEstimator:
                 "x": round(global_x, 1),
                 "y": round(global_y, 1),
                 "dist_m": round(exact_dist_mm / 1000.0, 3),
-                "angle_deg": round(angle_deg, 2)
+                "angle_deg": -round(angle_deg, 2)
             })
             self.depth_pub.publish(result)
             print("Depth Published!")
