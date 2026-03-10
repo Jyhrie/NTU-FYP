@@ -14,6 +14,8 @@ from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
 from sensor_msgs.msg import LaserScan # Add this import at the top
 
+APPROACH_STABLE_REQUIRED = 5  # 5 ticks at 20hz = 250ms of stability
+
 class MovementState(Enum):
     IDLE = 0
     ROTATE = 1
@@ -22,6 +24,7 @@ class MovementState(Enum):
     ALIGN = 4
     APPROACH = 5
     PURSUIT = 6
+    
 
 class PurePursuitController:
 
@@ -68,7 +71,8 @@ class PurePursuitController:
 
         self.side_nudge = 0
         self.safety_threshold = 0.4  # Distance in meters to start nudging
-        
+        self._approach_stable_ticks = 0
+
         self.rate = rospy.Rate(15)
 
     # -------------------------------------------------
@@ -655,46 +659,53 @@ class PurePursuitController:
             return
 
         curr_x, curr_y, curr_yaw = pose
-        target_x, target_y = self.approach_target
+        tx, ty = self.approach_target
 
-        # 1. CALCULATE VECTOR TO TARGET
-        dx = target_x - curr_x
-        dy = target_y - curr_y
-        current_dist = math.hypot(dx, dy)
-        
-        # 2. DEFINE THE "SWEET SPOT" (Setpoint)
-        # For a search and retrieve robot, you might want to stop 15cm away
-        desired_dist = self.stop_distance
-        dist_error = current_dist - desired_dist
-        
-        # 3. HEADING CALCULATION
-        # Note: When backing up, we still want to face the object
-        angle_to_target = math.atan2(dy, dx)
+        dist_to_target = math.hypot(tx - curr_x, ty - curr_y)
+        move_dist_remaining = dist_to_target - self.stop_distance
+
+        angle_to_target = math.atan2(ty - curr_y, tx - curr_x)
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
-        # 4. TERMINATION CHECK (Tolerance)
-        # Stop if we are within 2cm of the desired distance AND aligned
-        if abs(dist_error) < 0.02 and abs(yaw_error) < math.radians(3):
-            rospy.loginfo("[APPROACH] Position Stabilized at %.2fm", current_dist)
-            self.stop_robot()
-            self.approach_target = None
-            self.state = MovementState.COMPLETE
-            self.node_topic.publish("done")
-            return
+        # TERMINATION - must hold tolerance for N consecutive ticks
+        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(1.0):
+            self._approach_stable_ticks += 1
+            self.get_logger().info("[APPROACH] Stable tick %d/%d, yaw_error=%.2f deg" % (
+                self._approach_stable_ticks, APPROACH_STABLE_REQUIRED, math.degrees(yaw_error)))
 
-        # 5. MOTOR COMMANDS
+            if self._approach_stable_ticks >= APPROACH_STABLE_REQUIRED:
+                self.get_logger().info("[APPROACH] Pickup position achieved. Final dist: %.3f" % dist_to_target)
+                self.stop_robot()
+                self.approach_target = None
+                self._approach_stable_ticks = 0
+                self.state = MovementState.COMPLETE
+                self.node_topic.publish("done")
+                return
+        else:
+            # Reset counter if we leave the window - don't accumulate across oscillations
+            self._approach_stable_ticks = 0
+
         cmd = Twist()
-        
-        # Heading Correction (Face the object regardless of moving forward/back)
-        cmd.angular.z = max(min(yaw_error * 2.0, 0.4), -0.4)
 
-        # Linear Logic: Proportional control based on distance error
-        # If dist_error is negative, the robot moves backward (-x)
-        p_gain_linear = 1.2
-        linear_x = dist_error * p_gain_linear
-        
-        # Cap the speed for safety
-        cmd.linear.x = max(min(linear_x, 0.15), -0.15)
+        # PHASE 1 - Initial pivot before moving
+        if abs(yaw_error) > math.radians(2):
+            cmd.linear.x = 0.0
+            cmd.angular.z = max(min(yaw_error * 1.5, 0.3), -0.3)
+            self.get_logger().info("[APPROACH] Pivoting... yaw_error=%.2f deg" % math.degrees(yaw_error))
+
+        # PHASE 2 - Move forward with heading correction
+        elif move_dist_remaining > 0.01:
+            raw_speed = move_dist_remaining * 1.5
+            cmd.linear.x = max(min(raw_speed, 0.25), 0.08)
+            cmd.angular.z = max(min(yaw_error * 3.0, 0.2), -0.2)
+            self.get_logger().info("[APPROACH] Approaching... dist=%.3f yaw_err=%.2f deg" % (
+                move_dist_remaining, math.degrees(yaw_error)))
+
+        # PHASE 3 - Fine alignment, let it oscillate symmetrically
+        else:
+            cmd.linear.x = 0.0
+            cmd.angular.z = max(min(yaw_error * 2.5, 0.15), -0.15)
+            self.get_logger().info("[APPROACH] Fine aligning... yaw_error=%.2f deg" % math.degrees(yaw_error))
 
         self.cmd_pub.publish(cmd)
 
