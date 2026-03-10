@@ -615,7 +615,6 @@ class PurePursuitController:
 
 
     def state_approach(self):
-        # 1. Get current pose
         pose = self.get_robot_pose()
         if pose is None or self.approach_target is None:
             return
@@ -623,37 +622,44 @@ class PurePursuitController:
         curr_x, curr_y, curr_yaw = pose
         target_x, target_y = self.approach_target
 
-        # 2. CALCULATE VECTOR TO TARGET
+        # 1. CALCULATE VECTOR TO TARGET
         dx = target_x - curr_x
         dy = target_y - curr_y
-        dist_to_go = math.hypot(dx, dy)
+        current_dist = math.hypot(dx, dy)
         
-        # Angle from robot to the target coordinate
+        # 2. DEFINE THE "SWEET SPOT" (Setpoint)
+        # For a search and retrieve robot, you might want to stop 15cm away
+        desired_dist = 0.15 
+        dist_error = current_dist - desired_dist
+        
+        # 3. HEADING CALCULATION
+        # Note: When backing up, we still want to face the object
         angle_to_target = math.atan2(dy, dx)
-        # How much we need to turn to face that point
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
-        # 3. TERMINATION CHECK (Goal Tolerance)
-        # Using 0.05m (5cm) as a tight tolerance for approach
-        if dist_to_go < 0.05:
-            rospy.loginfo("[APPROACH] Target (%.2f, %.2f) reached.", target_x, target_y)
+        # 4. TERMINATION CHECK (Tolerance)
+        # Stop if we are within 2cm of the desired distance AND aligned
+        if abs(dist_error) < 0.02 and abs(yaw_error) < math.radians(3):
+            rospy.loginfo("[APPROACH] Position Stabilized at %.2fm", current_dist)
             self.stop_robot()
-            self.approach_target = None  # Clear target
+            self.approach_target = None
             self.state = MovementState.COMPLETE
             self.node_topic.publish("done")
             return
 
-        # 4. MOTOR COMMANDS
+        # 5. MOTOR COMMANDS
         cmd = Twist()
         
-        # Heading Correction: If the error is large, prioritize rotating
-        if abs(yaw_error) > math.radians(20):
-            cmd.linear.x = 0.0
-            cmd.angular.z = max(min(yaw_error * 2.0, 0.5), -0.5)
-        else:
-            # Move forward while slightly adjusting heading (Pure Pursuit style)
-            cmd.linear.x = min(self.linear_vel, dist_to_go * 1.5)
-            cmd.angular.z = yaw_error * 2.0
+        # Heading Correction (Face the object regardless of moving forward/back)
+        cmd.angular.z = max(min(yaw_error * 2.0, 0.4), -0.4)
+
+        # Linear Logic: Proportional control based on distance error
+        # If dist_error is negative, the robot moves backward (-x)
+        p_gain_linear = 1.2
+        linear_x = dist_error * p_gain_linear
+        
+        # Cap the speed for safety
+        cmd.linear.x = max(min(linear_x, 0.15), -0.15)
 
         self.cmd_pub.publish(cmd)
 

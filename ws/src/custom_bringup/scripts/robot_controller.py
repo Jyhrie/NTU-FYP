@@ -137,11 +137,6 @@ class Controller:
 
                 elif self.sub_state == SubStates.APPROACH_ITEM:
                     self.sub_state = SubStates.PICKING_UP
-
-                elif self.sub_state == SubStates.ALIGNING:
-                    self.cached_pickup_distance = self.calculate_distance(self.object_box[0]) if self.object_box else None
-
-                    self.sub_state = SubStates.APPROACHING
                 elif self.sub_state == SubStates.RETURNING:
                     print("Back at origin. Fetch complete.")
                     self.transition(States.NULL)
@@ -469,12 +464,14 @@ class Controller:
                 "header": "movement",
                 "command": "approach_item",
                 "extra": "face_coordinates",
-                "stopping_distance": 0.35,
+                "stopping_distance": 0,
                 "x": obj_x,
                 "y": obj_y
             })
             #NOTE: potentially just pass in the coords of the object and let the movement controller handle it due to lower latency, but state transitions might be abit more annoying and i cba rn.
             self.global_request.publish(msg)
+
+
 
         if self.sub_state == SubStates.PICKING_UP:
             #object should be perfectly positioned in front of the robot now, so just perform standard FK based grab command
