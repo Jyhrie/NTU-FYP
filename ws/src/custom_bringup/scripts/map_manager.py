@@ -241,7 +241,7 @@ class PathingNode:
                     "command": "path"
                 })
                 rospy.loginfo("Valid frontier path found, publishing.")
-                self.path_pub.publish(path)
+                self._publish_path(path)
                 return
 
             if path:
