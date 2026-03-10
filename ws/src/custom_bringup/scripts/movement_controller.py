@@ -83,8 +83,9 @@ class PurePursuitController:
                     if extra == "face_coordinates":
                         self.face_coordinates = (data.get("x"), data.get("y"))
                 if command == "rotate":
-                    self.state = MovementState.ROTATE
                     self.rotate_angular = data.get("angle")
+                    self.start_relative_rotation(degrees=self.rotate_angular)
+                    
 
 
 
@@ -293,7 +294,6 @@ class PurePursuitController:
         # 4. Set the state
         self.rotate_target_pose = target_pose
         self.state = MovementState.ROTATE
-        rospy.loginfo(f"[PP] Rotating relatively by {degrees} degrees")
         
     def get_align(self):
         # 0.5 degrees in radians
