@@ -110,7 +110,9 @@ class Controller:
         print("Initialization Complete, Node is Ready!")
 
     # ====== CALLBACKS (Your original logic preserved) ====== #
-    def global_reply_cb(self, msg): self.received = json.loads(msg.data)
+    def global_reply_cb(self, msg): 
+        print("something received")
+        self.received = json.loads(msg.data)
     def path_reply_cb(self, msg): self.received_path = msg
     def frontier_node_cb(self, msg): self.received = json.loads(msg.data)
     def frontier_node_path_cb(self, msg): self.received_path = msg
