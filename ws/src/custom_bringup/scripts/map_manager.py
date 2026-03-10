@@ -35,7 +35,7 @@ class PathingNode:
         self.detector = None
         self.is_active = False
         self.last_trigger_time = rospy.Time(0)
-        self.cooldown_duration = rospy.Duration(2.5)
+        self.cooldown_duration = rospy.Duration(0.3)
         self.blacklist = []
         self.blacklist_threshold = 5.0
         self.debug = 1

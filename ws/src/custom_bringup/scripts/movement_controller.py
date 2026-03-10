@@ -64,6 +64,7 @@ class PurePursuitController:
         self.initial_rotation_yaw = None
         self.face_coordinates = None
         self.rotate_angular = None
+        self.stop_distance = None
 
         self.side_nudge = 0
         self.safety_threshold = 0.4  # Distance in meters to start nudging
@@ -133,6 +134,14 @@ class PurePursuitController:
                 if command == "rotate":
                     self.state = MovementState.ROTATE
                     self.rotate_angular = data.get("angle")
+                if command == "approach":
+                    self.state = MovementState.APPROACH
+                    # Store the specific x, y we want to approach
+                    self.approach_target = (data.get("x"), data.get("y"))
+                    self.stop_distance = data.get("stopping_distance")
+                if command == "stop_robot":
+                    self.stop_robot()
+                    self.state = MovementState.IDLE
 
 
 
@@ -400,48 +409,51 @@ class PurePursuitController:
         cmd.angular.z = max(min(angular_z, 0.25), -0.25)
         self.cmd_pub.publish(cmd)
 
-    def get_approach(self):
-            pose = self.get_robot_pose()
-            if pose is None:
-                return
+    def state_approach(self):
+        # 1. Get current pose
+        pose = self.get_robot_pose()
+        if pose is None or self.approach_target is None:
+            return
 
-            curr_x, curr_y, curr_yaw = pose
+        curr_x, curr_y, curr_yaw = pose
+        tx, ty = self.approach_target
 
-            # 1. INITIALIZE: Record start position AND starting heading
-            if self.approach_start_pose is None:
-                self.approach_start_pose = (curr_x, curr_y)
-                # This is the "Lock" - we want to stay at this angle
-                self.locked_heading = curr_yaw 
-                rospy.loginfo("[PP] Approach Lock: Heading %.2f | Dist %.2f", 
-                            self.locked_heading, self.max_dist)
-                return
+        # 2. CALCULATE CURRENT GAP
+        # Distance from robot center to the target point
+        dist_to_target = math.hypot(tx - curr_x, ty - curr_y)
+        
+        # Error is how much we still need to move to reach the stop_distance
+        # If we want to be 10cm away and we are 50cm away, move_dist = 40cm
+        move_dist_remaining = dist_to_target - self.stop_distance
 
-            # 2. TRACK DISTANCE
-            start_x, start_y = self.approach_start_pose
-            dist_traveled = math.hypot(curr_x - start_x, curr_y - start_y)
+        # 3. CALCULATE HEADING TO TARGET
+        angle_to_target = math.atan2(ty - curr_y, tx - curr_x)
+        yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
-            # 3. CHECK COMPLETION
-            if dist_traveled >= self.max_dist:
-                rospy.loginfo("[PP] Distance reached. Final Heading Error: %.2f", 
-                            self.normalize_angle(self.locked_heading - curr_yaw))
-                self.stop_robot()
-                self.state = MovementState.IDLE
-                self.approach_start_pose = None 
-                self.node_topic.publish("done")
-                return
+        # 4. TERMINATION CHECK
+        # Stop when the remaining distance to move is zero (or we overshot slightly)
+        if move_dist_remaining <= 0.01: # 1cm tolerance
+            rospy.loginfo("[APPROACH] Stopping distance reached. Final Gap: %.2f", dist_to_target)
+            self.stop_robot()
+            self.approach_target = None
+            self.state = MovementState.COMPLETE
+            self.node_topic.publish("done")
+            return
 
-            # 4. HEADING LOCK (Correction Logic)
-            # Calculate how much we have drifted from our starting heading
-            yaw_error = self.normalize_angle(self.locked_heading - curr_yaw)
-            
-            cmd = Twist()
-            cmd.linear.x = self.approach_speed
-            
-            # High gain for the gyro-lock because IMU data has zero delay
-            # This will keep the robot's "nose" pointed exactly where it started
-            cmd.angular.z = yaw_error * 8.0 
+        # 5. MOTOR COMMANDS
+        cmd = Twist()
+        
+        # Heading Check: If we aren't facing the target, pivot first
+        if abs(yaw_error) > math.radians(15):
+            cmd.linear.x = 0.0
+            cmd.angular.z = max(min(yaw_error * 2.0, 0.5), -0.5)
+        else:
+            # Move forward, slowing down as we reach the "stop line"
+            cmd.linear.x = min(self.linear_vel, move_dist_remaining * 1.5)
+            # Gentle steering to stay centered on the point
+            cmd.angular.z = yaw_error * 1.5
 
-            self.cmd_pub.publish(cmd)
+        self.cmd_pub.publish(cmd)
 
     def reset_align_vars(self):
         self.latched_align_target = None
@@ -609,7 +621,47 @@ class PurePursuitController:
 
 
     def state_approach(self):
-        pass
+        # 1. Get current pose
+        pose = self.get_robot_pose()
+        if pose is None or self.approach_target is None:
+            return
+
+        curr_x, curr_y, curr_yaw = pose
+        target_x, target_y = self.approach_target
+
+        # 2. CALCULATE VECTOR TO TARGET
+        dx = target_x - curr_x
+        dy = target_y - curr_y
+        dist_to_go = math.hypot(dx, dy)
+        
+        # Angle from robot to the target coordinate
+        angle_to_target = math.atan2(dy, dx)
+        # How much we need to turn to face that point
+        yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
+
+        # 3. TERMINATION CHECK (Goal Tolerance)
+        # Using 0.05m (5cm) as a tight tolerance for approach
+        if dist_to_go < 0.05:
+            rospy.loginfo("[APPROACH] Target (%.2f, %.2f) reached.", target_x, target_y)
+            self.stop_robot()
+            self.approach_target = None  # Clear target
+            self.state = MovementState.COMPLETE
+            self.node_topic.publish("done")
+            return
+
+        # 4. MOTOR COMMANDS
+        cmd = Twist()
+        
+        # Heading Correction: If the error is large, prioritize rotating
+        if abs(yaw_error) > math.radians(20):
+            cmd.linear.x = 0.0
+            cmd.angular.z = max(min(yaw_error * 2.0, 0.5), -0.5)
+        else:
+            # Move forward while slightly adjusting heading (Pure Pursuit style)
+            cmd.linear.x = min(self.linear_vel, dist_to_go * 1.5)
+            cmd.angular.z = yaw_error * 2.0
+
+        self.cmd_pub.publish(cmd)
 
 
     def run(self):

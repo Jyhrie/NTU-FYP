@@ -44,6 +44,9 @@ class SubStates(Enum):
     COMPLETE = 15
     CONFIRMING_ITEM = 16
     WAITING_PATH_RESPONSE = 17
+    WAITING_HOME_PATH_RESPONSE = 18
+    MOVING_HOME = 19
+    DROPPING_ITEM = 20
 
 class NavStates(Enum):
     NULL = 0
@@ -110,9 +113,7 @@ class Controller:
         print("Initialization Complete, Node is Ready!")
 
     # ====== CALLBACKS (Your original logic preserved) ====== #
-    def global_reply_cb(self, msg): 
-        print("something received")
-        self.received = json.loads(msg.data)
+    def global_reply_cb(self, msg): self.received = json.loads(msg.data)
     def path_reply_cb(self, msg): self.received_path = msg
     def frontier_node_cb(self, msg): self.received = json.loads(msg.data)
     def frontier_node_path_cb(self, msg): self.received_path = msg
@@ -243,8 +244,8 @@ class Controller:
             self.rate.sleep()
 
     def manage_idle(self):
-        if self.f_mapping_complete != True:
-            self.transition(States.MAPPING)
+        # if self.f_mapping_complete != True:
+        #     self.transition(States.MAPPING)
         return
 
     def manage_mapping(self):
@@ -397,6 +398,7 @@ class Controller:
         
             dist = self.detected_distance
             pose = self.get_robot_pose()
+            angle    = self.detected_angle
             #so now we have all the information required to get the object's position in the world
             print(angle, dist, pose)
 
@@ -445,27 +447,31 @@ class Controller:
             
 
         if self.sub_state == SubStates.APPROACH_ITEM:
-            x, y, _ = self.get_robot_pose()
-            obj_x, obj_y = self.target_object_transform
+            # x, y, _ = self.get_robot_pose()
+            # obj_x, obj_y = self.target_object_transform
             #then we convert the distance between the robot's current transform and the target_object_transform,
-            pickup_distance = abs(math.hypot(x-obj_x, y-obj_y)) - 0.35
+            # pickup_distance = abs(math.hypot(x-obj_x, y-obj_y)) - 0.35
 
-            if pickup_distance < 0.015: #1.5cm
-                msg = String()
-                msg.data = json.dumps({
-                    "header": "movement",
-                    "command": "stop_movement",
-                })
-                self.global_request.publish(msg)
-                self.sub_state = SubStates.PICKING_UP
-                #TODO: perform the state transition, then return.
-                return
+            # if pickup_distance < 0.015: #1.5cm
+            #     msg = String()
+            #     msg.data = json.dumps({
+            #         "header": "movement",
+            #         "command": "stop_movement",
+            #     })
+            #     self.global_request.publish(msg)
+            #     self.sub_state = SubStates.PICKING_UP
+            #     #TODO: perform the state transition, then return.
+            #     return
             
+            obj_x, obj_y = self.target_object_transform
             msg = String()
             msg.data = json.dumps({
                 "header": "movement",
                 "command": "approach_item",
-                "distance": pickup_distance, # Stop 35 cm away from the target to prepare for pickup
+                "extra": "face_coordinates",
+                "stopping_distance": 0.35,
+                "x": obj_x,
+                "y": obj_y
             })
             #NOTE: potentially just pass in the coords of the object and let the movement controller handle it due to lower latency, but state transitions might be abit more annoying and i cba rn.
             self.global_request.publish(msg)
