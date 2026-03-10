@@ -29,16 +29,13 @@ roslaunch custom_bringup gmapping.launch
 roslaunch custom_bringup master.launch
 
 # Custom Nodes
-rosrun custom_bringup robot_controller.py
+
+rosrun custom_bringup movement_controller.py
+rosrun custom_bringup map_manager.py
 rosrun custom_bringup node_computer_vision.py
 rosrun custom_bringup node_depth.py
-
-
-
-rosrun custom_bringup frontier_node.py
-rosrun custom_bringup movement_controller.py
-rosrun custom_bringup waypoint_navigator_node.py
-rosrun custom_bringup arm_control_node.py
+rosrun custom_bringup node_arm_control.py
+rosrun custom_bringup robot_controller.py
 
 # RESET THE ARM
 cd fyp
