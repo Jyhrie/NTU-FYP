@@ -60,6 +60,7 @@ class PurePursuitController:
         self.approach_start_pose = None
 
         self.face_coordinates = None
+        self.rotate_angular = None
         
         self.rate = rospy.Rate(15)
 
@@ -83,9 +84,9 @@ class PurePursuitController:
                         self.face_coordinates = (data.get("x"), data.get("y"))
                 if command == "rotate":
                     self.state = MovementState.ROTATE
-                    if self.cached_transform is not None:
-                        self.latched_target_yaw = self.cached_transform
-                        
+                    self.rotate_angular = data.get("angle")
+
+
 
                     
                     # self.end_facing_target = (data.get("end_face_pt_x"), data.get("end_face_pt_y"))
@@ -237,46 +238,62 @@ class PurePursuitController:
         self.cmd_pub.publish(Twist())
 
     # -------------------------------------------------
-    def get_rot(self):
+    def state_rotate(self):
         pose = self.get_robot_pose()
         if pose is None or self.rotate_target_pose is None:
-            return None
+            return
 
+        # Get current and target yaw
         _, _, current_yaw = pose
+        q = self.rotate_target_pose.pose.orientation
+        _, _, target_yaw = tf.transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
 
-        # 1. LATCHING THE TARGET (The "Cache")
-        # Only calculate the target_yaw once when the command first arrives
-        if not hasattr(self, 'latched_target_yaw') or self.latched_target_yaw is None:
-            q = self.rotate_target_pose.pose.orientation
-            (_, _, relative_target) = tf.transformations.euler_from_quaternion(
-                [q.x, q.y, q.z, q.w]
-            )
-            # Store this as a fixed goal in the world/odom frame
-            self.latched_target_yaw = relative_target 
+        # Calculate error
+        error = target_yaw - current_yaw
+        # Correct for wrap-around
+        error = math.atan2(math.sin(error), math.cos(error))
 
-        # 2. CALCULATE ERROR BASED ON REAL-TIME ODOM (No delay)
-        error = self.normalize_angle(self.latched_target_yaw - current_yaw)
-
-        # ---------------- Check Completion ----------------
-        if abs(error) < 0.03: # Tightened tolerance
-            rospy.loginfo("[PP] Rotation complete. Waiting for next camera input.")
+        # Check if finished (e.g., within 0.05 radians / ~3 degrees)
+        if abs(error) < 0.05:
             self.stop_robot()
-            
-            # Reset everything to wait for the next command
-            self.state = MovementState.IDLE
-            self.rotate_target_pose = None
-            self.latched_target_yaw = None # Clear the latch
-            
+            self.state = MovementState.COMPLETE
             self.node_topic.publish("done")
-            return None
-        
-        # ---------------- Control ----------------
-        cmd = Twist()
-        # Lower the gain (1.2 -> 0.6) to prevent aggressive starts/stops with the delay
-        speed = error * 0.8 
-        cmd.angular.z = max(min(speed, 0.3), -0.3) # Capped speed for stability
+            return
 
+        # Proportional control for rotation
+        cmd = Twist()
+        cmd.linear.x = 0.0
+        # Kp gain (e.g., 1.0), clamped to max speed (0.5)
+        cmd.angular.z = max(min(error * 1.5, 0.5), -0.5)
         self.cmd_pub.publish(cmd)
+
+    def start_relative_rotation(self, degrees):
+        pose = self.get_robot_pose()
+        if pose is None:
+            return
+        
+        current_x, current_y, current_yaw = pose
+        
+        # 1. Convert relative degrees to absolute target yaw (radians)
+        relative_radians = math.radians(degrees)
+        target_yaw = current_yaw + relative_radians
+        
+        # 2. Wrap angle to keep it within [-pi, pi]
+        target_yaw = math.atan2(math.sin(target_yaw), math.cos(target_yaw))
+        
+        # 3. Create PoseStamped for the ROTATE state to use
+        target_pose = PoseStamped()
+        target_pose.header.frame_id = "map"
+        q = tf.transformations.quaternion_from_euler(0, 0, target_yaw)
+        target_pose.pose.orientation.x = q[0]
+        target_pose.pose.orientation.y = q[1]
+        target_pose.pose.orientation.z = q[2]
+        target_pose.pose.orientation.w = q[3]
+        
+        # 4. Set the state
+        self.rotate_target_pose = target_pose
+        self.state = MovementState.ROTATE
+        rospy.loginfo(f"[PP] Rotating relatively by {degrees} degrees")
         
     def get_align(self):
         # 0.5 degrees in radians
@@ -530,8 +547,6 @@ class PurePursuitController:
         self.cmd_pub.publish(cmd)
         pass
 
-    def state_rotate(self):
-        pass
 
     def state_approach(self):
         pass
@@ -544,7 +559,7 @@ class PurePursuitController:
             if self.state == MovementState.PURSUIT:
                 self.state_pursuit()
             if self.state == MovementState.ROTATE:
-                self.get_rot()
+                self.state_rotate()
             #     pass
             # if self.state == MovementState.MOVE:
             #     self.get_pp()
