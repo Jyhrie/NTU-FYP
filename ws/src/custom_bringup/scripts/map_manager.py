@@ -253,9 +253,22 @@ class PathingNode:
             sel_path = self._get_shortest_path(paths)
             if sel_path and len(sel_path) > 3:
                 rospy.loginfo("No complete path; sending best partial.")
-                self._publish_frontier_path(sel_path)
+                reply_msg.data = json.dumps({
+                    "header": "map",
+                    "command": "path",
+                    "extra": "incomplete"
+                })
+                self.reply_pub.publish(reply_msg)
+                self._publish_path(path)
                 return
 
+        reply_msg.data = json.dumps({
+            "header": "map",
+            "command": "complete"
+        })
+        self.reply_pub.publish(reply_msg) 
+
+            
         rospy.logwarn("No valid frontier path found.")
 
     # -------------------------------------------------------------------------

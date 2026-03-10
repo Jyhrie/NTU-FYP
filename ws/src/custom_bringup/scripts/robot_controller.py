@@ -269,30 +269,9 @@ class Controller:
                     self.start_time = rospy.get_time()
                     self.sub_state = SubStates.WAITING_PATH_RESPONSE
 
-                # if self.received and self.received.get("header") == "map": #NOTE: additionally perform a timestamp check in case its an old piece of data.
-                #     # Handle path receipt
-                #     recv_cmd = self.received.get("command")
-                #     if self.received_path and recv_cmd == "path":
-                #         self.goal_path = self.received_path
-                #         self.received = None
-                #         self.request_sent = False
-                #         self.sub_state = SubStates.MOVING
-                #     # Handle rotation command
-                #     if recv_cmd == "rotate":
-                #         self.rotate_target_msg = self.prepare_flip()
-                #         self.received = None
-                #         self.request_sent = False
-                #         self.sub_state = SubStates.MOVING
-                #     if recv_cmd == "complete":
-                #         self.received = None
-                #         self.request_sent = False
-                #         self.sub_state = SubStates.COMPLETE
-
-            #TODO: add a timeout
             if self.sub_state == SubStates.WAITING_PATH_RESPONSE:
                 if self.received and self.received.get("header") == "map": #NOTE: additionally perform a timestamp check in case its an old piece of data.
-                    print("callback_received")
-                    # Handle path receipt
+                    #TODO: add a timeout
                     recv_cmd = self.received.get("command")
                     if self.received_path and recv_cmd == "path":
                         self.goal_path = self.received_path
