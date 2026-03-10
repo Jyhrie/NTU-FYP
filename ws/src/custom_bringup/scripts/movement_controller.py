@@ -95,7 +95,7 @@ class PurePursuitController:
         min_r = get_valid_min(right_ranges)
 
         nudge_velocity = 0.0
-        gain = 0.4  # Strength of the nudge
+        gain = 1.5  # Strength of the nudge
 
         # If too close to left wall -> nudge RIGHT (negative angular z)
         if min_l < self.safety_threshold:
