@@ -427,7 +427,7 @@ class PurePursuitController:
         angle_to_target = math.atan2(ty - curr_y, tx - curr_x)
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
-        # 4. TERMINATION CHECK — within 1cm of stop_distance AND heading settled
+        # 4. TERMINATION CHECK  within 1cm of stop_distance AND heading settled
         if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(2):
             rospy.loginfo("[APPROACH] Target achieved. Final dist: %.3f", dist_to_target)
             self.stop_robot()
@@ -438,14 +438,14 @@ class PurePursuitController:
 
         cmd = Twist()
 
-        # 5. PHASE 1 — Pivot to face target before moving
+        # 5. PHASE 1  Pivot to face target before moving
         if abs(yaw_error) > math.radians(5):
             cmd.linear.x = 0.0
             cmd.angular.z = max(min(yaw_error * 2.0, 0.5), -0.5)
             rospy.loginfo_throttle(1, "[APPROACH] Aligning heading... yaw_error=%.1f deg",
                                 math.degrees(yaw_error))
 
-        # 6. PHASE 2 — Move forward, correcting heading as we go
+        # 6. PHASE 2  Move forward, correcting heading as we go
         else:
             if move_dist_remaining > 0:
                 # Ramp down as we approach: P-gain 1.5, clamped 0.08–0.25
