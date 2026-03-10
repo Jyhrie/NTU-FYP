@@ -448,15 +448,15 @@ class PurePursuitController:
         # 6. PHASE 2  Move forward, correcting heading as we go
         else:
             if move_dist_remaining > 0:
-                # Ramp down as we approach: P-gain 1.5, clamped 0.08–0.25
+                # Ramp down as we approach: Pgain 1.5, clamped 0.08-0.25
                 # Using 0.08 min (not 0.15) so we can creep to a clean stop
                 raw_speed = move_dist_remaining * 1.5
                 cmd.linear.x = max(min(raw_speed, 0.25), 0.08)
             else:
-                # Overshot the stop distance — halt, termination will catch it next tick
+                # Overshot the stop distance  halt, termination will catch it next tick
                 cmd.linear.x = 0.0
 
-            # Heading correction while moving — clamped so it doesn't fight forward motion
+            # Heading correction while moving  clamped so it doesn't fight forward motion
             cmd.angular.z = max(min(yaw_error * 2.0, 0.3), -0.3)
             rospy.loginfo_throttle(1, "[APPROACH] Moving... dist_remaining=%.3f speed=%.2f",
                                 move_dist_remaining, cmd.linear.x)
