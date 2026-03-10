@@ -108,6 +108,9 @@ class PurePursuitController:
         # Apply a small low-pass filter to prevent jittery steering
         self.side_nudge = 0.5 * self.side_nudge + 0.5 * nudge_velocity
 
+        print(self.side_nudge)
+        
+
     def controller_cb(self, msg):
         try:
             # Try to parse as JSON first
