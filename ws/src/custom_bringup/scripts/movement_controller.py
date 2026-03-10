@@ -418,40 +418,47 @@ class PurePursuitController:
         curr_x, curr_y, curr_yaw = pose
         tx, ty = self.approach_target
 
-        # 2. CALCULATE CURRENT GAP
-        # Distance from robot center to the target point
+        # 2. CALCULATE DISTANCES
         dist_to_target = math.hypot(tx - curr_x, ty - curr_y)
-        
-        # Error is how much we still need to move to reach the stop_distance
-        # If we want to be 10cm away and we are 50cm away, move_dist = 40cm
         move_dist_remaining = dist_to_target - self.stop_distance
 
-        # 3. CALCULATE HEADING TO TARGET
+        # 3. CALCULATE HEADING
         angle_to_target = math.atan2(ty - curr_y, tx - curr_x)
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
         # 4. TERMINATION CHECK
-        # Stop when the remaining distance to move is zero (or we overshot slightly)
-        if move_dist_remaining <= 0.01 and yaw_error < math.radians(2): # 1cm tolerance
-            rospy.loginfo("[APPROACH] Stopping distance reached. Final Gap: %.2f", dist_to_target)
+        # We allow a small distance tolerance (1cm) and heading tolerance (2 degrees)
+        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(2):
+            rospy.loginfo("[APPROACH] Target achieved. Final Gap: %.2f", dist_to_target)
             self.stop_robot()
             self.approach_target = None
             self.state = MovementState.COMPLETE
             self.node_topic.publish("done")
             return
 
-        # 5. MOTOR COMMANDS
         cmd = Twist()
-        
-        # Heading Check: If we aren't facing the target, pivot first
-        if abs(yaw_error) > math.radians(15):
+
+        # 5. PIVOT FIRST (Face the object)
+        # We use a 5-degree threshold to decide when to start moving forward
+        if abs(yaw_error) > math.radians(5):
             cmd.linear.x = 0.0
+            # P-control for rotation
             cmd.angular.z = max(min(yaw_error * 2.0, 0.5), -0.5)
+            rospy.loginfo_throttle(1, "[APPROACH] Aligning heading...")
+        
+        # 6. MOVE FORWARD SLOWLY (With heading maintenance)
         else:
-            # Move forward, slowing down as we reach the "stop line"
-            cmd.linear.x = min(self.linear_vel, move_dist_remaining * 1.5)
-            # Gentle steering to stay centered on the point
-            cmd.angular.z = yaw_error * 1.5
+            # Calculate velocity with your 0.15 - 0.3 range
+            # We use a P-gain (1.5) but clamp it between your min and max
+            raw_speed = move_dist_remaining * 1.5
+            cmd.linear.x = max(min(raw_speed, 0.3), 0.15)
+            
+            # If we have technically "passed" the stop line, don't move at all
+            if move_dist_remaining <= 0:
+                cmd.linear.x = 0.0
+
+            # Keep the "nose" pointed at the object while moving
+            cmd.angular.z = yaw_error * 2.0 
 
         self.cmd_pub.publish(cmd)
 
