@@ -64,38 +64,24 @@ class PathingNode:
             rospy.logwarn("Costmap is empty, skipping publish.")
             return
 
-        grid_msg = OccupancyGrid()
+        msg = self.map
+        # 2. Prepare the OccupancyGrid message
+        out_msg = OccupancyGrid()
+        out_msg.header = msg.header
+        out_msg.header.stamp = rospy.Time.now()
+        out_msg.info = msg.info
 
-        # 1. Header and Metadata
-        grid_msg.header.stamp = rospy.Time.now()
-        grid_msg.header.frame_id = "map"  # Ensure this matches your SLAM frame
-
-        # 2. Info (Resolution and Origin must match your SLAM map)
-        grid_msg.info.resolution = self.map_resolution  # e.g., 0.05
-        grid_msg.info.width = self.global_costmap.shape[1]
-        grid_msg.info.height = self.global_costmap.shape[0]
-        
-        # Origin usually matches the GMapping/SLAM map origin
-        grid_msg.info.origin.position.x = self.map_origin_x
-        grid_msg.info.origin.position.y = self.map_origin_y
-        grid_msg.info.origin.orientation.w = 1.0
-
-        # 3. Data Normalization
-        # Map your cost values to the 0-100 range required by OccupancyGrid
-        # Use float64 to avoid overflow during normalization
-        cost_min = np.min(self.global_costmap)
-        cost_max = np.max(self.global_costmap)
-        
-        if cost_max - cost_min > 0:
-            normalized_costs = (self.global_costmap - cost_min) / (cost_max - cost_min) * 100
+        # 3. Normalize to 0-100 range for Rviz visualization
+        max_val = np.max(self.global_costmap)
+        if max_val > 0:
+            # High cost (walls) = 100, Low cost (centers) = 0
+            normalized = (self.global_costmap.astype(float) / max_val * 100)
+            # OccupancyGrid data must be a list of int8
+            out_msg.data = normalized.flatten().astype(np.int8).tolist()
         else:
-            normalized_costs = self.global_costmap
+            out_msg.data = self.global_costmap.flatten().astype(np.int8).tolist()
 
-        # Convert to int8 (OccupancyGrid data format) and flatten
-        grid_msg.data = normalized_costs.astype(np.int8).flatten().tolist()
-
-        # 4. Publish to the dedicated topic
-        self.costmap_pub.publish(grid_msg)
+        self.costmap_pub.publish(out_msg)
 
     # -------------------------------------------------------------------------
     # Map Callbacks
