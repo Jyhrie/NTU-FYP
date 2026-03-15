@@ -173,8 +173,8 @@ class YOLOv8TRTNode:
             else:
                 self.detection_counter = 0
 
-            cv2.imshow("Astra Pro Vision", display_img)
-            cv2.waitKey(1)
+            # cv2.imshow("Astra Pro Vision", display_img)
+            # cv2.waitKey(1)
 
         finally:
             self.ctx.pop()
