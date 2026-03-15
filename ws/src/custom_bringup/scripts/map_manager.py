@@ -362,6 +362,7 @@ class PathingNode:
 
             # 3. Calculate costmap with the thicker obstacle
             self.global_costmap = calc_cost_map(local_map)
+            self.publish_costmap()
 
             # 2. Prepare the OccupancyGrid message
             out_msg = OccupancyGrid()
