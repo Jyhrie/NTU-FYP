@@ -57,6 +57,45 @@ class PathingNode:
         # self.marker_pub = rospy.Publisher("/detected_frontiers", Marker, queue_size=10)
 
         rospy.loginfo("Pathing Node Initialized and Ready.")
+    
+
+    def publish_costmap(self):
+        if self.global_costmap is None:
+            rospy.logwarn("Costmap is empty, skipping publish.")
+            return
+
+        grid_msg = OccupancyGrid()
+
+        # 1. Header and Metadata
+        grid_msg.header.stamp = rospy.Time.now()
+        grid_msg.header.frame_id = "map"  # Ensure this matches your SLAM frame
+
+        # 2. Info (Resolution and Origin must match your SLAM map)
+        grid_msg.info.resolution = self.map_resolution  # e.g., 0.05
+        grid_msg.info.width = self.global_costmap.shape[1]
+        grid_msg.info.height = self.global_costmap.shape[0]
+        
+        # Origin usually matches the GMapping/SLAM map origin
+        grid_msg.info.origin.position.x = self.map_origin_x
+        grid_msg.info.origin.position.y = self.map_origin_y
+        grid_msg.info.origin.orientation.w = 1.0
+
+        # 3. Data Normalization
+        # Map your cost values to the 0-100 range required by OccupancyGrid
+        # Use float64 to avoid overflow during normalization
+        cost_min = np.min(self.global_costmap)
+        cost_max = np.max(self.global_costmap)
+        
+        if cost_max - cost_min > 0:
+            normalized_costs = (self.global_costmap - cost_min) / (cost_max - cost_min) * 100
+        else:
+            normalized_costs = self.global_costmap
+
+        # Convert to int8 (OccupancyGrid data format) and flatten
+        grid_msg.data = normalized_costs.astype(np.int8).flatten().tolist()
+
+        # 4. Publish to the dedicated topic
+        self.costmap_pub.publish(grid_msg)
 
     # -------------------------------------------------------------------------
     # Map Callbacks
@@ -179,6 +218,7 @@ class PathingNode:
             return
 
         self.global_costmap = calc_cost_map(self.map)
+        self.publish_costmap()
 
         x, y, yaw = pose
         start = self.pose_to_cell(x, y)
