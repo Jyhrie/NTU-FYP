@@ -119,7 +119,6 @@ class Controller:
     def frontier_node_path_cb(self, msg): self.received_path = msg
 
     def cv_cb(self, msg):
-        
         if self.state in [States.IDLE, States.MAPPING]: #interruptable
             self.interrupt(clear=True)
             self.state = States.FETCHING
@@ -241,8 +240,8 @@ class Controller:
             self.rate.sleep()
 
     def manage_idle(self):
-        # if self.f_mapping_complete != True:
-        #     self.transition(States.MAPPING)
+        if self.f_mapping_complete != True:
+            self.transition(States.MAPPING)
         return
 
     def manage_mapping(self):
@@ -401,6 +400,7 @@ class Controller:
 
             #ok we know the definite position here, update it in the map.
             self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
+            
             if self.target_object_transform is None:
                 return
 
@@ -441,6 +441,10 @@ class Controller:
         
         if self.sub_state == SubStates.MOVING:
             pass
+
+        #TODO: get object again...
+        #turn such that camera is not obscured
+        #t
             
 
         if self.sub_state == SubStates.APPROACH_ITEM:
@@ -466,7 +470,7 @@ class Controller:
                 "header": "movement",
                 "command": "approach",
                 "extra": "face_coordinates",
-                "stopping_distance": 0.42,
+                "stopping_distance": 0.41,
                 "x": obj_x,
                 "y": obj_y
             })
@@ -489,9 +493,10 @@ class Controller:
         if self.sub_state == SubStates.REQUESTING_HOME_PATH:
             msg = String()
             msg.data = json.dumps({
-                "header": "movement",
-                "command": "approach_item",
-                "distance": pickup_distance, # Stop 35 cm away from the target to prepare for pickup
+                "header": "pathing",
+                "command": "object",
+                "x": 0,
+                "y": 0
             })
             #NOTE: potentially just pass in the coords of the object and let the movement controller handle it due to lower latency, but state transitions might be abit more annoying and i cba rn.
             self.global_request.publish(msg)
@@ -500,11 +505,7 @@ class Controller:
             obj_x, obj_y = self.target_object_transform
             msg = String()
             msg.data = json.dumps({
-                "header": "movement",
-                "command": "follow_path",
-                "extra": "face_coordinates",
-                "x": obj_x,
-                "y": obj_y
+                #TODO
             })
             self.global_request.publish(msg)
             self.global_path.publish(self.received_path)
