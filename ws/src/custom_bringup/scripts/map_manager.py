@@ -484,7 +484,7 @@ class PathingNode:
         map_h, map_w = self.visual_map.shape
 
         cone_range_m = 2.5
-        half_fov = math.radians(30.0)   # ±30° → 60° total FOV
+        half_fov = math.radians(30.0) 
         range_cells = int(math.ceil(cone_range_m / res))
 
         # Robot position in grid coordinates
