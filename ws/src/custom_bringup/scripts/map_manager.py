@@ -9,7 +9,7 @@ import copy
 
 from std_msgs.msg import String
 from nav_msgs.msg import Path, OccupancyGrid
-from geometry_msgs.msg import PoseStamped, Point
+from geometry_msgs.msg import PoseStamped, Point, Twist
 from visualization_msgs.msg import Marker
 
 import tf2_ros
@@ -30,6 +30,7 @@ class PathingNode:
         self.map = None
         self.global_costmap = None
         self.home_pose = (0.0, 0.0)
+        self.visual_map = None
 
         # --- Frontier State ---
         self.detector = None
@@ -47,6 +48,7 @@ class PathingNode:
         # --- Subscribers ---
         rospy.Subscriber("/controller/global", String, self.controller_cb)
         rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
+        rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_cb)
         #rospy.Subscriber("/map/costmap_global", OccupancyGrid, self.global_costmap_cb)
 
         self.marker_pub = rospy.Publisher('/detected_object_marker', Marker, queue_size=10)
@@ -54,6 +56,7 @@ class PathingNode:
         # --- Publishers ---
         self.reply_pub = rospy.Publisher("/robot/reply", String, queue_size=1)
         self.path_pub = rospy.Publisher("/robot/path_reply", Path, queue_size=1)
+        self.visual_map_pub = rospy.Publisher("/map/visual", OccupancyGrid, queue_size=1)
         # self.marker_pub = rospy.Publisher("/detected_frontiers", Marker, queue_size=10)
 
         rospy.loginfo("Pathing Node Initialized and Ready.")
@@ -96,6 +99,16 @@ class PathingNode:
                 resolution=msg.info.resolution,
                 origin_x=msg.info.origin.position.x,
                 origin_y=msg.info.origin.position.y,
+            )
+            # Initialise visual_map as a separate in-memory occupancy grid.
+            # Dimensions match the incoming map; all cells start as unknown (-1).
+            self.visual_map = np.full(
+                (msg.info.height, msg.info.width), -1, dtype=np.int8
+            )
+            rospy.loginfo(
+                "visual_map initialised: {}x{} cells".format(
+                    msg.info.width, msg.info.height
+                )
             )
 
         # self.global_costmap = calc_cost_map(msg)
@@ -428,6 +441,94 @@ class PathingNode:
                 self.reply_pub.publish(json.dumps({"header": "object", "data": "path_ready"}))
             else:
                 rospy.logerr("Pathing Node: Failed to find A* path to the safe spot.")
+
+    # -------------------------------------------------------------------------
+    # cmd_vel Callback – free-space cone marking
+    # -------------------------------------------------------------------------
+
+    def publish_visual_map(self):
+        """Publish self.visual_map as an OccupancyGrid on /map/visual."""
+        if self.visual_map is None or self.map is None:
+            return
+        out_msg = OccupancyGrid()
+        out_msg.header.frame_id = "map"
+        out_msg.header.stamp = rospy.Time.now()
+        out_msg.info = self.map.info
+        out_msg.data = self.visual_map.flatten().tolist()
+        self.visual_map_pub.publish(out_msg)
+
+    def cmd_vel_cb(self, msg):
+        """
+        When a zero Twist is received on /cmd_vel, mark all cells inside a
+        60-degree FOV cone (±30° around the robot's forward direction) with a
+        2.5 m range as FREE (0) in self.visual_map.
+        """
+        # Only act on a fully zero twist command
+        is_zero = (
+            msg.linear.x == 0.0
+            and msg.linear.y == 0.0
+            and msg.linear.z == 0.0
+            and msg.angular.x == 0.0
+            and msg.angular.y == 0.0
+            and msg.angular.z == 0.0
+        )
+        if not is_zero:
+            return
+
+        if self.visual_map is None or self.map is None:
+            return
+
+        pose = self.get_robot_pose()
+        if pose is None:
+            return
+
+        rx, ry, yaw = pose
+        res = self.map.info.resolution
+        origin_x = self.map.info.origin.position.x
+        origin_y = self.map.info.origin.position.y
+        map_h, map_w = self.visual_map.shape
+
+        cone_range_m = 2.5
+        half_fov = math.radians(30.0)   # ±30° → 60° total FOV
+        range_cells = int(math.ceil(cone_range_m / res))
+
+        # Robot position in grid coordinates
+        robot_gx = int((rx - origin_x) / res)
+        robot_gy = int((ry - origin_y) / res)
+
+        # Iterate over the bounding box of the cone
+        for dy in range(-range_cells, range_cells + 1):
+            for dx in range(-range_cells, range_cells + 1):
+                gx = robot_gx + dx
+                gy = robot_gy + dy
+
+                # Bounds check
+                if not (0 <= gx < map_w and 0 <= gy < map_h):
+                    continue
+
+                # Distance check
+                dist = math.sqrt(dx * dx + dy * dy) * res
+                if dist > cone_range_m:
+                    continue
+
+                # Angle check: is this cell within ±30° of the robot's forward?
+                cell_angle = math.atan2(dy, dx)
+                angle_diff = math.atan2(
+                    math.sin(cell_angle - yaw),
+                    math.cos(cell_angle - yaw),
+                )
+                if abs(angle_diff) > half_fov:
+                    continue
+
+                self.visual_map[gy, gx] = 0  # mark as FREE
+
+        rospy.logdebug(
+            "cmd_vel zero-twist: marked 60° cone (2.5 m) as free in visual_map "
+            "from robot ({:.2f}, {:.2f}) yaw={:.1f}°".format(
+                rx, ry, math.degrees(yaw)
+            )
+        )
+        self.publish_visual_map()
 
     # -------------------------------------------------------------------------
     # Shared Helpers
