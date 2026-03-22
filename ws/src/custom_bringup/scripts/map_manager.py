@@ -506,7 +506,6 @@ class PathingNode:
                 if dist > cone_range_m:
                     continue
 
-                # Angle check: is this cell within ±30° of the robot's forward?
                 cell_angle = math.atan2(dy, dx)
                 angle_diff = math.atan2(
                     math.sin(cell_angle - yaw),
