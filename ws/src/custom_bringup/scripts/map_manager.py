@@ -443,7 +443,7 @@ class PathingNode:
                 rospy.logerr("Pathing Node: Failed to find A* path to the safe spot.")
 
     # -------------------------------------------------------------------------
-    # cmd_vel Callback – free-space cone marking
+    # cmd_vel Callback  free-space cone marking
     # -------------------------------------------------------------------------
 
     def publish_visual_map(self):
