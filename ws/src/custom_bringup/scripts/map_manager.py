@@ -105,9 +105,17 @@ class PathingNode:
             self.visual_map = np.full(
                 (msg.info.height, msg.info.width), -1, dtype=np.int8
             )
+            # Freeze the origin and resolution at init time so the visual_map
+            # stays anchored in world space even if SLAM shifts map.info.origin.
+            self.visual_map_resolution = msg.info.resolution
+            self.visual_map_origin_x = msg.info.origin.position.x
+            self.visual_map_origin_y = msg.info.origin.position.y
+            self.visual_map_width = msg.info.width
+            self.visual_map_height = msg.info.height
             rospy.loginfo(
-                "visual_map initialised: {}x{} cells".format(
-                    msg.info.width, msg.info.height
+                "visual_map initialised: {}x{} cells, origin=({:.2f},{:.2f})".format(
+                    msg.info.width, msg.info.height,
+                    self.visual_map_origin_x, self.visual_map_origin_y,
                 )
             )
 
@@ -443,7 +451,7 @@ class PathingNode:
                 rospy.logerr("Pathing Node: Failed to find A* path to the safe spot.")
 
     # -------------------------------------------------------------------------
-    # cmd_vel Callback  free-space cone marking
+    # cmd_vel Callback - free-space cone marking
     # -------------------------------------------------------------------------
 
     def publish_visual_map(self):
@@ -453,11 +461,22 @@ class PathingNode:
         out_msg = OccupancyGrid()
         out_msg.header.frame_id = "map"
         out_msg.header.stamp = rospy.Time.now()
-        out_msg.info = self.map.info
+        # Use the frozen metadata so the grid never shifts with SLAM's origin.
+        out_msg.info.resolution = self.visual_map_resolution
+        out_msg.info.width = self.visual_map_width
+        out_msg.info.height = self.visual_map_height
+        out_msg.info.origin.position.x = self.visual_map_origin_x
+        out_msg.info.origin.position.y = self.visual_map_origin_y
+        out_msg.info.origin.orientation.w = 1.0
         out_msg.data = self.visual_map.flatten().tolist()
         self.visual_map_pub.publish(out_msg)
 
     def cmd_vel_cb(self, msg):
+        """
+        When a zero Twist is received on /cmd_vel, mark all cells inside a
+        60-degree FOV cone (+/-30 degrees around the robot's forward direction) with a
+        2.5 m range as FREE (0) in self.visual_map.
+        """
         # Only act on a fully zero twist command
         is_zero = (
             msg.linear.x == 0.0
@@ -478,13 +497,14 @@ class PathingNode:
             return
 
         rx, ry, yaw = pose
-        res = self.map.info.resolution
-        origin_x = self.map.info.origin.position.x
-        origin_y = self.map.info.origin.position.y
-        map_h, map_w = self.visual_map.shape
+        res = self.visual_map_resolution
+        origin_x = self.visual_map_origin_x
+        origin_y = self.visual_map_origin_y
+        map_h = self.visual_map_height
+        map_w = self.visual_map_width
 
-        cone_range_m = 2.5
-        half_fov = math.radians(30.0) 
+        cone_range_m = 1
+        half_fov = math.radians(30.0)   # +/-30 degrees -> 60 degree total FOV
         range_cells = int(math.ceil(cone_range_m / res))
 
         # Robot position in grid coordinates
@@ -506,6 +526,7 @@ class PathingNode:
                 if dist > cone_range_m:
                     continue
 
+                # Angle check: is this cell within +/-30 degrees of the robot's forward?
                 cell_angle = math.atan2(dy, dx)
                 angle_diff = math.atan2(
                     math.sin(cell_angle - yaw),
@@ -514,11 +535,27 @@ class PathingNode:
                 if abs(angle_diff) > half_fov:
                     continue
 
-                self.visual_map[gy, gx] = 0  # mark as FREE
+                # Copy the current map value so visual_map reflects what the
+                # robot actually sees at this cell while standing still.
+                # Convert the visual_map cell back to world coords, then into
+                # the live map's (potentially shifted) grid to read the value.
+                live_res = self.map.info.resolution
+                live_origin_x = self.map.info.origin.position.x
+                live_origin_y = self.map.info.origin.position.y
+                live_map_w = self.map.info.width
+                live_map_h = self.map.info.height
+                wx = gx * res + origin_x
+                wy = gy * res + origin_y
+                live_gx = int((wx - live_origin_x) / live_res)
+                live_gy = int((wy - live_origin_y) / live_res)
+                if not (0 <= live_gx < live_map_w and 0 <= live_gy < live_map_h):
+                    continue
+                map_idx = live_gy * live_map_w + live_gx
+                self.visual_map[gy, gx] = self.map.data[map_idx]
 
         rospy.logdebug(
             "cmd_vel zero-twist: marked 60deg cone (2.5 m) as free in visual_map "
-            "from robot ({:.2f}, {:.2f}) yaw={:.1f}".format(
+            "from robot ({:.2f}, {:.2f}) yaw={:.1f}deg".format(
                 rx, ry, math.degrees(yaw)
             )
         )
