@@ -458,11 +458,6 @@ class PathingNode:
         self.visual_map_pub.publish(out_msg)
 
     def cmd_vel_cb(self, msg):
-        """
-        When a zero Twist is received on /cmd_vel, mark all cells inside a
-        60-degree FOV cone (±30° around the robot's forward direction) with a
-        2.5 m range as FREE (0) in self.visual_map.
-        """
         # Only act on a fully zero twist command
         is_zero = (
             msg.linear.x == 0.0
