@@ -518,7 +518,7 @@ class PathingNode:
 
         rospy.logdebug(
             "cmd_vel zero-twist: marked 60deg cone (2.5 m) as free in visual_map "
-            "from robot ({:.2f}, {:.2f}) yaw={:.1f}°".format(
+            "from robot ({:.2f}, {:.2f}) yaw={:.1f}".format(
                 rx, ry, math.degrees(yaw)
             )
         )
