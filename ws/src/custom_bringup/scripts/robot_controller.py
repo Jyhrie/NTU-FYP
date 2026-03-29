@@ -240,8 +240,8 @@ class Controller:
             self.rate.sleep()
 
     def manage_idle(self):
-        if self.f_mapping_complete != True:
-            self.transition(States.MAPPING)
+        # if self.f_mapping_complete != True:
+        #     self.transition(States.MAPPING)
         return
 
     def manage_mapping(self):
