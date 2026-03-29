@@ -35,7 +35,8 @@ class PurePursuitController:
 
         # ---------------- Params ----------------
         self.lookahead = rospy.get_param("~lookahead", 0.6)   # meters
-        self.linear_vel = rospy.get_param("~linear_vel", 0.25)
+        self.linear_vel = rospy.get_param("~linear_vel", 0.15)
+        self.max_angular_vel = rospy.get_param("~max_angular_vel", 0.3) # Added for easier tuning
         self.goal_tol = rospy.get_param("~goal_tolerance", 0.3)
 
         # ---------------- State ----------------
@@ -615,15 +616,20 @@ class PurePursuitController:
 
         base_angular = kappa * self.linear_vel
         
+        
         cmd = Twist()
         # Combine Pure Pursuit steering with the side-avoidance nudge
-        cmd.angular.z = base_angular + self.side_nudge
+        total_angular = base_angular + self.side_nudge
+        cmd.angular.z = max(min(total_angular, 0.3), -0.3) # Hard clamp at 0.3 rad/s
+
+        turn_severity = abs(cmd.angular.z) / 0.3
+        speed_factor = 1.0 - (turn_severity * 0.8)
+        nudge_slowdown = max(0.4, 1.0 - abs(self.side_nudge))
+        cmd.linear.x = self.linear_vel * speed_factor * nudge_slowdown
         
-        # Optional: Slow down linear speed if we are nudging hard (safety)
-        nudge_intensity = abs(self.side_nudge)
-        speed_factor = max(0.3, 0.6 - nudge_intensity) 
-        cmd.linear.x = self.linear_vel * speed_factor
-        
+        # nudge_intensity = abs(self.side_nudge)
+        # speed_factor = max(0.3, 0.6 - nudge_intensity) 
+        # cmd.linear.x = self.linear_vel * speed_factor
         self.cmd_pub.publish(cmd)
         pass
 

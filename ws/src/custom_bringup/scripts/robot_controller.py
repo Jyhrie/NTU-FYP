@@ -136,7 +136,7 @@ class Controller:
 
                 elif self.sub_state == SubStates.APPROACH_ITEM:
                     self.sub_state = SubStates.PICKING_UP
-                elif self.sub_state == SubStates.RETURNING:
+                elif self.sub_state == SubStates.REQUESTING_HOME_PATH:
                     print("Back at origin. Fetch complete.")
                     self.transition(States.NULL)
                 return
