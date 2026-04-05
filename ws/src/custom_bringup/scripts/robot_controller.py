@@ -615,7 +615,7 @@ class Controller:
             
             
         if self.sub_state == SubStates.WAITING_HOME_PATH_RESPONSE:
-            if self.received and self.received.get("header") == "map": #NOTE: additionally perform a timestamp check in case its an old piece of data.
+            if self.received is not None: #and self.received.get("header") == "map":
                 self.goal_path = self.received_path
                 self.received = None
                 self.request_sent = False
