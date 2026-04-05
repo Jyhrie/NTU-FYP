@@ -134,7 +134,8 @@ class Controller:
         pass
 
     def movement_controller_cb(self, msg):
-        if msg.data == "done":
+        data = json.loads(msg.data)
+        if data['header'] == "done":
             print("Movement Controller reports: Movement Complete")
             if self.state == States.FETCHING:
                 if self.sub_state == SubStates.MOVING:
@@ -144,7 +145,8 @@ class Controller:
                     self.sub_state = SubStates.REALIGNMENT_WAITING_ITEM
                 
                 if self.sub_state == SubStates.REALIGNMENT_IN_MOVING:
-                    self.sub_state = SubStates.APPROACH_ITEM
+                    if data['extra'] == "rotate":
+                        self.sub_state = SubStates.APPROACH_ITEM
 
                 elif self.sub_state == SubStates.APPROACH_ITEM:
                     self.sub_state = SubStates.PICKING_UP

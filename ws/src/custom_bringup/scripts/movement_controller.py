@@ -329,7 +329,12 @@ class PurePursuitController:
             self.rotate_angular = None 
             
             self.state = MovementState.COMPLETE
-            self.node_topic.publish("done")
+            msg = String()
+            msg.data = json.dumps({
+                    "header": "done",
+                    "extra": "rotate",
+                })
+            self.node_topic.publish(msg)
             return
 
         # 5. MOTOR COMMANDS (P-Control)
@@ -390,7 +395,12 @@ class PurePursuitController:
                 self.stop_robot()
                 self.state = MovementState.IDLE
                 self.align_target_reached_time = None 
-                self.node_topic.publish("done")
+                msg = String()
+                msg.data = json.dumps({
+                        "header": "done",
+                        "extra": "align",
+                    })
+                self.node_topic.publish(msg)
                 return
             
             self.stop_robot()
@@ -434,7 +444,12 @@ class PurePursuitController:
             if self._approach_stable_ticks >= APPROACH_STABLE_REQUIRED:
                 self.stop_robot()
                 print("Approach complete and stable, yaw_error=%.2f deg, dist_remaining=%.3f" % (math.degrees(yaw_error), move_dist_remaining))
-                self.node_topic.publish("done")
+                msg = String()
+                msg.data = json.dumps({
+                        "header": "done",
+                        "extra": "approach",
+                    })
+                self.node_topic.publish(msg)
                 self.state = MovementState.COMPLETE
                 return
         else:
@@ -526,7 +541,12 @@ class PurePursuitController:
                 rospy.loginfo("[PP] Transitioning to ROTATE to face target point")
             else:
                 self.stop_robot()
-                self.node_topic.publish("done")
+                msg = String()
+                msg.data = json.dumps({
+                        "header": "done",
+                        "extra": "pp",
+                    })
+                self.node_topic.publish(msg)
                 self.state = MovementState.COMPLETE
             return
 
