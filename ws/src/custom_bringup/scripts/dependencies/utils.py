@@ -26,7 +26,7 @@ def wrap_angle(angle_rad):
 
 def project_local_to_world(robot_pose, rel_angle_deg, distance):
     rx, ry, ryaw = robot_pose
-    ry = ry-0.015
+    ry = ry-0.025
     
     # 1. Total bearing: Robot's orientation + sensor's relative offset
     total_bearing_rad = wrap_angle(ryaw + math.radians(rel_angle_deg))
