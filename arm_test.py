@@ -29,7 +29,7 @@ def move_arm_staggered():
     try:
         # --- STEP 1: EXTEND ---
         # Stagger the start of each motor
-        send_single_joint(7, 150, 2000)
+        send_single_joint(7, 120, 2000)
         rospy.sleep(0.3)
         send_single_joint(8, 180, 1100)
         rospy.sleep(0.3)
