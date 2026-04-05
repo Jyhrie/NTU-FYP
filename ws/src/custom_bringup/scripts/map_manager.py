@@ -51,7 +51,7 @@ class PathingNode:
         rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_cb)
         #rospy.Subscriber("/map/costmap_global", OccupancyGrid, self.global_costmap_cb)
 
-        self.marker_pub = rospy.Publisher('/detected_object_marker', Marker, queue_size=10)
+        #self.marker_pub = rospy.Publisher('/detected_object_marker', Marker, queue_size=10)
         self.costmap_pub = rospy.Publisher('/costmap/global', OccupancyGrid, queue_size=1)
         # --- Publishers ---
         self.reply_pub = rospy.Publisher("/robot/reply", String, queue_size=1)
@@ -591,7 +591,7 @@ class PathingNode:
         elif color == "red":
             marker.color.r = 1.0
             
-        self.marker_pub.publish(marker)
+        #self.marker_pub.publish(marker)
 
     def _maps_ready(self):
         if self.map is None:

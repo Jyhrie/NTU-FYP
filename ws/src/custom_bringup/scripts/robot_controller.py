@@ -200,6 +200,7 @@ class Controller:
                 marker.color.b = 1.0
                 
             self.marker_pub.publish(marker)
+    
 
     def prepare_flip(self):
         pose = self.get_robot_pose()
@@ -417,6 +418,7 @@ class Controller:
                 return
 
             obj_x, obj_y = self.target_object_transform
+            self.publish_marker(obj_x, obj_y, 1 , color="blue")
 
             #wipe detected distance for next detection.
             self.detected_distance = None
@@ -524,6 +526,8 @@ class Controller:
 
                 #ok we know the definite position here, update it in the map.
                 self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
+                tx, ty = self.target_object_transform
+                self.publish_marker(tx, ty, 1 , color="blue")
                 print("Target Object Transform: %s" % str(self.target_object_transform))
                 self.sub_state = SubStates.REALIGNMENT_IN
 
