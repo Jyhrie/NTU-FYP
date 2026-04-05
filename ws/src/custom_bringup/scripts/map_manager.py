@@ -406,8 +406,8 @@ class PathingNode:
 
             # Define ring parameters (in cells)
             # Assuming resolution is 0.05m, radius=10 is 0.5m away
-            sampling_radius = 10
-            sampling_thickness = 4
+            sampling_radius = 15
+            sampling_thickness = 3
 
             candidates = self.get_lowest_cost_in_ring(
                 obj_cx, obj_cy, radius=sampling_radius, thickness=sampling_thickness, n_best=1
