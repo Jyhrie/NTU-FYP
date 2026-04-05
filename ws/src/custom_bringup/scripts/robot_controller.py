@@ -457,7 +457,7 @@ class Controller:
             pass
 
         if self.sub_state == SubStates.REALIGNMENT_OUT:
-            rospy.sleep(0.8)
+            rospy.sleep(1.5)
             msg = String()
             msg.data = json.dumps({
                 "header": "movement",
