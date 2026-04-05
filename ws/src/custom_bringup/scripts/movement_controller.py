@@ -14,7 +14,7 @@ from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
 from sensor_msgs.msg import LaserScan # Add this import at the top
 
-APPROACH_STABLE_REQUIRED = 5  # 5 ticks at 20hz = 250ms of stability
+APPROACH_STABLE_REQUIRED = 10  # 10 ticks at 20hz = 500ms of stability
 
 class MovementState(Enum):
     IDLE = 0
@@ -429,10 +429,11 @@ class PurePursuitController:
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
         # 1. TERMINATION LOGIC (Keep this as is, it's solid)
-        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(0.8):
+        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(0.5):
             self._approach_stable_ticks += 1
             if self._approach_stable_ticks >= APPROACH_STABLE_REQUIRED:
                 self.stop_robot()
+                print("Approach complete and stable, yaw_error=%.2f deg, dist_remaining=%.3f" % (math.degrees(yaw_error), move_dist_remaining))
                 self.node_topic.publish("done")
                 self.state = MovementState.COMPLETE
                 return
