@@ -618,7 +618,12 @@ class PurePursuitController:
                 rospy.loginfo("[PP] Rotating %.2f degrees to face target point", self.rotate_angular)
             else:
                 self.stop_robot()
-                self.node_topic.publish("done")
+                msg = String()
+                msg.data = json.dumps({
+                        "header": "done",
+                        "extra": "pp",
+                    })
+                self.node_topic.publish(msg)
                 self.state = MovementState.COMPLETE
             return
 
