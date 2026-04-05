@@ -448,7 +448,7 @@ class PurePursuitController:
         cmd.angular.z = max(min(angular_speed, 0.4), -0.4)
 
         # 3. SMOOTH LINEAR CONTROL
-        if move_dist_remaining > 0:
+        if abs(move_dist_remaining) > 0.015:
             # Calculate base forward speed
             linear_speed = move_dist_remaining * 0.6
             
@@ -459,6 +459,9 @@ class PurePursuitController:
             # If error > 45 deg, speed becomes 0. If error is 0, speed is 100%.
             error_factor = max(0, 1.0 - (abs(yaw_error) / math.radians(45)))
             cmd.linear.x = target_linear * error_factor
+            self.cmd_pub.publish(cmd)
+            return
+    
         else:
             cmd.linear.x = 0.0
 
@@ -486,6 +489,7 @@ class PurePursuitController:
             rospy.loginfo_throttle(0.5, "[APPROACH] Fine aligning... yaw_error=%.2f deg", math.degrees(yaw_error))
 
         self.cmd_pub.publish(cmd)
+        return
 
     def reset_align_vars(self):
         self.latched_align_target = None
