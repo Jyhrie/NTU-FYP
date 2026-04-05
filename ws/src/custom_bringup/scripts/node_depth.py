@@ -81,7 +81,9 @@ class BlobCentroidEstimator:
             global_x = xmin + rel_x
             global_y = ymin + rel_y
 
-            angle_deg = math.degrees(math.atan2(global_x - self.cx, self.fx))
+            # Bounding box center (for angle)
+            bbox_center_x = (xmin + xmax) / 2.0
+            angle_deg = math.degrees(math.atan2(bbox_center_x - self.cx, self.fx))
 
             result = String()
             result.data = json.dumps({
