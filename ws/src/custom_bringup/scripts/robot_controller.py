@@ -611,6 +611,7 @@ class Controller:
             })
             self.received = None
             self.global_request.publish(msg)
+            self.sub_state = SubStates.WAITING_HOME_PATH_RESPONSE
             
             
         if self.sub_state == SubStates.WAITING_HOME_PATH_RESPONSE:
