@@ -47,6 +47,12 @@ class SubStates(Enum):
     WAITING_HOME_PATH_RESPONSE = 18
     MOVING_HOME = 19
     DROPPING_ITEM = 20
+    REALIGNMENT_OUT = 21
+    REALIGNMENT_OUT_MOVING = 22
+    REALIGNMENT_WAITING_ITEM = 23
+    REALIGNMENT_WAITING_DEPTH = 24
+    REALIGNMENT_IN = 25
+    REALIGNMENT_IN_MOVING = 26
 
 class NavStates(Enum):
     NULL = 0
@@ -132,6 +138,12 @@ class Controller:
             print("Movement Controller reports: Movement Complete")
             if self.state == States.FETCHING:
                 if self.sub_state == SubStates.MOVING:
+                    self.sub_state = SubStates.APPROACH_ITEM
+                
+                if self.sub_state == SubStates.REALIGNTMENT_OUT_MOVING:
+                    self.sub_state = SubStates.REALIGNMENT_WAITING_ITEM
+                
+                if self.sub_state == SubStates.REALIGNMENT_IN_MOVING:
                     self.sub_state = SubStates.APPROACH_ITEM
 
                 elif self.sub_state == SubStates.APPROACH_ITEM:
@@ -442,28 +454,100 @@ class Controller:
         if self.sub_state == SubStates.MOVING:
             pass
 
-        #TODO: get object again...
-        #turn such that camera is not obscured
-        #t
-            
+        if self.sub_state == SubStates.REALIGNMENT_OUT:
+            msg = String()
+            msg.data = json.dumps({
+                "header": "movement",
+                "command": "rotate",
+                "angle": 15
+            })
+            pass
 
+        if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING: #waiting phase
+            pass
+
+        if self.sub_state == SubStates.REALIGNMENT_WAITING_ITEM:
+            rospy.sleep(1.5)
+            cached_last_cv_detection = self.last_cv_detection
+            rospy.sleep(1.5)
+            latest_cv_detection = self.last_cv_detection
+
+            if float(latest_cv_detection['ros_time']) - float(cached_last_cv_detection['ros_time']) > 1.2: #PERSISTENCE CHECK PASS
+                bbox_old = (
+                    cached_last_cv_detection['x_start'], 
+                    cached_last_cv_detection['y_start'], 
+                    cached_last_cv_detection['x_len'], 
+                    cached_last_cv_detection['y_len']
+                )
+
+                bbox_latest = (
+                    latest_cv_detection['x_start'], 
+                    latest_cv_detection['y_start'], 
+                    latest_cv_detection['x_len'], 
+                    latest_cv_detection['y_len']
+                )
+                if not utils.compare_bbox_centroid(bbox_old, bbox_latest, radius=12):
+                    self.transition(States.MAPPING)
+                    return
+                
+            rospy.sleep(0.5)
+            self.detected_distance = None
+            self.sub_state = SubStates.REALIGNMENT_WAITING_DEPTH
+            pass
+
+        if self.sub_state == SubStates.REALIGNMENT_WAITING_DEPTH:
+            msg = String()  
+            msg.data = json.dumps({
+                "header": "depth_node",
+                "command": "check_depth",
+                "x_start": self.last_cv_detection['x_start'],
+                "x_len": self.last_cv_detection['x_len'],
+                "y_start": self.last_cv_detection['y_start'],
+                "y_len": self.last_cv_detection['y_len'],
+            })
+            self.global_request.publish(msg)
+
+            if self.detected_distance is None:
+                return
+            elif self.detected_distance < -1:
+                return
+            else:
+                #update target object pose.
+                dist = self.detected_distance
+                pose = self.get_robot_pose()
+                angle    = self.detected_angle
+                #so now we have all the information required to get the object's position in the world
+                print(angle, dist, pose)
+
+                #ok we know the definite position here, update it in the map.
+                self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
+                self.sub_state = SubStates.REALIGNMENT_IN
+
+        if self.sub_state == SubStates.REALIGNMENT_IN:
+            #calculate rotation from current rotation to face the object, then just call a naive rotate in place command, then transition to next sub-state to move forward a bit to get into the ideal position for pickup.
+            rx, ry, ryaw = self.get_robot_pose()
+            tx = self.target_object_transform.x
+            ty = self.target_object_transform.y
+            dx = tx - rx
+            dy = ty - ry
+            target_yaw = math.atan2(dy, dx)
+            yaw_error = target_yaw - ryaw
+            yaw_error = (yaw_error + math.pi) % (2 * math.pi) - math.pi
+            yaw_error_deg = math.degrees(yaw_error)
+            msg = String()
+            msg.data = json.dumps({
+                "header": "movement",
+                "command": "rotate",
+                "angle": yaw_error_deg
+            })
+            self.global_request.publish(msg)
+            pass
+
+        if self.sub_state == SubStates.REALIGNMENT_IN_MOVING: #waiting phase
+            pass
+
+            
         if self.sub_state == SubStates.APPROACH_ITEM:
-            # x, y, _ = self.get_robot_pose()
-            # obj_x, obj_y = self.target_object_transform
-            #then we convert the distance between the robot's current transform and the target_object_transform,
-            # pickup_distance = abs(math.hypot(x-obj_x, y-obj_y)) - 0.35
-
-            # if pickup_distance < 0.015: #1.5cm
-            #     msg = String()
-            #     msg.data = json.dumps({
-            #         "header": "movement",
-            #         "command": "stop_movement",
-            #     })
-            #     self.global_request.publish(msg)
-            #     self.sub_state = SubStates.PICKING_UP
-            #     #TODO: perform the state transition, then return.
-            #     return
-            
             obj_x, obj_y = self.target_object_transform
             msg = String()
             msg.data = json.dumps({
