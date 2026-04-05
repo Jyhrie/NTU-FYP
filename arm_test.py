@@ -30,7 +30,9 @@ def move_arm_staggered():
         # --- STEP 1: EXTEND ---
         # Stagger the start of each motor
         send_single_joint(7, 100, 1500)
+        rospy.sleep(0.3)
         send_single_joint(8, 180, 1100)
+        rospy.sleep(0.3)
         send_single_joint(9, 30, 1000)
         rospy.sleep(2.0) # Wait for full extension
 
@@ -41,7 +43,9 @@ def move_arm_staggered():
         # --- STEP 3: HALF TUCK (holding item)---
         # Stagger the return
         send_single_joint(7, 210, 2000)
+        rospy.sleep(0.3)
         send_single_joint(8, 50, 2000)
+        rospy.sleep(0.3)
         send_single_joint(9, 85, 1000)
         rospy.sleep(2.5)
 
@@ -51,7 +55,9 @@ def move_arm_staggered():
         # --- STEP 3: FULL TUCK ---
         # Stagger the return
         send_single_joint(7, 220, 2000)
+        rospy.sleep(0.3)
         send_single_joint(8, 30, 2000)
+        rospy.sleep(0.3)
         send_single_joint(9, 85, 1000)
         rospy.sleep(2.5)
 
