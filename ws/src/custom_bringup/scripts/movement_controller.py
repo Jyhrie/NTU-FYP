@@ -208,7 +208,6 @@ class PurePursuitController:
         rospy.loginfo("[PP] New path received with %d points", len(self.path))
 
     def rotate_pose_cb(self, msg):
-        print("Received Pose")
         self.rotate_target_pose = msg
 
     # -------------------------------------------------
@@ -302,6 +301,7 @@ class PurePursuitController:
     # -------------------------------------------------
     def state_rotate(self):
         # 1. Get current pose
+        print("Rotating")
         pose = self.get_robot_pose()
         if pose is None:
             return
@@ -651,7 +651,6 @@ class PurePursuitController:
     def run(self):
         rospy.loginfo("[PP] Pure Pursuit controller started")
         while not rospy.is_shutdown():
-            print(self.state.name)
             if self.state == MovementState.PURSUIT:
                 self.state_pursuit()
             if self.state == MovementState.ROTATE:
