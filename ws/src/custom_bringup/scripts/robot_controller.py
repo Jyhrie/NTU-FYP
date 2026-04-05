@@ -510,7 +510,7 @@ class Controller:
                 "y_len": self.last_cv_detection['y_len'],
             })
             self.global_request.publish(msg)
-            print("Detected Distance: %f" % self.detected_distance)
+            print("Detected Distance:", self.detected_distance)
 
             if self.detected_distance is None:
                 return
