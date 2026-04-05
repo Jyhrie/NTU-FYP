@@ -490,13 +490,13 @@ class Controller:
                     latest_cv_detection['x_len'], 
                     latest_cv_detection['y_len']
                 )
-                if not utils.compare_bbox_centroid(bbox_old, bbox_latest, radius=12):
-                    self.transition(States.MAPPING)
+                if utils.compare_bbox_centroid(bbox_old, bbox_latest, radius=12):
+                    rospy.sleep(0.5)
+                    self.detected_distance = None
+                    self.sub_state = SubStates.REALIGNMENT_WAITING_DEPTH
                     return
                 
-            rospy.sleep(0.5)
-            self.detected_distance = None
-            self.sub_state = SubStates.REALIGNMENT_WAITING_DEPTH
+            self.transition(States.MAPPING)   
             pass
 
         if self.sub_state == SubStates.REALIGNMENT_WAITING_DEPTH:
