@@ -84,13 +84,13 @@ class ArmControlNode:
             # If your robot has gripper sensors, implement check here. 
             # Otherwise, we assume success for the state machine.
             self.status_pub.publish(json.dumps({"data": "success"}))
-            self.movement_msg_pub.publish("done")
+            #self.movement_msg_pub.publish("done")
             rospy.loginfo("Grab Sequence Complete.")
 
         except Exception as e:
             rospy.logerr("Grab sequence failed: %s", e)
             self.status_pub.publish(json.dumps({"data": "failed"}))
-            self.movement_msg_pub.publish("done")
+            #self.movement_msg_pub.publish("done")
 
     def handle_extend_sequence(self):
         rospy.loginfo("Mechanical Action: START EXTEND SEQUENCE")
@@ -105,7 +105,7 @@ class ArmControlNode:
             # If your robot has gripper sensors, implement check here. 
             # Otherwise, we assume success for the state machine.
             self.status_pub.publish(json.dumps({"data": "success"}))
-            self.movement_msg_pub.publish("done")
+            #self.movement_msg_pub.publish("done")
             rospy.loginfo("Grab Sequence Complete.")
 
         except Exception as e:
@@ -134,7 +134,7 @@ class ArmControlNode:
         except Exception as e:
             rospy.logerr("Grab sequence failed: %s", e)
             self.status_pub.publish(json.dumps({"data": "failed"}))
-            self.movement_msg_pub.publish("done")
+            #self.movement_msg_pub.publish("done")
 
     def handle_release_sequence(self):
         rospy.loginfo("Mechanical Action: START RELEASE SEQUENCE")
@@ -152,12 +152,12 @@ class ArmControlNode:
             rospy.sleep(2.5)
 
             self.status_pub.publish(json.dumps({"data": "success"}))
-            self.movement_msg_pub.publish("done")
+            #self.movement_msg_pub.publish("done")
             rospy.loginfo("Release Sequence Complete.")
 
         except Exception as e:
             rospy.logerr("Release sequence failed: %s", e)
-            self.movement_msg_pub.publish("done")
+            #self.movement_msg_pub.publish("done")
 
     def run(self):
         rospy.spin()

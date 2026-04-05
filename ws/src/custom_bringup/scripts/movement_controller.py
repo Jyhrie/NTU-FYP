@@ -130,6 +130,10 @@ class PurePursuitController:
             extra = data.get("extra")
 
             self.face_coordinates = None
+            if header == 'interrupt':
+                self.stop_robot()
+                self.state = MovementState.IDLE
+                return
 
             if header == "movement":
                 if command == "follow_path":
