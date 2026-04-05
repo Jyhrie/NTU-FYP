@@ -448,7 +448,7 @@ class PurePursuitController:
         cmd.angular.z = max(min(angular_speed, 0.4), -0.4)
 
         # 3. SMOOTH LINEAR CONTROL
-        if abs(move_dist_remaining) > 0.015:
+        if abs(move_dist_remaining) > 0.015 and abs(yaw_error) < math.radians(4):
             # Calculate base forward speed
             linear_speed = move_dist_remaining * 0.6
             
