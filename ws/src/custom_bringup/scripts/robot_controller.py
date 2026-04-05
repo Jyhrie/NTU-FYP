@@ -461,7 +461,8 @@ class Controller:
                 "command": "rotate",
                 "angle": 15
             })
-            pass
+            self.global_request.publish(msg)
+            self.sub_state = SubStates.REALIGNMENT_OUT_MOVING
 
         if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING: #waiting phase
             pass
@@ -541,6 +542,7 @@ class Controller:
                 "angle": yaw_error_deg
             })
             self.global_request.publish(msg)
+            self.sub_state = SubStates.REALIGNMENT_IN_MOVING
             pass
 
         if self.sub_state == SubStates.REALIGNMENT_IN_MOVING: #waiting phase
