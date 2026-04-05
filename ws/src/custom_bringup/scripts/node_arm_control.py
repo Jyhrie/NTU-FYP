@@ -96,7 +96,7 @@ class ArmControlNode:
         rospy.loginfo("Mechanical Action: START EXTEND SEQUENCE")
         try:
             # 1. EXTEND
-            self.send_single_joint(7, 120, 1500)
+            self.send_single_joint(7, 90, 1500)
             self.send_single_joint(8, 180, 1100)
             self.send_single_joint(9, 30, 1000)
             rospy.sleep(2.0) # Wait for extension to finish
