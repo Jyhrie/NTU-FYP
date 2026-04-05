@@ -242,7 +242,6 @@ class Controller:
         # self.nav_state = NavStates.NULL
 
         while not rospy.is_shutdown():
-            #debug
             status = "\rMain State: %-10s | Sub-State: %-10s\033[K" % (self.state.name, self.sub_state.name)
             sys.stdout.write(status)
             sys.stdout.flush()
@@ -478,7 +477,7 @@ class Controller:
             #     "header": "arm",
             #     "command": "extend"
             # })
-            self.global_request.publish(msg)
+            # self.global_request.publish(msg)
             rospy.sleep(2.5)
             cached_last_cv_detection = self.last_cv_detection
             rospy.sleep(1.5)
@@ -545,7 +544,7 @@ class Controller:
             #     "header": "arm",
             #     "command": "tuck"
             # })
-            self.global_request.publish(msg)
+            # self.global_request.publish(msg)
             rospy.sleep(2.5)
             #calculate rotation from current rotation to face the object, then just call a naive rotate in place command, then transition to next sub-state to move forward a bit to get into the ideal position for pickup.
             rx, ry, ryaw = self.get_robot_pose()
