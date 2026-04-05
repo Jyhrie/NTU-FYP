@@ -29,47 +29,30 @@ def move_arm_staggered():
     try:
         # --- STEP 1: EXTEND ---
         # Stagger the start of each motor
-        send_single_joint(7, 30, 1500)
-        rospy.sleep(2.0) # Wait for full extension
-        send_single_joint(7, 50, 1500)
-        rospy.sleep(2.0) # Wait for full extension
-        send_single_joint(7, 70, 1500)
-        rospy.sleep(2.0) # Wait for full extension
         send_single_joint(7, 100, 1500)
+        send_single_joint(8, 180, 1100)
+        send_single_joint(9, 30, 1000)
         rospy.sleep(2.0) # Wait for full extension
-        send_single_joint(7, 120, 1500)
-        rospy.sleep(2.0) # Wait for full extension
-        send_single_joint(7, 150, 1500)
-        rospy.sleep(2.0) # Wait for full extension
-        send_single_joint(7, 180, 1500)
-        rospy.sleep(2.0) # Wait for full extension
-        send_single_joint(7, 200, 1500)
-        rospy.sleep(2.0) # Wait for full extension
-        send_single_joint(7, 220, 1500)
-        rospy.sleep(2.0) # Wait for full extension
-        # send_single_joint(8, 180, 1100)
-        # send_single_joint(9, 30, 1000)
-        # rospy.sleep(2.0) # Wait for full extension
 
-        # # --- STEP 2: GRIP ---
-        # send_single_joint(9, 85, 800)
-        # rospy.sleep(1.0)
+        # --- STEP 2: GRIP ---
+        send_single_joint(9, 85, 800)
+        rospy.sleep(1.0)
 
-        # # --- STEP 3: HALF TUCK (holding item)---
-        # # Stagger the return
-        # send_single_joint(7, 210, 2000)
-        # send_single_joint(8, 50, 2000)
-        # send_single_joint(9, 85, 1000)
-        # rospy.sleep(2.5)
+        # --- STEP 3: HALF TUCK (holding item)---
+        # Stagger the return
+        send_single_joint(7, 220, 2000)
+        send_single_joint(8, 50, 2000)
+        send_single_joint(9, 85, 1000)
+        rospy.sleep(2.5)
 
-        # # --- STEP : (RELEASE item)---
-        # send_single_joint(9, 30, 800)
+        # --- STEP : (RELEASE item)---
+        send_single_joint(9, 30, 800)
 
-        # # --- STEP 3: FULL TUCK ---
-        # # Stagger the return
-        # send_single_joint(7, 220, 2000)
-        # send_single_joint(8, 30, 2000)
-        # send_single_joint(9, 85, 1000)
+        # --- STEP 3: FULL TUCK ---
+        # Stagger the return
+        send_single_joint(7, 220, 2000)
+        send_single_joint(8, 30, 2000)
+        send_single_joint(9, 85, 1000)
         rospy.sleep(2.5)
 
     except rospy.ROSInterruptException:
