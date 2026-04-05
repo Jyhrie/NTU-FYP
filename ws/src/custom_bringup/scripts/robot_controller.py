@@ -562,6 +562,7 @@ class Controller:
             })
             self.global_request.publish(msg)
             self.sub_state = SubStates.REALIGNMENT_IN_MOVING
+            rospy.sleep(1.5)
             pass
 
         if self.sub_state == SubStates.REALIGNMENT_IN_MOVING: #waiting phase
@@ -586,6 +587,7 @@ class Controller:
 
 
         if self.sub_state == SubStates.PICKING_UP:
+            rospy.sleep(1.5)
             #object should be perfectly positioned in front of the robot now, so just perform standard FK based grab command
             msg = String()
             msg.data = json.dumps({

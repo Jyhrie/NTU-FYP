@@ -62,7 +62,6 @@ class ArmControlNode:
 
     def handle_grab_sequence(self):
         rospy.loginfo("Mechanical Action: START GRAB SEQUENCE")
-        
         try:
             # 1. EXTEND
             self.send_single_joint(7, 100, 1500)
@@ -95,7 +94,6 @@ class ArmControlNode:
 
     def handle_extend_sequence(self):
         rospy.loginfo("Mechanical Action: START EXTEND SEQUENCE")
-        
         try:
             # 1. EXTEND
             self.send_single_joint(7, 120, 1500)
