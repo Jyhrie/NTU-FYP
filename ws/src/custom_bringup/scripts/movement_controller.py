@@ -462,8 +462,6 @@ class PurePursuitController:
         else:
             cmd.linear.x = 0.0
 
-        self.cmd_pub.publish(cmd)
-
         # PHASE 1 - Initial pivot before moving
         if abs(yaw_error) > math.radians(2):
             cmd.linear.x = 0.0
