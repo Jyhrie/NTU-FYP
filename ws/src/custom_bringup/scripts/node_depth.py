@@ -91,7 +91,7 @@ class BlobCentroidEstimator:
                 "x": round(global_x, 1),
                 "y": round(global_y, 1),
                 "dist_m": round(exact_dist_mm / 1000.0, 3) + ASSUMED_DEPTH_OFFSET + CAMERA_DEPTH_OFFSET,
-                "angle_deg": -round(angle_deg-2) #- ANGLE_OFFSET
+                "angle_deg": -round(angle_deg-5) #- ANGLE_OFFSET
             })
             self.depth_pub.publish(result)
             print("Depth Published!")
