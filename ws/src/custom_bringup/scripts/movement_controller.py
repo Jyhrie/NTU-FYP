@@ -450,7 +450,7 @@ class PurePursuitController:
         # 3. SMOOTH LINEAR CONTROL
         if move_dist_remaining > 0:
             # Calculate base forward speed
-            linear_speed = move_dist_remaining * 1.2
+            linear_speed = move_dist_remaining * 0.6
             
             # Slower "floor" for fine-tuning, but allow it to go to 0
             target_linear = max(min(linear_speed, 0.25), 0.0)
