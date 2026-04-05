@@ -625,7 +625,8 @@ class Controller:
             obj_x, obj_y = self.target_object_transform
             msg = String()
             msg.data = json.dumps({
-                #TODO
+                "header": "movement",
+                "command": "follow_path",
             })
             self.global_request.publish(msg)
             self.global_path.publish(self.received_path)
