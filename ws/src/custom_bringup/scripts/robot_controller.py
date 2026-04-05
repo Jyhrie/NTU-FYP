@@ -139,7 +139,7 @@ class Controller:
             print("Movement Controller reports: Movement Complete")
             if self.state == States.FETCHING:
                 if self.sub_state == SubStates.MOVING:
-                    self.sub_state = SubStates.REALIGNMENT_WAITING_ITEM
+                    self.sub_state = SubStates.REALIGNMENT_OUT
                 
                 if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING:
                     self.sub_state = SubStates.REALIGNMENT_WAITING_ITEM
@@ -458,26 +458,26 @@ class Controller:
         if self.sub_state == SubStates.MOVING:
             pass
 
-        # if self.sub_state == SubStates.REALIGNMENT_OUT:
-        #     rospy.sleep(1.5)
-        #     msg = String()
-        #     msg.data = json.dumps({
-        #         "header": "movement",
-        #         "command": "rotate",
-        #         "angle": 12
-        #     })
-        #     self.global_request.publish(msg)
-        #     self.sub_state = SubStates.REALIGNMENT_OUT_MOVING
-
-        # if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING: #waiting phase
-        #     pass
-
-        if self.sub_state == SubStates.REALIGNMENT_WAITING_ITEM:
+        if self.sub_state == SubStates.REALIGNMENT_OUT:
+            rospy.sleep(1.5)
             msg = String()
             msg.data = json.dumps({
-                "header": "arm",
-                "command": "extend"
+                "header": "movement",
+                "command": "rotate",
+                "angle": 12
             })
+            self.global_request.publish(msg)
+            self.sub_state = SubStates.REALIGNMENT_OUT_MOVING
+
+        if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING: #waiting phase
+            pass
+
+        if self.sub_state == SubStates.REALIGNMENT_WAITING_ITEM:
+            # msg = String()
+            # msg.data = json.dumps({
+            #     "header": "arm",
+            #     "command": "extend"
+            # })
             self.global_request.publish(msg)
             rospy.sleep(2.5)
             cached_last_cv_detection = self.last_cv_detection
@@ -540,11 +540,11 @@ class Controller:
                 self.sub_state = SubStates.REALIGNMENT_IN
 
         if self.sub_state == SubStates.REALIGNMENT_IN:
-            msg = String()
-            msg.data = json.dumps({
-                "header": "arm",
-                "command": "tuck"
-            })
+            # msg = String()
+            # msg.data = json.dumps({
+            #     "header": "arm",
+            #     "command": "tuck"
+            # })
             self.global_request.publish(msg)
             rospy.sleep(2.5)
             #calculate rotation from current rotation to face the object, then just call a naive rotate in place command, then transition to next sub-state to move forward a bit to get into the ideal position for pickup.
