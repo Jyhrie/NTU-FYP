@@ -609,8 +609,9 @@ class Controller:
                 "x": 0,
                 "y": 0
             })
-            #NOTE: potentially just pass in the coords of the object and let the movement controller handle it due to lower latency, but state transitions might be abit more annoying and i cba rn.
+            self.received = None
             self.global_request.publish(msg)
+            
             
         if self.sub_state == SubStates.WAITING_HOME_PATH_RESPONSE:
             if self.received and self.received.get("header") == "map": #NOTE: additionally perform a timestamp check in case its an old piece of data.
