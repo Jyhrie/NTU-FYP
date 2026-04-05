@@ -140,7 +140,7 @@ class Controller:
                 if self.sub_state == SubStates.MOVING:
                     self.sub_state = SubStates.APPROACH_ITEM
                 
-                if self.sub_state == SubStates.REALIGNTMENT_OUT_MOVING:
+                if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING:
                     self.sub_state = SubStates.REALIGNMENT_WAITING_ITEM
                 
                 if self.sub_state == SubStates.REALIGNMENT_IN_MOVING:
