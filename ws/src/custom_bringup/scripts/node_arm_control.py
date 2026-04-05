@@ -53,6 +53,10 @@ class ArmControlNode:
                 self.handle_grab_sequence()
             elif command == "release":
                 self.handle_release_sequence()
+            elif command == "extend":
+                self.handle_extend_sequence()
+            elif command == "tuck":
+                self.handle_tuck_sequence()  # Tuck is essentially a release followed by a tuck
         except Exception as e:
             rospy.logerr("Error parsing arm command: %s", e)
 
@@ -74,6 +78,51 @@ class ArmControlNode:
             self.send_single_joint(7, 220, 2000)
             self.send_single_joint(8, 50, 2000)
             # Re-affirm grip just in case
+            self.send_single_joint(9, 85, 1000)
+            rospy.sleep(2.5)
+
+            # --- Success Check ---
+            # If your robot has gripper sensors, implement check here. 
+            # Otherwise, we assume success for the state machine.
+            self.status_pub.publish(json.dumps({"data": "success"}))
+            self.movement_msg_pub.publish("done")
+            rospy.loginfo("Grab Sequence Complete.")
+
+        except Exception as e:
+            rospy.logerr("Grab sequence failed: %s", e)
+            self.status_pub.publish(json.dumps({"data": "failed"}))
+            self.movement_msg_pub.publish("done")
+
+    def handle_extend_sequence(self):
+        rospy.loginfo("Mechanical Action: START EXTEND SEQUENCE")
+        
+        try:
+            # 1. EXTEND
+            self.send_single_joint(7, 100, 1500)
+            self.send_single_joint(8, 180, 1100)
+            self.send_single_joint(9, 30, 1000)
+            rospy.sleep(2.0) # Wait for extension to finish
+
+            # --- Success Check ---
+            # If your robot has gripper sensors, implement check here. 
+            # Otherwise, we assume success for the state machine.
+            self.status_pub.publish(json.dumps({"data": "success"}))
+            self.movement_msg_pub.publish("done")
+            rospy.loginfo("Grab Sequence Complete.")
+
+        except Exception as e:
+            rospy.logerr("Grab sequence failed: %s", e)
+            self.status_pub.publish(json.dumps({"data": "failed"}))
+            self.movement_msg_pub.publish("done")
+
+    def handle_tuck_sequence(self):
+        rospy.loginfo("Mechanical Action: START TUCK SEQUENCE")
+        
+        try:
+            # 2. FULL TUCK
+            self.send_single_joint(7, 220, 2000)
+            self.send_single_joint(8, 30, 2000)
+            # Close claw in tuck position for safety
             self.send_single_joint(9, 85, 1000)
             rospy.sleep(2.5)
 
