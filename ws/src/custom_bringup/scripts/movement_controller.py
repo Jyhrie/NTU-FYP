@@ -473,7 +473,8 @@ class PurePursuitController:
             # REDUCE linear speed if yaw error is high (The "Blending" Secret)
             # If error > 45 deg, speed becomes 0. If error is 0, speed is 100%.
             error_factor = max(0, 1.0 - (abs(yaw_error) / math.radians(45)))
-            cmd.linear.x = target_linear * error_factor
+            linear_speed = target_linear * error_factor
+            cmd.linear.x = math.copysign(max(abs(linear_speed), 0.03), linear_speed) if linear_speed != 0 else 0
             self.cmd_pub.publish(cmd)
             return
     
