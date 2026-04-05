@@ -48,7 +48,7 @@ def move_arm_staggered():
         # --- STEP : (RELEASE item)---
         # send_single_joint(9, 30, 800)
         send_single_joint(8, 60, 2000)
-
+        rospy.sleep(2.5)
         # --- STEP 3: FULL TUCK ---
         # Stagger the return
         send_single_joint(7, 220, 2000)
