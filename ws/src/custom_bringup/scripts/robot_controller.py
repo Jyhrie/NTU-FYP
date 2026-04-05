@@ -527,8 +527,7 @@ class Controller:
         if self.sub_state == SubStates.REALIGNMENT_IN:
             #calculate rotation from current rotation to face the object, then just call a naive rotate in place command, then transition to next sub-state to move forward a bit to get into the ideal position for pickup.
             rx, ry, ryaw = self.get_robot_pose()
-            tx = self.target_object_transform.x
-            ty = self.target_object_transform.y
+            tx, ty = self.target_object_transform
             dx = tx - rx
             dy = ty - ry
             target_yaw = math.atan2(dy, dx)
