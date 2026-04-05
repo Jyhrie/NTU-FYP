@@ -587,7 +587,7 @@ class Controller:
             msg = String()
             msg.data = json.dumps({
                 "header": "pathing",
-                "command": "object",
+                "command": "waypoint",
                 "x": 0,
                 "y": 0
             })
@@ -595,6 +595,13 @@ class Controller:
             self.global_request.publish(msg)
             
         if self.sub_state == SubStates.WAITING_HOME_PATH_RESPONSE:
+            if self.received and self.received.get("header") == "map": #NOTE: additionally perform a timestamp check in case its an old piece of data.
+                self.goal_path = self.received_path
+                self.received = None
+                self.request_sent = False
+                self.sub_state = SubStates.MOVING_HOME
+        
+        if self.sub_state == SubStates.MOVING_HOME:
             obj_x, obj_y = self.target_object_transform
             msg = String()
             msg.data = json.dumps({
@@ -602,9 +609,6 @@ class Controller:
             })
             self.global_request.publish(msg)
             self.global_path.publish(self.received_path)
-            self.sub_state = SubStates.MOVING_HOME
-        
-        if self.sub_state == SubStates.MOVING_HOME:
             pass
 
         if self.sub_state == SubStates.DROPPING_ITEM:
