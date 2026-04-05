@@ -571,7 +571,7 @@ class Controller:
             
         if self.sub_state == SubStates.APPROACH_ITEM:
             print("Approaching item...")
-            rospy.sleep(1.5)
+            rospy.sleep(5)
             obj_x, obj_y = self.target_object_transform
             msg = String()
             msg.data = json.dumps({
