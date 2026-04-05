@@ -138,7 +138,7 @@ class Controller:
             print("Movement Controller reports: Movement Complete")
             if self.state == States.FETCHING:
                 if self.sub_state == SubStates.MOVING:
-                    self.sub_state = SubStates.REALIGNMENT_OUT
+                    self.sub_state = SubStates.REALIGNMENT_WAITING_ITEM
                 
                 if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING:
                     self.sub_state = SubStates.REALIGNMENT_WAITING_ITEM
@@ -456,22 +456,28 @@ class Controller:
         if self.sub_state == SubStates.MOVING:
             pass
 
-        if self.sub_state == SubStates.REALIGNMENT_OUT:
-            rospy.sleep(1.5)
-            msg = String()
-            msg.data = json.dumps({
-                "header": "movement",
-                "command": "rotate",
-                "angle": 12
-            })
-            self.global_request.publish(msg)
-            self.sub_state = SubStates.REALIGNMENT_OUT_MOVING
+        # if self.sub_state == SubStates.REALIGNMENT_OUT:
+        #     rospy.sleep(1.5)
+        #     msg = String()
+        #     msg.data = json.dumps({
+        #         "header": "movement",
+        #         "command": "rotate",
+        #         "angle": 12
+        #     })
+        #     self.global_request.publish(msg)
+        #     self.sub_state = SubStates.REALIGNMENT_OUT_MOVING
 
-        if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING: #waiting phase
-            pass
+        # if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING: #waiting phase
+        #     pass
 
         if self.sub_state == SubStates.REALIGNMENT_WAITING_ITEM:
-            rospy.sleep(1.5)
+            msg = String()
+            msg.data = json.dumps({
+                "header": "arm",
+                "command": "extend"
+            })
+            self.global_request.publish(msg)
+            rospy.sleep(2.5)
             cached_last_cv_detection = self.last_cv_detection
             rospy.sleep(1.5)
             latest_cv_detection = self.last_cv_detection
