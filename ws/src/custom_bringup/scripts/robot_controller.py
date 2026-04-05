@@ -508,6 +508,7 @@ class Controller:
                 "y_len": self.last_cv_detection['y_len'],
             })
             self.global_request.publish(msg)
+            print("Detected Distance: %f" % self.detected_distance)
 
             if self.detected_distance is None:
                 return
@@ -523,6 +524,7 @@ class Controller:
 
                 #ok we know the definite position here, update it in the map.
                 self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
+                print("Target Object Transform: %s" % str(self.target_object_transform))
                 self.sub_state = SubStates.REALIGNMENT_IN
 
         if self.sub_state == SubStates.REALIGNMENT_IN:
@@ -539,7 +541,7 @@ class Controller:
             msg.data = json.dumps({
                 "header": "movement",
                 "command": "rotate",
-                "angle": -yaw_error_deg
+                "angle": yaw_error_deg
             })
             self.global_request.publish(msg)
             self.sub_state = SubStates.REALIGNMENT_IN_MOVING
