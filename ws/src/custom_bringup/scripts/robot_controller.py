@@ -138,7 +138,7 @@ class Controller:
             print("Movement Controller reports: Movement Complete")
             if self.state == States.FETCHING:
                 if self.sub_state == SubStates.MOVING:
-                    self.sub_state = SubStates.APPROACH_ITEM
+                    self.sub_state = SubStates.REALIGNMENT_OUT
                 
                 if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING:
                     self.sub_state = SubStates.REALIGNMENT_WAITING_ITEM
