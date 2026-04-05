@@ -580,7 +580,7 @@ class Controller:
                 "header": "movement",
                 "command": "approach",
                 "extra": "face_coordinates",
-                "stopping_distance": 0.415,
+                "stopping_distance": 0.375,
                 "x": obj_x,
                 "y": obj_y
             })
