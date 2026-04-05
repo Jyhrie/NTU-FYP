@@ -104,20 +104,20 @@ class PurePursuitController:
             gain = 1  # Strength of the nudge
             
             # --- Obstacle Detection Prints ---
-            if min_l < self.safety_threshold:
-                rospy.loginfo("[SCAN] OBSTACLE LEFT: dist=%.2f | Nudging Right", min_l)
-                nudge_velocity -= (self.safety_threshold - min_l) * gain
+            # if min_l < self.safety_threshold:
+            #     rospy.loginfo("[SCAN] OBSTACLE LEFT: dist=%.2f | Nudging Right", min_l)
+            #     nudge_velocity -= (self.safety_threshold - min_l) * gain
                 
-            if min_r < self.safety_threshold:
-                rospy.loginfo("[SCAN] OBSTACLE RIGHT: dist=%.2f | Nudging Left", min_r)
-                nudge_velocity += (self.safety_threshold - min_r) * gain
+            # if min_r < self.safety_threshold:
+            #     rospy.loginfo("[SCAN] OBSTACLE RIGHT: dist=%.2f | Nudging Left", min_r)
+            #     nudge_velocity += (self.safety_threshold - min_r) * gain
 
             # Apply low-pass filter
             self.side_nudge = 0.5 * self.side_nudge + 0.5 * nudge_velocity
 
             # Optional: only print the final nudge if it's significant
-            if abs(self.side_nudge) > 0.01:
-                print("Total Nudge: {:.3f}".format(self.side_nudge))
+            # if abs(self.side_nudge) > 0.01:
+            #     print("Total Nudge: {:.3f}".format(self.side_nudge))
         
 
     def controller_cb(self, msg):
@@ -424,29 +424,43 @@ class PurePursuitController:
 
         dist_to_target = math.hypot(tx - curr_x, ty - curr_y)
         move_dist_remaining = dist_to_target - self.stop_distance
-
+        
         angle_to_target = math.atan2(ty - curr_y, tx - curr_x)
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
-        # TERMINATION - must hold tolerance for N consecutive ticks
-        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(1.0):
+        # 1. TERMINATION LOGIC (Keep this as is, it's solid)
+        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(2.0):
             self._approach_stable_ticks += 1
-            rospy.loginfo("[APPROACH] Stable tick %d/%d, yaw_error=%.2f deg",
-                self._approach_stable_ticks, APPROACH_STABLE_REQUIRED, math.degrees(yaw_error))
-
             if self._approach_stable_ticks >= APPROACH_STABLE_REQUIRED:
-                rospy.loginfo("[APPROACH] Pickup position achieved. Final dist: %.3f", dist_to_target)
                 self.stop_robot()
-                self.approach_target = None
-                self._approach_stable_ticks = 0
                 self.state = MovementState.COMPLETE
-                self.node_topic.publish("done")
                 return
         else:
-            # Reset counter if we leave the window
             self._approach_stable_ticks = 0
 
         cmd = Twist()
+
+        # 2. SMOOTH ANGULAR CONTROL
+        # Use one consistent gain. 2.0 is a good middle ground.
+        angular_speed = yaw_error * 2.0
+        cmd.angular.z = max(min(angular_speed, 0.4), -0.4)
+
+        # 3. SMOOTH LINEAR CONTROL
+        if move_dist_remaining > 0:
+            # Calculate base forward speed
+            linear_speed = move_dist_remaining * 1.2
+            
+            # Slower "floor" for fine-tuning, but allow it to go to 0
+            target_linear = max(min(linear_speed, 0.25), 0.0)
+
+            # REDUCE linear speed if yaw error is high (The "Blending" Secret)
+            # If error > 45 deg, speed becomes 0. If error is 0, speed is 100%.
+            error_factor = max(0, 1.0 - (abs(yaw_error) / math.radians(45)))
+            cmd.linear.x = target_linear * error_factor
+        else:
+            cmd.linear.x = 0.0
+
+        self.cmd_pub.publish(cmd)
 
         # PHASE 1 - Initial pivot before moving
         if abs(yaw_error) > math.radians(2):
