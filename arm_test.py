@@ -36,7 +36,8 @@ def move_arm_staggered():
         send_single_joint(9, 30, 1000)
         rospy.sleep(2.0) # Wait for full extension
 
-        send_single_joint(7, 210, 2000)
+
+        send_single_joint(7, 140, 2000)
 
         # --- STEP 2: GRIP ---
         # send_single_joint(9, 85, 800)
