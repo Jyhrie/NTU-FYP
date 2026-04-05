@@ -429,7 +429,7 @@ class PurePursuitController:
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
         # 1. TERMINATION LOGIC (Keep this as is, it's solid)
-        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(0.5):
+        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(0.3):
             self._approach_stable_ticks += 1
             if self._approach_stable_ticks >= APPROACH_STABLE_REQUIRED:
                 self.stop_robot()
@@ -479,7 +479,10 @@ class PurePursuitController:
         # PHASE 3 - Fine alignment, let it oscillate symmetrically
         else:
             cmd.linear.x = 0.0
-            cmd.angular.z = max(min(yaw_error * 2.5, 0.15), -0.15)
+            angular = max(min(yaw_error * 2.5, 0.4), -0.4)
+            if abs(angular_speed) < 0.13:
+                angular = math.copysign(0.13, angular)  # Ensure we have enough oomph to overcome static friction
+            cmd.angular.z = angular
             rospy.loginfo_throttle(0.5, "[APPROACH] Fine aligning... yaw_error=%.2f deg", math.degrees(yaw_error))
 
         self.cmd_pub.publish(cmd)
