@@ -459,7 +459,7 @@ class Controller:
             msg.data = json.dumps({
                 "header": "movement",
                 "command": "rotate",
-                "angle": 15
+                "angle": 8.5
             })
             self.global_request.publish(msg)
             self.sub_state = SubStates.REALIGNMENT_OUT_MOVING
