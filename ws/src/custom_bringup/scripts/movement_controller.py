@@ -429,10 +429,11 @@ class PurePursuitController:
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
         # 1. TERMINATION LOGIC (Keep this as is, it's solid)
-        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(2.0):
+        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(0.8):
             self._approach_stable_ticks += 1
             if self._approach_stable_ticks >= APPROACH_STABLE_REQUIRED:
                 self.stop_robot()
+                self.node_topic.publish("done")
                 self.state = MovementState.COMPLETE
                 return
         else:
@@ -465,14 +466,14 @@ class PurePursuitController:
         # PHASE 1 - Initial pivot before moving
         if abs(yaw_error) > math.radians(2):
             cmd.linear.x = 0.0
-            cmd.angular.z = max(min(yaw_error * 1.5, 0.3), -0.3)
+            cmd.angular.z = max(min(yaw_error * 1.5, 0.5), -0.5)
             rospy.loginfo_throttle(0.5, "[APPROACH] Pivoting... yaw_error=%.2f deg", math.degrees(yaw_error))
 
         # PHASE 2 - Move forward with heading correction
         elif move_dist_remaining > 0.01:
             raw_speed = move_dist_remaining * 1.5
             cmd.linear.x = max(min(raw_speed, 0.25), 0.08)
-            cmd.angular.z = max(min(yaw_error * 3.0, 0.2), -0.2)
+            cmd.angular.z = max(min(yaw_error * 3.0, 0.4), -0.4)
             rospy.loginfo_throttle(0.5, "[APPROACH] Approaching... dist=%.3f yaw_err=%.2f deg",
                 move_dist_remaining, math.degrees(yaw_error))
 
