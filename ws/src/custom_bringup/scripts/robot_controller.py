@@ -280,6 +280,7 @@ class Controller:
 
             if self.sub_state == SubStates.WAITING_PATH_RESPONSE:
                 if self.received and self.received.get("header") == "map": #NOTE: additionally perform a timestamp check in case its an old piece of data.
+                    print(self.received)
                     #TODO: add a timeout
                     recv_cmd = self.received.get("command")
                     if self.received_path and recv_cmd == "path":
