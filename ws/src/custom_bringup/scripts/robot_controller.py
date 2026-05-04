@@ -56,6 +56,7 @@ class SubStates(Enum):
     TURN_TWO = 28
     TURN_THREE = 29
     TURN_FOUR = 30
+    ROTATING = 31
 
 class NavStates(Enum):
     NULL = 0
@@ -164,6 +165,8 @@ class Controller:
             if self.state == States.SEARCHING:
                 if self.sub_state == SubStates.MOVING: 
                     self.sub_state = SubStates.TURN_ONE
+                elif self.sub_state == SubStates.ROTATING:
+                    self.sub_state = SubStates.COMPLETE
                 elif self.sub_state == SubStates.TURN_ONE:
                     self.sub_state = SubStates.TURN_TWO
                 elif self.sub_state == SubStates.TURN_TWO:
@@ -387,7 +390,7 @@ class Controller:
                     self.rotate_target_msg = self.prepare_flip()
                     self.received = None
                     self.request_sent = False
-                    self.sub_state = SubStates.MOVING
+                    self.sub_state = SubStates.ROTATING
                 if recv_cmd == "complete":
                     print("Mapping has been marked as Complete!")
                     self.f_searching_complete = True
@@ -395,6 +398,15 @@ class Controller:
                     self.request_sent = False
                     self.sub_state = SubStates.COMPLETE
             pass
+
+        if self.sub_state == SubStates.ROTATING:
+            msg = String()
+            msg.data = json.dumps({
+                "header": "movement",
+                "command": "rotate",
+                "angle": 180
+            })
+            self.global_request.publish(msg)
 
         elif self.sub_state == SubStates.MOVING:
             # Execute the active task
@@ -406,14 +418,14 @@ class Controller:
                 })
                 self.global_request.publish(msg)
                 self.global_path.publish(self.goal_path)
-            elif self.rotate_target_msg:
-                msg = String()
-                msg.data = json.dumps({
-                    "header": "movement",
-                    "command": "rotate",
-                    "angle": 180
-                })
-                self.global_request.publish(msg)
+            # elif self.rotate_target_msg:
+            #     msg = String()
+            #     msg.data = json.dumps({
+            #         "header": "movement",
+            #         "command": "rotate",
+            #         "angle": 180
+            #     })
+            #     self.global_request.publish(msg)
         
         elif self.sub_state == SubStates.TURN_ONE:
             msg = String()
