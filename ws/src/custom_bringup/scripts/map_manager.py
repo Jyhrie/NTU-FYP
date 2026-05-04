@@ -156,7 +156,12 @@ class PathingNode:
             if command == "waypoint":
                 self._handle_waypoint(data)
             elif command == "frontier":
-                self._handle_frontier()
+                extra = data.get("extra", "")
+                if extra == "lidar":
+                    self._handle_frontier()
+                elif extra == "visual":
+                    self._handle_visual_frontier()
+
             elif command == "object":
                 self._handle_object(data)
             else:
@@ -218,7 +223,24 @@ class PathingNode:
         self.last_trigger_time = current_time
         self._run_frontier()
 
-    def _run_frontier(self):
+    def _handle_visual_frontier(self):
+        current_time = rospy.Time.now()
+        if (
+            self.is_active
+            and (current_time - self.last_trigger_time) < self.cooldown_duration
+        ):
+            rospy.loginfo("Frontier trigger ignored: cooldown in progress.")
+            return
+
+        if not self._maps_ready():
+            return
+
+        rospy.loginfo("Frontier request received, detecting frontiers...")
+        self.is_active = True
+        self.last_trigger_time = current_time
+        self._run_visual_frontier()
+
+    def _run_visual_frontier(self):
         pose = self.get_robot_pose()
         if pose is None:
             rospy.logwarn("No TF pose available for frontier exploration.")
@@ -239,7 +261,7 @@ class PathingNode:
 
         for frontier in frontiers:
             path, success = a_star_exploration(
-                self.map.data, self.global_costmap, start, frontier
+                self.visual_map.data, self.global_costmap, start, frontier
             )
 
             if len(path) < TRUNCATION_SIZE + 3:
@@ -253,7 +275,7 @@ class PathingNode:
             path = path[:-TRUNCATION_SIZE]
 
             if success and path:
-                if len(path) >= 3:
+                if len(path) >= 5:
                     lookahead = min(5, len(path) - 1)
                     first_dx = path[lookahead][0] - path[0][0]
                     first_dy = path[lookahead][1] - path[0][1]
@@ -298,7 +320,108 @@ class PathingNode:
         # Fallback to best partial path
         if paths:
             sel_path = self._get_shortest_path(paths)
-            if sel_path and len(sel_path) >= 3:
+            if sel_path and len(sel_path) >= 5:
+                reply_msg = String()
+                rospy.loginfo("No complete path; sending best partial.")
+                reply_msg.data = json.dumps({
+                    "header": "map",
+                    "command": "path",
+                    "extra": "incomplete"
+                })
+                self.reply_pub.publish(reply_msg)
+                self._publish_path(path)
+                return
+            
+        reply_msg = String()
+        reply_msg.data = json.dumps({
+            "header": "map",
+            "command": "complete"
+        })
+        self.reply_pub.publish(reply_msg) 
+            
+        rospy.logwarn("No valid frontier path found.")
+
+    def _run_frontier(self):
+        pose = self.get_robot_pose()
+        if pose is None:
+            rospy.logwarn("No TF pose available for frontier exploration.")
+            return
+
+        self.global_costmap = calc_cost_map(self.map)
+        self.publish_costmap()
+
+        x, y, yaw = pose
+        start = self.pose_to_cell(x, y)
+        sx, sy = start
+
+        frontiers = self.detector.get_frontiers(sx, sy, self.map.data)
+        if self.debug:
+            self._publish_frontier_markers(frontiers)
+
+        paths = []
+
+        for frontier in frontiers:
+            path, success = a_star_exploration(
+                self.map.data, self.global_costmap, start, frontier
+            )
+
+            if len(path) < TRUNCATION_SIZE + 3:
+                rospy.loginfo(
+                    "Discarding short path to frontier {}: len={}".format(
+                        frontier, len(path)
+                    )
+                )
+                continue
+
+            path = path[:-TRUNCATION_SIZE]
+
+            if success and path:
+                if len(path) >= 5:
+                    lookahead = min(5, len(path) - 1)
+                    first_dx = path[lookahead][0] - path[0][0]
+                    first_dy = path[lookahead][1] - path[0][1]
+                    first_step_angle = math.atan2(first_dy, first_dx)
+                    angle_diff = math.atan2(
+                        math.sin(first_step_angle - yaw),
+                        math.cos(first_step_angle - yaw),
+                    )
+                    rospy.loginfo(
+                        "Path angle: {}deg | Yaw: {}deg | Diff: {}deg".format(
+                            round(math.degrees(first_step_angle), 1),
+                            round(math.degrees(yaw), 1),
+                            round(math.degrees(angle_diff), 1),
+                        )
+                    )
+                    if abs(angle_diff) > math.radians(90):
+                        rospy.loginfo(
+                            "Large angle diff ({}deg), rotating first.".format(
+                                round(math.degrees(angle_diff), 1)
+                            )
+                        )
+                        reply_msg = String()
+                        reply_msg.data = json.dumps({
+                            "header": "map",
+                            "command": "rotate"
+                        })
+                        self.reply_pub.publish(reply_msg)
+                        return
+                reply_msg = String()
+                reply_msg.data = json.dumps({
+                    "header": "map",
+                    "command": "path"
+                })
+                self.reply_pub.publish(reply_msg)
+                rospy.loginfo("Valid frontier path found, publishing.")
+                self._publish_path(path)
+                return
+
+            if path:
+                paths.append(path)
+
+        # Fallback to best partial path
+        if paths:
+            sel_path = self._get_shortest_path(paths)
+            if sel_path and len(sel_path) >= 5:
                 reply_msg = String()
                 rospy.loginfo("No complete path; sending best partial.")
                 reply_msg.data = json.dumps({
@@ -595,6 +718,12 @@ class PathingNode:
 
     def _maps_ready(self):
         if self.map is None:
+            rospy.logwarn("Pathing Node: Waiting for map")
+            return False
+        return True
+    
+    def _maps_visual_ready(self):
+        if self.visual_map is None:
             rospy.logwarn("Pathing Node: Waiting for map")
             return False
         return True

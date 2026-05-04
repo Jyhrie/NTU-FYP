@@ -21,7 +21,7 @@ class States(Enum):
     IDLE = 0
     MAPPING = 1
     FETCHING = 2
-    EXPLORING = 3
+    SEARCHING = 3
     NULL = 4
 
 class SubStates(Enum):
@@ -109,6 +109,7 @@ class Controller:
         self.target_object_transform = None
 
         self.f_mapping_complete = False
+        self.f_searching_complete = False
         
         self.request_sent = False
         self.request_timeout = 30
@@ -201,7 +202,6 @@ class Controller:
                 
             self.marker_pub.publish(marker)
     
-
     def prepare_flip(self):
         pose = self.get_robot_pose()
         if pose:
@@ -231,7 +231,6 @@ class Controller:
         self.sub_state = nxt_sub
         self.request_sent = False
         self.received = None
-
     # ====== MAIN STATE LOGIC ====== #
     def run(self):
         rospy.sleep(1.0)
@@ -249,11 +248,14 @@ class Controller:
             if self.state == States.IDLE:    self.manage_idle()
             elif self.state == States.MAPPING:  self.manage_mapping()
             elif self.state == States.FETCHING: self.manage_fetching()
+            elif self.state == States.SEARCHING: self.manage_searching()
             self.rate.sleep()
 
     def manage_idle(self):
         if self.f_mapping_complete != True:
             self.transition(States.MAPPING)
+        if self.f_mapping_complete and not self.f_searching_complete:
+            self.transition(States.SEARCHING)
         return
 
     def manage_mapping(self):
@@ -272,6 +274,7 @@ class Controller:
                     msg.data = json.dumps({
                         "header": "pathing",
                         "command": "frontier",
+                        "extra": "lidar"
                     })
                     self.global_request.publish(msg)
                     self.request_sent = True
@@ -329,6 +332,81 @@ class Controller:
 
             else:
                 print("Unknown sub-state in MAPPING: {}".format(self.sub_state))
+
+    def manage_searching(self):
+        # Initial entry: move to requesting data
+        if self.sub_state == SubStates.READY:
+            self.sub_state = SubStates.REQUESTING
+
+            #clear goal_path for next request.
+            self.goal_path = None
+            self.rotate_target_msg = None
+
+        # Logic for requesting and receiving paths/commands
+        elif self.sub_state == SubStates.REQUESTING:
+            if not self.request_sent:
+                msg = String()
+                msg.data = json.dumps({
+                    "header": "pathing",
+                    "command": "frontier",
+                    "extra": "visual",
+                })
+                self.global_request.publish(msg)
+                self.request_sent = True
+                self.start_time = rospy.get_time()
+                self.sub_state = SubStates.WAITING_PATH_RESPONSE
+
+        if self.sub_state == SubStates.WAITING_PATH_RESPONSE:
+            if self.received and self.received.get("header") == "map": #NOTE: additionally perform a timestamp check in case its an old piece of data.
+                print(self.received)
+                #TODO: add a timeout
+                recv_cmd = self.received.get("command")
+                if self.received_path and recv_cmd == "path":
+                    self.goal_path = self.received_path
+                    self.received = None
+                    self.request_sent = False
+                    self.sub_state = SubStates.MOVING
+                # Handle rotation command   
+                if recv_cmd == "rotate":
+                    self.rotate_target_msg = self.prepare_flip()
+                    self.received = None
+                    self.request_sent = False
+                    self.sub_state = SubStates.MOVING
+                if recv_cmd == "complete":
+                    print("Mapping has been marked as Complete!")
+                    self.f_mapping_complete = True
+                    self.received = None
+                    self.request_sent = False
+                    self.sub_state = SubStates.COMPLETE
+            pass
+
+        elif self.sub_state == SubStates.MOVING:
+            # Execute the active task
+            if self.goal_path:
+                msg = String()
+                msg.data = json.dumps({
+                    "header": "movement",
+                    "command": "follow_path",
+                })
+                self.global_request.publish(msg)
+                self.global_path.publish(self.goal_path)
+            elif self.rotate_target_msg:
+                msg = String()
+                msg.data = json.dumps({
+                    "header": "movement",
+                    "command": "rotate",
+                    "angle": 180
+                })
+                self.global_request.publish(msg)
+
+        # Logic while the robot is physically in motion
+        elif self.sub_state == SubStates.COMPLETE:
+            self.goal_path = None
+            self.rotate_target_msg = None
+            self.transition(States.IDLE, SubStates.READY)
+
+        else:
+            print("Unknown sub-state in SEARCHING: {}".format(self.sub_state))
 
     def manage_fetching(self):
         #initial entry due to interrupt
