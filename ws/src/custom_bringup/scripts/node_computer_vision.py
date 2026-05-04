@@ -18,7 +18,7 @@ INPUT_W         = 640
 INPUT_H         = 640
 ASTRA_PRO_HFOV  = 58.4
 PRINT_INTERVAL  = 3.0
-CONF_THRESHOLD  = 0.85
+CONF_THRESHOLD  = 0.75
 FRAME_THRESHOLD = 5
 NMS_THRESHOLD   = 0.4  
 SKIP_COUNT      = 2    # Number of frames to skip after processing one
@@ -97,6 +97,7 @@ class YOLOv8TRTNode:
         self.ctx.push()
         try:
             current_time = time.time()
+            print("Performing Inference")
 
             # --- Convert ROS Image to BGR ---
             frame = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)
@@ -165,6 +166,7 @@ class YOLOv8TRTNode:
                                 }
                                 json_payload = json.dumps(detection_data)
                                 self.pub.publish(json_payload)
+                                print("payload sent")
 
 
                             cv2.rectangle(display_img, (left, top), (left + bw_box, top + bh_box), color, 2)
