@@ -587,119 +587,118 @@ class Controller:
         if self.sub_state == SubStates.MOVING:
             pass
 
-        if self.sub_state == SubStates.REALIGNMENT_OUT:
-            rospy.sleep(1.5)
-            msg = String()
-            msg.data = json.dumps({
-                "header": "movement",
-                "command": "rotate",
-                "angle": 7
-            })
-            self.global_request.publish(msg)
-            self.sub_state = SubStates.REALIGNMENT_OUT_MOVING
+        # if self.sub_state == SubStates.REALIGNMENT_OUT:
+        #     rospy.sleep(1.5)
+        #     msg = String()
+        #     msg.data = json.dumps({
+        #         "header": "movement",
+        #         "command": "rotate",
+        #         "angle": 7
+        #     })
+        #     self.global_request.publish(msg)
+        #     self.sub_state = SubStates.REALIGNMENT_OUT_MOVING
 
-        if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING: #waiting phase
-            pass
+        # if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING: #waiting phase
+        #     pass
 
-        if self.sub_state == SubStates.REALIGNMENT_WAITING_ITEM:
-            # msg = String()
-            # msg.data = json.dumps({
-            #     "header": "arm",
-            #     "command": "extend"
-            # })
-            # self.global_request.publish(msg)
-            rospy.sleep(2.5)
-            cached_last_cv_detection = self.last_cv_detection
-            rospy.sleep(1.5)
-            latest_cv_detection = self.last_cv_detection
+        # if self.sub_state == SubStates.REALIGNMENT_WAITING_ITEM:
+        #     # msg = String()
+        #     # msg.data = json.dumps({
+        #     #     "header": "arm",
+        #     #     "command": "extend"
+        #     # })
+        #     # self.global_request.publish(msg)
+        #     rospy.sleep(2.5)
+        #     cached_last_cv_detection = self.last_cv_detection
+        #     rospy.sleep(1.5)
+        #     latest_cv_detection = self.last_cv_detection
 
-            if float(latest_cv_detection['ros_time']) - float(cached_last_cv_detection['ros_time']) > 1.2: #PERSISTENCE CHECK PASS
-                bbox_old = (
-                    cached_last_cv_detection['x_start'], 
-                    cached_last_cv_detection['y_start'], 
-                    cached_last_cv_detection['x_len'], 
-                    cached_last_cv_detection['y_len']
-                )
+        #     if float(latest_cv_detection['ros_time']) - float(cached_last_cv_detection['ros_time']) > 1.2: #PERSISTENCE CHECK PASS
+        #         bbox_old = (
+        #             cached_last_cv_detection['x_start'], 
+        #             cached_last_cv_detection['y_start'], 
+        #             cached_last_cv_detection['x_len'], 
+        #             cached_last_cv_detection['y_len']
+        #         )
 
-                bbox_latest = (
-                    latest_cv_detection['x_start'], 
-                    latest_cv_detection['y_start'], 
-                    latest_cv_detection['x_len'], 
-                    latest_cv_detection['y_len']
-                )
-                if utils.compare_bbox_centroid(bbox_old, bbox_latest, radius=12):
-                    rospy.sleep(0.5)
-                    self.detected_distance = None
-                    self.sub_state = SubStates.REALIGNMENT_WAITING_DEPTH
-                    return
+        #         bbox_latest = (
+        #             latest_cv_detection['x_start'], 
+        #             latest_cv_detection['y_start'], 
+        #             latest_cv_detection['x_len'], 
+        #             latest_cv_detection['y_len']
+        #         )
+        #         if utils.compare_bbox_centroid(bbox_old, bbox_latest, radius=12):
+        #             rospy.sleep(0.5)
+        #             self.detected_distance = None
+        #             self.sub_state = SubStates.REALIGNMENT_WAITING_DEPTH
+        #             return
                 
-            self.transition(States.MAPPING)   
-            pass
+        #     self.transition(States.MAPPING)   
+        #     pass
 
-        if self.sub_state == SubStates.REALIGNMENT_WAITING_DEPTH:
-            msg = String()  
-            msg.data = json.dumps({
-                "header": "depth_node",
-                "command": "check_depth",
-                "x_start": self.last_cv_detection['x_start'],
-                "x_len": self.last_cv_detection['x_len'],
-                "y_start": self.last_cv_detection['y_start'],
-                "y_len": self.last_cv_detection['y_len'],
-            })
-            self.global_request.publish(msg)
-            print("Detected Distance:", self.detected_distance)
+        # if self.sub_state == SubStates.REALIGNMENT_WAITING_DEPTH:
+        #     msg = String()  
+        #     msg.data = json.dumps({
+        #         "header": "depth_node",
+        #         "command": "check_depth",
+        #         "x_start": self.last_cv_detection['x_start'],
+        #         "x_len": self.last_cv_detection['x_len'],
+        #         "y_start": self.last_cv_detection['y_start'],
+        #         "y_len": self.last_cv_detection['y_len'],
+        #     })
+        #     self.global_request.publish(msg)
+        #     print("Detected Distance:", self.detected_distance)
 
-            if self.detected_distance is None:
-                return
-            elif self.detected_distance < -1:
-                return
-            else:
-                #update target object pose.
-                dist = self.detected_distance
-                pose = self.get_robot_pose()
-                angle    = self.detected_angle
-                #so now we have all the information required to get the object's position in the world
-                print(angle, dist, pose)
+        #     if self.detected_distance is None:
+        #         return
+        #     elif self.detected_distance < -1:
+        #         return
+        #     else:
+        #         #update target object pose.
+        #         dist = self.detected_distance
+        #         pose = self.get_robot_pose()
+        #         angle    = self.detected_angle
+        #         #so now we have all the information required to get the object's position in the world
+        #         print(angle, dist, pose)
 
-                #ok we know the definite position here, update it in the map.
-                self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
-                tx, ty = self.target_object_transform
-                self.publish_marker(tx, ty, 1 , color="blue")
-                print("Target Object Transform: %s" % str(self.target_object_transform))
-                self.sub_state = SubStates.REALIGNMENT_IN
+        #         #ok we know the definite position here, update it in the map.
+        #         self.target_object_transform = utils.project_local_to_world(pose, angle, dist)#robot forward, object angle, depth distance
+        #         tx, ty = self.target_object_transform
+        #         self.publish_marker(tx, ty, 1 , color="blue")
+        #         print("Target Object Transform: %s" % str(self.target_object_transform))
+        #         self.sub_state = SubStates.REALIGNMENT_IN
 
-        if self.sub_state == SubStates.REALIGNMENT_IN:
-            # msg = String()
-            # msg.data = json.dumps({
-            #     "header": "arm",
-            #     "command": "tuck"
-            # })
-            # self.global_request.publish(msg)
-            rospy.sleep(2.5)
-            #calculate rotation from current rotation to face the object, then just call a naive rotate in place command, then transition to next sub-state to move forward a bit to get into the ideal position for pickup.
-            rx, ry, ryaw = self.get_robot_pose()
-            tx, ty = self.target_object_transform
-            dx = tx - rx
-            dy = ty - ry
-            target_yaw = math.atan2(dy, dx)
-            yaw_error = target_yaw - ryaw
-            yaw_error = (yaw_error + math.pi) % (2 * math.pi) - math.pi
-            yaw_error_deg = math.degrees(yaw_error)
-            msg = String()
-            msg.data = json.dumps({
-                "header": "movement",
-                "command": "rotate",
-                "angle": yaw_error_deg
-            })
-            self.global_request.publish(msg)
-            self.sub_state = SubStates.REALIGNMENT_IN_MOVING
-            rospy.sleep(1.5)
-            pass
+        # if self.sub_state == SubStates.REALIGNMENT_IN:
+        #     # msg = String()
+        #     # msg.data = json.dumps({
+        #     #     "header": "arm",
+        #     #     "command": "tuck"
+        #     # })
+        #     # self.global_request.publish(msg)
+        #     rospy.sleep(2.5)
+        #     #calculate rotation from current rotation to face the object, then just call a naive rotate in place command, then transition to next sub-state to move forward a bit to get into the ideal position for pickup.
+        #     rx, ry, ryaw = self.get_robot_pose()
+        #     tx, ty = self.target_object_transform
+        #     dx = tx - rx
+        #     dy = ty - ry
+        #     target_yaw = math.atan2(dy, dx)
+        #     yaw_error = target_yaw - ryaw
+        #     yaw_error = (yaw_error + math.pi) % (2 * math.pi) - math.pi
+        #     yaw_error_deg = math.degrees(yaw_error)
+        #     msg = String()
+        #     msg.data = json.dumps({
+        #         "header": "movement",
+        #         "command": "rotate",
+        #         "angle": yaw_error_deg
+        #     })
+        #     self.global_request.publish(msg)
+        #     self.sub_state = SubStates.REALIGNMENT_IN_MOVING
+        #     rospy.sleep(1.5)
+        #     pass
 
-        if self.sub_state == SubStates.REALIGNMENT_IN_MOVING: #waiting phase
-            pass
+        # if self.sub_state == SubStates.REALIGNMENT_IN_MOVING: #waiting phase
+        #     pass
 
-            
         if self.sub_state == SubStates.APPROACH_ITEM:
             print("Approaching item...")
             rospy.sleep(5)
@@ -716,8 +715,6 @@ class Controller:
             #NOTE: potentially just pass in the coords of the object and let the movement controller handle it due to lower latency, but state transitions might be abit more annoying and i cba rn.
             self.global_request.publish(msg)
 
-
-
         if self.sub_state == SubStates.PICKING_UP:
             rospy.sleep(1.5)
             #object should be perfectly positioned in front of the robot now, so just perform standard FK based grab command
@@ -729,7 +726,6 @@ class Controller:
             self.global_request.publish(msg)
             rospy.sleep(3.0)
             self.sub_state = SubStates.REQUESTING_HOME_PATH
-
         #TIME TO HUI JIA LIAO
         if self.sub_state == SubStates.REQUESTING_HOME_PATH:
             msg = String()
