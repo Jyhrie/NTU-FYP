@@ -298,7 +298,7 @@ class PathingNode:
         # Fallback to best partial path
         if paths:
             sel_path = self._get_shortest_path(paths)
-            if sel_path and len(sel_path) > 3:
+            if sel_path and len(sel_path) >= 3:
                 reply_msg = String()
                 rospy.loginfo("No complete path; sending best partial.")
                 reply_msg.data = json.dumps({
