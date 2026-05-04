@@ -161,13 +161,13 @@ class Controller:
                 if self.sub_state == SubStates.MOVING:
                     self.sub_state = SubStates.COMPLETE
             if self.state == States.SEARCHING:
-                if self.sub_state == SubStates.MOVING:
+                if self.sub_state == SubStates.MOVING: 
                     self.sub_state = SubStates.TURN_ONE
-                if self.sub_state == SubStates.TURN_ONE:
+                elif self.sub_state == SubStates.TURN_ONE:
                     self.sub_state = SubStates.TURN_TWO
-                if self.sub_state == SubStates.TURN_TWO:
+                elif self.sub_state == SubStates.TURN_TWO:
                     self.sub_state = SubStates.TURN_THREE
-                if self.sub_state == SubStates.TURN_THREE:
+                elif self.sub_state == SubStates.TURN_THREE:
                     self.sub_state = SubStates.COMPLETE
 
 
