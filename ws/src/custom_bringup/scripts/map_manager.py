@@ -253,7 +253,7 @@ class PathingNode:
         start = self.pose_to_cell(x, y)
         sx, sy = start
 
-        frontiers = self.detector.get_frontiers(sx, sy, self.map.data)
+        frontiers = self.detector.get_frontiers(sx, sy, self.visual_map.data)
         if self.debug:
             self._publish_frontier_markers(frontiers)
 
@@ -261,7 +261,7 @@ class PathingNode:
 
         for frontier in frontiers:
             path, success = a_star_exploration(
-                self.visual_map.data, self.global_costmap, start, frontier
+                self.map.data, self.global_costmap, start, frontier
             )
 
             if len(path) < TRUNCATION_SIZE + 3:
