@@ -130,7 +130,7 @@ class Controller:
     def frontier_node_path_cb(self, msg): self.received_path = msg
 
     def cv_cb(self, msg):
-        if self.state in [States.IDLE, States.MAPPING]: #interruptable
+        if self.state in [States.IDLE, States.MAPPING, States.SEARCHING]: #interruptable
             self.interrupt(clear=True)
             self.state = States.FETCHING
 
