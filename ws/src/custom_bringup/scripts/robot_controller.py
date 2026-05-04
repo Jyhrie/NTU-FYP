@@ -728,7 +728,7 @@ class Controller:
                 "command": "grab"
             })
             self.global_request.publish(msg)
-            rospy.sleep(3.0)
+            rospy.sleep(6)
             self.sub_state = SubStates.REQUESTING_HOME_PATH
         #TIME TO HUI JIA LIAO
         if self.sub_state == SubStates.REQUESTING_HOME_PATH:
