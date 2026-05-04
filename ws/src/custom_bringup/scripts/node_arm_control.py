@@ -75,9 +75,9 @@ class ArmControlNode:
             rospy.sleep(1.0)
 
             # 3. HALF TUCK (holding item)
-            self.send_single_joint(8, 50, 2000)
-            rospy.sleep(0.5)
             self.send_single_joint(7, 220, 2000)
+            rospy.sleep(0.5)
+            self.send_single_joint(8, 50, 2000)
             # Re-affirm grip just in case
             self.send_single_joint(9, 110, 1000)
             rospy.sleep(2.5)
