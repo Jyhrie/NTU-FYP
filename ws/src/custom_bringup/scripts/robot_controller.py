@@ -167,7 +167,6 @@ class Controller:
             self.detected_angle = data.get('angle_deg')
             self.detected_distance = data.get('dist_m')
 
-    # ====== UTILS (Original methods) ====== #
     def get_robot_pose(self):
         try:
             t = self.tf_buffer.lookup_transform("map", "base_link", rospy.Time(0), rospy.Duration(0.1))
@@ -295,6 +294,7 @@ class Controller:
                         self.request_sent = False
                         self.sub_state = SubStates.MOVING
                     if recv_cmd == "complete":
+                        print("Mapping has been marked as Complete!")
                         self.f_mapping_complete = True
                         self.received = None
                         self.request_sent = False
