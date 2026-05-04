@@ -253,7 +253,7 @@ class PathingNode:
         start = self.pose_to_cell(x, y)
         sx, sy = start
 
-        frontiers = self.detector.get_frontiers(sx, sy, self.visual_map.data)
+        frontiers = self.detector.get_frontiers(sx, sy, self.visual_map.flatten().tolist())
         if self.debug:
             self._publish_frontier_markers(frontiers)
 
