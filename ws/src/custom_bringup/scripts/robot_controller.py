@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from tkinter import NO
-
 import rospy
 from enum import Enum
 from std_msgs.msg import Empty, String
@@ -15,6 +13,7 @@ import tf
 import math
 import sys
 from dependencies import utils
+from config import *
 
 
 # --- State Definitions ---
@@ -579,7 +578,7 @@ class Controller:
                 "header": "movement",
                 "command": "approach",
                 "extra": "face_coordinates",
-                "stopping_distance": 0.395,
+                "stopping_distance": STOPPING_DISTANCE,
                 "x": obj_x,
                 "y": obj_y
             })

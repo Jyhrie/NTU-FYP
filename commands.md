@@ -35,8 +35,6 @@ rosrun custom_bringup robot_controller.py  <-- Wait for other nodes to initalize
 cd fyp
 python arm_test.py
 
-
-
 # Teleoperation
 rosrun teleop_twist_keyboard teleop_twist_keyboard.py 
 

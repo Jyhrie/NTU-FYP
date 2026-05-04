@@ -1,8 +1,29 @@
-move_group.launch
-demo.launch
-
+# Byte-compiled / optimized / DLL files
+__pycache__/
 *.pyc
+
+# Distributions and Packages
 *.whl
+dist/
+build/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Machine Learning Models & Large Files
+models/
 *.onnx
 *.engine
-/models
+*.pth
+*.weights
+
+# Images (Ignoring them in all directories)
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# SAM1 Model
+sam_vit_b_01ec64.pth
