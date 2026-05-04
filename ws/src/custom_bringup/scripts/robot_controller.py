@@ -52,6 +52,9 @@ class SubStates(Enum):
     REALIGNMENT_WAITING_DEPTH = 24
     REALIGNMENT_IN = 25
     REALIGNMENT_IN_MOVING = 26
+    TURN_ONE = 27
+    TURN_TWO = 28
+    TURN_THREE = 29
 
 class NavStates(Enum):
     NULL = 0
@@ -159,7 +162,14 @@ class Controller:
                     self.sub_state = SubStates.COMPLETE
             if self.state == States.SEARCHING:
                 if self.sub_state == SubStates.MOVING:
+                    self.sub_state = SubStates.TURN_ONE
+                if self.sub_state == SubStates.TURN_ONE:
+                    self.sub_state = SubStates.TURN_TWO
+                if self.sub_state == SubStates.TURN_TWO:
+                    self.sub_state = SubStates.TURN_THREE
+                if self.sub_state == SubStates.TURN_THREE:
                     self.sub_state = SubStates.COMPLETE
+
 
     def navigation_node_cb(self, msg):
         if msg.data == "COMPLETE":
@@ -401,6 +411,34 @@ class Controller:
                     "angle": 180
                 })
                 self.global_request.publish(msg)
+        
+        elif self.sub_state == SubStates.TURN_ONE:
+            msg = String()
+            msg.data = json.dumps({
+                "header": "movement",
+                "command": "rotate",
+                "angle": 90
+            })
+            self.global_request.publish(msg)
+
+        elif self.sub_state == SubStates.TURN_TWO:
+            msg = String()
+            msg.data = json.dumps({
+                "header": "movement",
+                "command": "rotate",
+                "angle": 90
+            })
+            self.global_request.publish(msg)
+
+        elif self.sub_state == SubStates.TURN_THREE:
+            msg = String()
+            msg.data = json.dumps({
+                "header": "movement",
+                "command": "rotate",
+                "angle": 90
+            })
+            self.global_request.publish(msg)
+
 
         # Logic while the robot is physically in motion
         elif self.sub_state == SubStates.COMPLETE:
