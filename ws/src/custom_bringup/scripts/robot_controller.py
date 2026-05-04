@@ -55,6 +55,7 @@ class SubStates(Enum):
     TURN_ONE = 27
     TURN_TWO = 28
     TURN_THREE = 29
+    TURN_FOUR = 30
 
 class NavStates(Enum):
     NULL = 0
@@ -168,6 +169,8 @@ class Controller:
                 elif self.sub_state == SubStates.TURN_TWO:
                     self.sub_state = SubStates.TURN_THREE
                 elif self.sub_state == SubStates.TURN_THREE:
+                    self.sub_state = SubStates.TURN_FOUR
+                elif self.sub_state == SubStates.TURN_FOUR:
                     self.sub_state = SubStates.COMPLETE
 
 
@@ -387,7 +390,7 @@ class Controller:
                     self.sub_state = SubStates.MOVING
                 if recv_cmd == "complete":
                     print("Mapping has been marked as Complete!")
-                    self.f_mapping_complete = True
+                    self.f_searching_complete = True
                     self.received = None
                     self.request_sent = False
                     self.sub_state = SubStates.COMPLETE
@@ -417,7 +420,7 @@ class Controller:
             msg.data = json.dumps({
                 "header": "movement",
                 "command": "rotate",
-                "angle": 90
+                "angle": 70
             })
             self.global_request.publish(msg)
 
@@ -426,7 +429,7 @@ class Controller:
             msg.data = json.dumps({
                 "header": "movement",
                 "command": "rotate",
-                "angle": 90
+                "angle": 70
             })
             self.global_request.publish(msg)
 
@@ -435,10 +438,18 @@ class Controller:
             msg.data = json.dumps({
                 "header": "movement",
                 "command": "rotate",
-                "angle": 90
+                "angle": 70
             })
             self.global_request.publish(msg)
 
+        elif self.sub_state == SubStates.TURN_FOUR:
+            msg = String()
+            msg.data = json.dumps({
+                "header": "movement",
+                "command": "rotate",
+                "angle": 70
+            })
+            self.global_request.publish(msg)
 
         # Logic while the robot is physically in motion
         elif self.sub_state == SubStates.COMPLETE:
