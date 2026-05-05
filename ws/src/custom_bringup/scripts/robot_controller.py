@@ -613,7 +613,7 @@ class Controller:
                 "command": "extend"
             })
             self.global_request.publish(msg)
-            rospy.sleep(2.5)
+            rospy.sleep(3)
             # msg = String()
             # msg.data = json.dumps({
             #     "header": "movement",
@@ -700,7 +700,7 @@ class Controller:
                 "command": "tuck"
             })
             self.global_request.publish(msg)
-            rospy.sleep(2.5)
+            rospy.sleep(3)
             #calculate rotation from current rotation to face the object, then just call a naive rotate in place command, then transition to next sub-state to move forward a bit to get into the ideal position for pickup.
             rx, ry, ryaw = self.get_robot_pose()
             tx, ty = self.target_object_transform
