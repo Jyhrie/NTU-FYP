@@ -621,6 +621,8 @@ class Controller:
             #     "angle": 7
             # })
             # self.global_request.publish(msg)
+            self.detected_distance = None
+            self.last_cv_detection = None
             self.sub_state = SubStates.REALIGNMENT_WAITING_DEPTH
 
         # if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING: #waiting phase
