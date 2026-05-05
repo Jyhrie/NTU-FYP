@@ -402,7 +402,8 @@ class PathingNode:
                         reply_msg = String()
                         reply_msg.data = json.dumps({
                             "header": "map",
-                            "command": "rotate"
+                            "command": "rotate",
+                            "extra": round(math.degrees(angle_diff), 1)
                         })
                         self.reply_pub.publish(reply_msg)
                         return
