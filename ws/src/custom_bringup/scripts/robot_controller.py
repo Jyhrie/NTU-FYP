@@ -635,6 +635,8 @@ class Controller:
             #     "command": "extend"
             # })
             # self.global_request.publish(msg)
+            if self.last_cv_detection == None:
+                return
             rospy.sleep(2.5)
             cached_last_cv_detection = self.last_cv_detection
             rospy.sleep(1.5)
