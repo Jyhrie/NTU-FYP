@@ -486,7 +486,7 @@ class Controller:
                 "command": "stop_movement"
             })
             self.global_request.publish(msg)
-            rospy.sleep(2.0)
+            rospy.sleep(3.0)
 
             #get ready next set of data received from cv node
             self.sub_state = SubStates.CONFIRMING_ITEM
@@ -552,7 +552,6 @@ class Controller:
 
         if self.sub_state == SubStates.DEPTH_READING_AVAILABLE:
             msg = String()
-        
             dist = self.detected_distance
             pose = self.get_robot_pose()
             angle    = self.detected_angle
@@ -730,7 +729,7 @@ class Controller:
 
         if self.sub_state == SubStates.APPROACH_ITEM:
             print("Approaching item...")
-            rospy.sleep(5)
+            rospy.sleep(3)
             obj_x, obj_y = self.target_object_transform
             msg = String()
             msg.data = json.dumps({
@@ -745,7 +744,7 @@ class Controller:
             self.global_request.publish(msg)
 
         if self.sub_state == SubStates.PICKING_UP:
-            rospy.sleep(1.5)
+            rospy.sleep(3)
             #object should be perfectly positioned in front of the robot now, so just perform standard FK based grab command
             msg = String()
             msg.data = json.dumps({
