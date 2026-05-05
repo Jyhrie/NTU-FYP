@@ -441,7 +441,7 @@ class PurePursuitController:
         angle_to_target = math.atan2(ty - curr_y, tx - curr_x)
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
-        # --- TERMINATION ---
+        # TERMINATION
         at_position = move_dist_remaining <= 0.01
         well_aligned = abs(yaw_error) < math.radians(0.5)
 
@@ -461,18 +461,18 @@ class PurePursuitController:
 
         cmd = Twist()
 
-        # --- SINGLE ANGULAR CONTROLLER ---
-        # One gain, always active. Tune ANGULAR_KP first (try 2.0 3.5).
+        # ANGULAR CONTROLLER
+        # One gain, always active. Tune ANGULAR_KP first (try 2.0-3.5).
         ANGULAR_KP = 2.5
         ANGULAR_MAX = 0.5
         ANGULAR_MIN = 0.10  # Only apply if not already near zero, overcomes static friction
-        
+
         raw_angular = yaw_error * ANGULAR_KP
         if abs(raw_angular) > 0.01:  # Dead-band: don't fight at near-zero error
             raw_angular = math.copysign(max(abs(raw_angular), ANGULAR_MIN), raw_angular)
         cmd.angular.z = max(min(raw_angular, ANGULAR_MAX), -ANGULAR_MAX)
 
-        # --- SINGLE LINEAR CONTROLLER ---
+        # LINEAR CONTROLLER
         # Only move forward when roughly pointed at target
         HEADING_GATE = math.radians(15)   # Must be within this to move forward
         LINEAR_KP = 1.2
