@@ -462,7 +462,7 @@ class PurePursuitController:
         cmd = Twist()
 
         # --- SINGLE ANGULAR CONTROLLER ---
-        # One gain, always active. Tune ANGULAR_KP first (try 2.0–3.5).
+        # One gain, always active. Tune ANGULAR_KP first (try 2.0 3.5).
         ANGULAR_KP = 2.5
         ANGULAR_MAX = 0.5
         ANGULAR_MIN = 0.10  # Only apply if not already near zero — overcomes static friction
