@@ -438,21 +438,21 @@ class PurePursuitController:
 
         dist_to_target = math.hypot(tx - curr_x, ty - curr_y)
         move_dist_remaining = dist_to_target - self.stop_distance
-        
         angle_to_target = math.atan2(ty - curr_y, tx - curr_x)
         yaw_error = self.normalize_angle(angle_to_target - curr_yaw)
 
-        # 1. TERMINATION LOGIC (Keep this as is, it's solid)
-        if move_dist_remaining <= 0.01 and abs(yaw_error) < math.radians(0.3):
+        # --- TERMINATION ---
+        at_position = move_dist_remaining <= 0.01
+        well_aligned = abs(yaw_error) < math.radians(0.5)
+
+        if at_position and well_aligned:
             self._approach_stable_ticks += 1
             if self._approach_stable_ticks >= APPROACH_STABLE_REQUIRED:
                 self.stop_robot()
-                print("Approach complete and stable, yaw_error=%.2f deg, dist_remaining=%.3f" % (math.degrees(yaw_error), move_dist_remaining))
+                print("Approach complete. yaw_err=%.2f deg, dist=%.3f m" % (
+                    math.degrees(yaw_error), move_dist_remaining))
                 msg = String()
-                msg.data = json.dumps({
-                        "header": "done",
-                        "extra": "approach",
-                    })
+                msg.data = json.dumps({"header": "done", "extra": "approach"})
                 self.node_topic.publish(msg)
                 self.state = MovementState.COMPLETE
                 return
@@ -461,55 +461,38 @@ class PurePursuitController:
 
         cmd = Twist()
 
-        # 2. SMOOTH ANGULAR CONTROL
-        # Use one consistent gain. 2.0 is a good middle ground.
-        angular_speed = yaw_error * 2.0
-        cmd.angular.z = max(min(angular_speed, 0.4), -0.4)
+        # --- SINGLE ANGULAR CONTROLLER ---
+        # One gain, always active. Tune ANGULAR_KP first (try 2.0–3.5).
+        ANGULAR_KP = 2.5
+        ANGULAR_MAX = 0.5
+        ANGULAR_MIN = 0.10  # Only apply if not already near zero — overcomes static friction
+        
+        raw_angular = yaw_error * ANGULAR_KP
+        if abs(raw_angular) > 0.01:  # Dead-band: don't fight at near-zero error
+            raw_angular = math.copysign(max(abs(raw_angular), ANGULAR_MIN), raw_angular)
+        cmd.angular.z = max(min(raw_angular, ANGULAR_MAX), -ANGULAR_MAX)
 
-        # 3. SMOOTH LINEAR CONTROL
-        if abs(move_dist_remaining) > 0.015 and abs(yaw_error) < math.radians(4):
-            # Calculate base forward speed
-            linear_speed = move_dist_remaining * 0.6
-            
-            # Slower "floor" for fine-tuning, but allow it to go to 0
-            target_linear = max(min(linear_speed, 0.25), 0.0)
+        # --- SINGLE LINEAR CONTROLLER ---
+        # Only move forward when roughly pointed at target
+        HEADING_GATE = math.radians(15)   # Must be within this to move forward
+        LINEAR_KP = 1.2
+        LINEAR_MAX = 0.25
+        LINEAR_MIN = 0.05
 
-            # REDUCE linear speed if yaw error is high (The "Blending" Secret)
-            # If error > 45 deg, speed becomes 0. If error is 0, speed is 100%.
-            error_factor = max(0, 1.0 - (abs(yaw_error) / math.radians(45)))
-            linear_speed = target_linear * error_factor
-            cmd.linear.x = math.copysign(max(abs(linear_speed), 0.03), linear_speed) if linear_speed != 0 else 0
-            self.cmd_pub.publish(cmd)
-            return
-    
+        if move_dist_remaining > 0.01 and abs(yaw_error) < HEADING_GATE:
+            # Scale down linearly as heading error grows (smoother than a hard gate)
+            heading_scale = 1.0 - (abs(yaw_error) / HEADING_GATE)
+            raw_linear = move_dist_remaining * LINEAR_KP * heading_scale
+            raw_linear = max(min(raw_linear, LINEAR_MAX), LINEAR_MIN)
+            cmd.linear.x = raw_linear
         else:
             cmd.linear.x = 0.0
 
-        # PHASE 1 - Initial pivot before moving
-        if abs(yaw_error) > math.radians(2):
-            cmd.linear.x = 0.0
-            cmd.angular.z = max(min(yaw_error * 1.5, 0.5), -0.5)
-            rospy.loginfo_throttle(0.5, "[APPROACH] Pivoting... yaw_error=%.2f deg", math.degrees(yaw_error))
-
-        # PHASE 2 - Move forward with heading correction
-        elif move_dist_remaining > 0.01:
-            raw_speed = move_dist_remaining * 1.5
-            cmd.linear.x = max(min(raw_speed, 0.25), 0.08)
-            cmd.angular.z = max(min(yaw_error * 3.0, 0.4), -0.4)
-            rospy.loginfo_throttle(0.5, "[APPROACH] Approaching... dist=%.3f yaw_err=%.2f deg",
-                move_dist_remaining, math.degrees(yaw_error))
-
-        # PHASE 3 - Fine alignment, let it oscillate symmetrically
-        else:
-            cmd.linear.x = 0.0
-            angular = max(min(yaw_error * 2.5, 0.4), -0.4)
-            if abs(angular_speed) < 0.13:
-                angular = math.copysign(0.13, angular)  # Ensure we have enough oomph to overcome static friction
-            cmd.angular.z = angular
-            rospy.loginfo_throttle(0.5, "[APPROACH] Fine aligning... yaw_error=%.2f deg", math.degrees(yaw_error))
+        rospy.loginfo_throttle(0.3, "[APPROACH] dist=%.3f m  yaw=%.1f deg  v=%.2f  w=%.2f",
+            move_dist_remaining, math.degrees(yaw_error),
+            cmd.linear.x, cmd.angular.z)
 
         self.cmd_pub.publish(cmd)
-        return
 
     def reset_align_vars(self):
         self.latched_align_target = None
