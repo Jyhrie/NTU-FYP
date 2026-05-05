@@ -605,7 +605,7 @@ class Controller:
             pass
 
         if self.sub_state == SubStates.REALIGNMENT_OUT:
-            rospy.sleep(1.5)
+            rospy.sleep(3)
             # msg = String()
             msg = String()
             msg.data = json.dumps({
