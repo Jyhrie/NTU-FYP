@@ -335,7 +335,7 @@ class Controller:
                     })
                     self.global_request.publish(msg)
                     self.global_path.publish(self.goal_path)
-                    
+
                 # elif self.rotate_target_msg:
                 #     msg = String()
                 #     msg.data = json.dumps({
@@ -350,7 +350,7 @@ class Controller:
                 msg.data = json.dumps({
                     "header": "movement",
                     "command": "rotate",
-                    "angle": self.rotate_by
+                    "angle": float(self.rotate_by)
                 })
                 self.global_request.publish(msg)
 
@@ -425,7 +425,7 @@ class Controller:
             msg.data = json.dumps({
                 "header": "movement",
                 "command": "rotate",
-                "angle": self.rotate_by
+                "angle": float(self.rotate_by)
             })
             self.global_request.publish(msg)
 
