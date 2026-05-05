@@ -475,7 +475,7 @@ class PurePursuitController:
         # LINEAR CONTROLLER
         # Only move forward when roughly pointed at target
         HEADING_GATE = math.radians(15)   # Must be within this to move forward
-        LINEAR_KP = 1.2
+        LINEAR_KP = 0.8
         LINEAR_MAX = 0.25
         LINEAR_MIN = 0.05
 
