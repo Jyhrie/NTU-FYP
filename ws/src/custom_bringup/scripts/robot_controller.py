@@ -163,6 +163,8 @@ class Controller:
             if self.state == States.MAPPING:
                 if self.sub_state == SubStates.MOVING:
                     self.sub_state = SubStates.COMPLETE
+                elif self.sub_state == SubStates.ROTATING:
+                    self.sub_state = SubStates.COMPLETE
             if self.state == States.SEARCHING:
                 if self.sub_state == SubStates.MOVING: 
                     self.sub_state = SubStates.TURN_ONE
