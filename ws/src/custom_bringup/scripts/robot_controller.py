@@ -313,10 +313,10 @@ class Controller:
                         self.sub_state = SubStates.MOVING
                     # Handle rotation command   
                     if recv_cmd == "rotate":
-                        self.rotate_target_msg = self.prepare_flip()
+                        self.rotate_by = self.received.get("extra")
                         self.received = None
                         self.request_sent = False
-                        self.sub_state = SubStates.MOVING
+                        self.sub_state = SubStates.ROTATING
                     if recv_cmd == "complete":
                         print("Mapping has been marked as Complete!")
                         self.f_mapping_complete = True
@@ -335,14 +335,24 @@ class Controller:
                     })
                     self.global_request.publish(msg)
                     self.global_path.publish(self.goal_path)
-                elif self.rotate_target_msg:
-                    msg = String()
-                    msg.data = json.dumps({
-                        "header": "movement",
-                        "command": "rotate",
-                        "angle": 180
-                    })
-                    self.global_request.publish(msg)
+                    
+                # elif self.rotate_target_msg:
+                #     msg = String()
+                #     msg.data = json.dumps({
+                #         "header": "movement",
+                #         "command": "rotate",
+                #         "angle": self.rotate_by
+                #     })
+                #     self.global_request.publish(msg)
+
+            elif self.sub_state == SubStates.ROTATING:
+                msg = String()
+                msg.data = json.dumps({
+                    "header": "movement",
+                    "command": "rotate",
+                    "angle": self.rotate_by
+                })
+                self.global_request.publish(msg)
 
             # Logic while the robot is physically in motion
             elif self.sub_state == SubStates.COMPLETE:
