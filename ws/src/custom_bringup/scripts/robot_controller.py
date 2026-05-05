@@ -115,7 +115,8 @@ class Controller:
 
         self.f_mapping_complete = False
         self.f_searching_complete = False
-        
+
+        self.rotate_by = None   
         self.request_sent = False
         self.request_timeout = 30
         self.start_time = 0
@@ -387,8 +388,8 @@ class Controller:
                     self.sub_state = SubStates.MOVING
                 # Handle rotation command   
                 if recv_cmd == "rotate":
-                    self.rotate_target_msg = self.prepare_flip()
                     self.received = None
+                    self.rotate_by = self.received.get("extra")
                     self.request_sent = False
                     self.sub_state = SubStates.ROTATING
                 if recv_cmd == "complete":
@@ -414,7 +415,7 @@ class Controller:
             msg.data = json.dumps({
                 "header": "movement",
                 "command": "rotate",
-                "angle": 180
+                "angle": self.rotate_by
             })
             self.global_request.publish(msg)
 
