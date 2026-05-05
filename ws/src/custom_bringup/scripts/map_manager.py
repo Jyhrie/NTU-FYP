@@ -599,9 +599,8 @@ class PathingNode:
     def cmd_vel_cb(self, msg):
         """
         When a zero Twist is received on /cmd_vel, mark all cells inside a
-        40-degree FOV cone (+/-20 degrees around the robot's forward direction) with a
-        1 m range as FREE (0) in self.visual_map, plus a 3 m radius circle
-        representing the robot's current footprint.
+        60-degree FOV cone (+/-30 degrees around the robot's forward direction) with a
+        2.5 m range, AS WELL AS a 3-cell radius around the robot, as FREE (0) in self.visual_map.
         """
         # Only act on a fully zero twist command
         is_zero = (
@@ -629,76 +628,71 @@ class PathingNode:
         map_h = self.visual_map_height
         map_w = self.visual_map_width
 
-        # Cache live map info once
-        live_res = self.map.info.resolution
-        live_origin_x = self.map.info.origin.position.x
-        live_origin_y = self.map.info.origin.position.y
-        live_map_w = self.map.info.width
-        live_map_h = self.map.info.height
+        cone_range_m = 1.0
+        half_fov = math.radians(30.0)   # +/-30 degrees -> 60 degree total FOV
+        range_cells = int(math.ceil(cone_range_m / res))
+        
+        # Ensure the bounding box accommodates at least the 3-cell radius
+        max_search_cells = max(range_cells, 3)
 
         # Robot position in grid coordinates
         robot_gx = int((rx - origin_x) / res)
         robot_gy = int((ry - origin_y) / res)
 
-        def copy_live_map_value(gx, gy):
-            """Copy the live map value at visual_map cell (gx, gy) into visual_map."""
-            wx = gx * res + origin_x
-            wy = gy * res + origin_y
-            live_gx = int((wx - live_origin_x) / live_res)
-            live_gy = int((wy - live_origin_y) / live_res)
-            if not (0 <= live_gx < live_map_w and 0 <= live_gy < live_map_h):
-                return
-            map_idx = live_gy * live_map_w + live_gx
-            self.visual_map[gy, gx] = self.map.data[map_idx]
-
-        # --- 40-degree FOV cone (1 m range) ---
-        cone_range_m = 1
-        half_fov = math.radians(20.0)   # +/-20 degrees -> 40 degree total FOV
-        cone_range_cells = int(math.ceil(cone_range_m / res))
-
-        for dy in range(-cone_range_cells, cone_range_cells + 1):
-            for dx in range(-cone_range_cells, cone_range_cells + 1):
+        # Iterate over the combined bounding box
+        for dy in range(-max_search_cells, max_search_cells + 1):
+            for dx in range(-max_search_cells, max_search_cells + 1):
                 gx = robot_gx + dx
                 gy = robot_gy + dy
 
+                # Bounds check
                 if not (0 <= gx < map_w and 0 <= gy < map_h):
                     continue
 
-                dist = math.sqrt(dx * dx + dy * dy) * res
-                if dist > cone_range_m:
+                cell_dist = math.sqrt(dx * dx + dy * dy)
+                dist_m = cell_dist * res
+
+                # Check 1: Is it within the 3-cell radius?
+                in_radius = (cell_dist <= 3)
+
+                # Check 2: Is it within the forward FOV cone?
+                in_cone = False
+                if dist_m <= cone_range_m:
+                    cell_angle = math.atan2(dy, dx)
+                    angle_diff = math.atan2(
+                        math.sin(cell_angle - yaw),
+                        math.cos(cell_angle - yaw),
+                    )
+                    if abs(angle_diff) <= half_fov:
+                        in_cone = True
+
+                # If the cell is neither in the 3-cell radius nor the cone, skip it
+                if not (in_radius or in_cone):
                     continue
 
-                cell_angle = math.atan2(dy, dx)
-                angle_diff = math.atan2(
-                    math.sin(cell_angle - yaw),
-                    math.cos(cell_angle - yaw),
-                )
-                if abs(angle_diff) > half_fov:
+                # Copy the current map value so visual_map reflects what the
+                # robot actually sees at this cell while standing still.
+                live_res = self.map.info.resolution
+                live_origin_x = self.map.info.origin.position.x
+                live_origin_y = self.map.info.origin.position.y
+                live_map_w = self.map.info.width
+                live_map_h = self.map.info.height
+                
+                wx = gx * res + origin_x
+                wy = gy * res + origin_y
+                
+                live_gx = int((wx - live_origin_x) / live_res)
+                live_gy = int((wy - live_origin_y) / live_res)
+                
+                if not (0 <= live_gx < live_map_w and 0 <= live_gy < live_map_h):
                     continue
-
-                copy_live_map_value(gx, gy)
-
-        # --- 3 m radius circle (robot footprint) ---
-        footprint_radius_m = 3.0
-        footprint_range_cells = int(math.ceil(footprint_radius_m / res))
-
-        for dy in range(-footprint_range_cells, footprint_range_cells + 1):
-            for dx in range(-footprint_range_cells, footprint_range_cells + 1):
-                gx = robot_gx + dx
-                gy = robot_gy + dy
-
-                if not (0 <= gx < map_w and 0 <= gy < map_h):
-                    continue
-
-                dist = math.sqrt(dx * dx + dy * dy) * res
-                if dist > footprint_radius_m:
-                    continue
-
-                copy_live_map_value(gx, gy)
+                    
+                map_idx = live_gy * live_map_w + live_gx
+                self.visual_map[gy, gx] = self.map.data[map_idx]
 
         rospy.logdebug(
-            "cmd_vel zero-twist: marked 40deg cone (1 m) + 3 m footprint circle "
-            "in visual_map from robot ({:.2f}, {:.2f}) yaw={:.1f}deg".format(
+            "cmd_vel zero-twist: marked 60deg cone and 3-cell radius as seen in visual_map "
+            "from robot ({:.2f}, {:.2f}) yaw={:.1f}deg".format(
                 rx, ry, math.degrees(yaw)
             )
         )
