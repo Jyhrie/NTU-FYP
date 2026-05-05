@@ -465,7 +465,7 @@ class PurePursuitController:
         # One gain, always active. Tune ANGULAR_KP first (try 2.0 3.5).
         ANGULAR_KP = 2.5
         ANGULAR_MAX = 0.5
-        ANGULAR_MIN = 0.10  # Only apply if not already near zero — overcomes static friction
+        ANGULAR_MIN = 0.10  # Only apply if not already near zero, overcomes static friction
         
         raw_angular = yaw_error * ANGULAR_KP
         if abs(raw_angular) > 0.01:  # Dead-band: don't fight at near-zero error
