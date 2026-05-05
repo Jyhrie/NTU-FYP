@@ -623,7 +623,7 @@ class Controller:
             # self.global_request.publish(msg)
             self.detected_distance = None
             self.last_cv_detection = None
-            self.sub_state = SubStates.REALIGNMENT_WAITING_DEPTH
+            self.sub_state = SubStates.REALIGNMENT_WAITING_ITEM
 
         # if self.sub_state == SubStates.REALIGNMENT_OUT_MOVING: #waiting phase
         #     pass
